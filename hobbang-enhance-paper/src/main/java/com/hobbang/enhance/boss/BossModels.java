@@ -44,14 +44,14 @@ public final class BossModels {
 	}
 
 	static {
-		put("abyssal_smith", "torso", 0.0000F, 2.7000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 17, "boss/abyssal_smith/torso");
-		put("abyssal_smith", "chest", 0.0000F, 4.5000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 26, "boss/abyssal_smith/chest");
-		put("abyssal_smith", "head", 0.0000F, 7.2000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 28, "boss/abyssal_smith/head");
-		put("abyssal_smith", "arm_l", 2.0000F, 6.8000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 8, "boss/abyssal_smith/arm_l");
-		put("abyssal_smith", "fore_l", 2.0278F, 5.3000F, 0.0278F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 8, "boss/abyssal_smith/fore_l");
+		put("abyssal_smith", "torso", 0.0000F, 2.7000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 14, "boss/abyssal_smith/torso");
+		put("abyssal_smith", "chest", 0.0000F, 4.5000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 23, "boss/abyssal_smith/chest");
+		put("abyssal_smith", "head", 0.0000F, 7.2000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 40, "boss/abyssal_smith/head");
+		put("abyssal_smith", "arm_l", 2.0000F, 6.8000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 10, "boss/abyssal_smith/arm_l");
+		put("abyssal_smith", "fore_l", 2.0278F, 5.3000F, 0.0278F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 7, "boss/abyssal_smith/fore_l");
 		put("abyssal_smith", "hand_l", 2.2917F, 4.4500F, 0.2083F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 14, "boss/abyssal_smith/hand_l");
-		put("abyssal_smith", "arm_r", -2.0000F, 6.8000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 8, "boss/abyssal_smith/arm_r");
-		put("abyssal_smith", "fore_r", -2.0278F, 5.3000F, 0.0278F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 8, "boss/abyssal_smith/fore_r");
+		put("abyssal_smith", "arm_r", -2.0000F, 6.8000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 10, "boss/abyssal_smith/arm_r");
+		put("abyssal_smith", "fore_r", -2.0278F, 5.3000F, 0.0278F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 7, "boss/abyssal_smith/fore_r");
 		put("abyssal_smith", "hand_r", -2.2917F, 4.4500F, 0.2083F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 14, "boss/abyssal_smith/hand_r");
 		put("abyssal_smith", "leg_l", 0.9000F, 2.6000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 5, "boss/abyssal_smith/leg_l");
 		put("abyssal_smith", "shin_l", 1.0833F, 1.5500F, -0.0833F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 7, "boss/abyssal_smith/shin_l");
@@ -85,7 +85,7 @@ public final class BossModels {
 		put("prism_colossus", "leg_r", -0.8370F, 2.3587F, 0.0000F, 3.2000F, 0.0000F, 1.0000F, 0.0000F, 1, "boss/prism_colossus/leg_r");
 		put("prism_colossus", "shin_r", -0.9062F, 1.4000F, -0.3542F, 3.2000F, 0.0000F, 1.0000F, 0.0000F, 6, "boss/prism_colossus/shin_r");
 		HEIGHT.put("prism_colossus", 7.0000F);
-		put("abyssal_smith", "hammer", -2.3500F, 3.5000F, 0.4500F, 2.0000F, 0.0000F, 1.0000F, 0.0000F, 30, "boss/smith_hammer/hammer");
+		put("abyssal_smith", "hammer", -2.3500F, 3.5000F, 0.4500F, 2.0000F, 0.0000F, 1.0000F, 0.0000F, 35, "boss/smith_hammer/hammer");
 		put("tempest_wyvern", "body", 0.0000F, 1.5640F, 0.3740F, 1.6000F, 0.0000F, 1.0000F, 0.0000F, 4, "boss/tempest_wyvern/body");
 		put("tempest_wyvern", "waist", 0.0000F, 1.5640F, -0.1700F, 1.6000F, 0.0000F, 1.0000F, 0.0000F, 4, "boss/tempest_wyvern/waist");
 		put("tempest_wyvern", "hips", 0.0000F, 1.5640F, -1.0200F, 1.6000F, 0.0000F, 1.0000F, 0.0000F, 4, "boss/tempest_wyvern/hips");

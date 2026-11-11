@@ -581,7 +581,7 @@ def paged_pack(rects, max_size, pad=1):
         todo = left; pages += 1
     return out, [max_size] * pages
 
-def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block, attach=None, credit='make_smith (HobbangEnhance 1.5.2)'):
+def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block, attach=None, credit='make_smith (HobbangEnhance 1.5.2)', *, part_ppu=None):
     S_REF = np.array([-1.0, 1.0, -1.0])
     disp = 16.0 / k_units_per_block
     for sub in ('models/item', 'textures/item', 'items'):
@@ -601,10 +601,14 @@ def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block
     if attach:
         man['attach'] = attach
 
+    if part_ppu:
+        man['part_texture_resolution'] = part_ppu
+
     total_cuboids = 0
     total_tex_px = 0
 
     for pname, p in parts_table.items():
+        ppu = (part_ppu or {}).get(pname, PPU)
         piv = np.array(p['pivot'], float)
         rects = []
         jobs = []
@@ -619,8 +623,8 @@ def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block
                 vs = b['_from'] + (b['_to'] - b['_from']) * np.array(FACE_VERTS[fn], float)
                 u_len = np.linalg.norm(vs[3] - vs[0]) / k_units_per_block
                 v_len = np.linalg.norm(vs[1] - vs[0]) / k_units_per_block
-                W = max(2, int(round(u_len * PPU)))
-                H = max(2, int(round(v_len * PPU)))
+                W = max(2, int(round(u_len * ppu)))
+                H = max(2, int(round(v_len * ppu)))
                 rects.append((W, H))
                 jobs.append((bi, fn))
 

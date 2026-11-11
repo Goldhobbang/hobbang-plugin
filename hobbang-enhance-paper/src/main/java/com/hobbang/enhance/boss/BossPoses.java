@@ -1,5 +1,6 @@
 package com.hobbang.enhance.boss;
 
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import static com.hobbang.enhance.boss.BossMotion.*;
@@ -47,10 +48,10 @@ final class BossPoses {
 		float stomp = hit + 0.5F * sweep.release() * other;
 		float shift = -0.26F * load + 0.17F * hit + 0.12F * weight;
 		float rise = sin(t * 0.067F) * 0.055F + Math.abs(weight) * 0.10F;
-		float lean = -12 * load + 35 * hit + other * (9 * sweep.release() - 10 * phase.prepare());
+		float lean = -12 * load + 55 * hit + other * (9 * sweep.release() - 10 * phase.prepare());
 		Rigid root = Rigid.yaw(yaw);
 		Rigid base = root.at(shift, rise + 0.08F * stomp, -0.16F * load + 0.80F * hit);
-		Rigid pelvis = pivot(SMITH, base, "torso").rotX(0.32F * lean).rotZ(-3 * weight + 3 * load);
+		Rigid pelvis = pivot(SMITH, base.at(0, -0.50F * ease(hit), 0), "torso").rotX(0.32F * lean).rotZ(-3 * weight + 3 * load);
 		sink.place("torso", pelvis, 1);
 		Rigid chest = child(SMITH, pelvis, "torso", "chest")
 			.rotX(0.68F * lean + sin(t * 0.067F - 0.28F) * 1.4F)
@@ -82,6 +83,12 @@ final class BossPoses {
 		Rigid hand = child(SMITH, foreR, "fore_r", "hand_r").rotX(wrist * 0.35F);
 		sink.place("hand_r", hand, 1);
 		Rigid hammer = child(SMITH, hand, "hand_r", "hammer").rotX(wrist * 0.65F - 90);
+		if (hit > 0) {
+			// At contact the local -Z striking face is flat against the ground.
+			float align = ease(hit);
+			Quaternionf rotation = new Quaternionf(hammer.rot()).slerp(root.rotX(-90).rot(), align);
+			hammer = new Rigid(hammer.pos(), rotation);
+		}
 		sink.place("hammer", hammer, 1);
 		return new SmithRig(head, hammer);
 	}

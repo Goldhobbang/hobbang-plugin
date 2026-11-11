@@ -179,7 +179,7 @@ public class SmithBoss extends DisplayBoss {
 
 	/** 망치 머리 (월드 좌표). 블록 모델 모드에서는 몸 앞 1.5블록 */
 	private Vector hammerHead() {
-		if (modelMode && hammerRig != null) return worldPoint(hammerRig, -0.3F, -2.3F, 0F);   // 망치 머리 중심 (손잡이 피벗 기준)
+		if (modelMode && hammerRig != null) return worldPoint(hammerRig, 0F, -2.16F, 0F);   // 망치 머리 중심 (손잡이 피벗 기준)
 		Location l = mob.getLocation();
 		Vector f = l.getDirection().setY(0);
 		if (f.lengthSquared() < 1e-6) f = new Vector(0, 0, 1);

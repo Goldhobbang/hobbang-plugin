@@ -25,12 +25,12 @@
       "scale": 2.0,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 30,
-      "cuboids_voxel": 24,
-      "cuboids_obb": 6,
-      "faces": 180,
+      "cuboids": 35,
+      "cuboids_voxel": 23,
+      "cuboids_obb": 12,
+      "faces": 210,
       "texture_px": 128,
-      "texture_pages": 2,
+      "texture_pages": 3,
       "voxels": 0
     }
   ],
@@ -43,5 +43,5 @@
       0.45
     ]
   },
-  "total_cuboids": 30
+  "total_cuboids": 35
 }
