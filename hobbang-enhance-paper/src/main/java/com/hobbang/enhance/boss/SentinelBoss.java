@@ -50,6 +50,8 @@ public class SentinelBoss extends DisplayBoss {
 	private Part mBody, mRing, mClock, mArmL, mArmR;
 	/** v1.5.0: 하부 진자(모래시계)와 팔 칼날을 따로 움직인다 */
 	private Part mPend, mBladeL, mBladeR;
+	/** golem remodel: cogs beside the dial, meshing with the clock (spin with the gear angle; stop / reverse with it) */
+	private Part mGearL, mGearR;
 	private Rigid coreRig;
 	private float gearAngle, gearSpeed = 1, deathU, tilt;
 	private int gearHoldUntil, lastDeathFrame;
@@ -88,13 +90,14 @@ public class SentinelBoss extends DisplayBoss {
 	@Override
 	protected void buildParts() {
 		core = face = hourHand = minHand = bell = pendRod = pendBob = label = null;
-		mBody = mRing = mClock = mArmL = mArmR = mPend = mBladeL = mBladeR = null;
+		mBody = mRing = mClock = mArmL = mArmR = mPend = mBladeL = mBladeR = mGearL = mGearR = null;
 		java.util.Arrays.fill(ringA, null);
 		java.util.Arrays.fill(ringB, null);
 		if (modelMode) {
 			mBody = model("body", false); mArmL = model("arm_l", false); mArmR = model("arm_r", false);
 			mRing = model("ring", false); mClock = model("clock", true);
 			mPend = model("pendulum", false); mBladeL = model("blade_l", false); mBladeR = model("blade_r", false);
+			mGearL = model("gear_l", false); mGearR = model("gear_r", false);
 			label = text(Component.empty(), 0, 0, 0, 1.6F);
 			return;
 		}
@@ -471,7 +474,7 @@ public class SentinelBoss extends DisplayBoss {
 	private void applyDeathLights(float u) {
 		int br = u < 0.20F ? Math.max(0, (int) (15 * (1F - u / 0.20F))) : 0;
 		org.bukkit.entity.Display.Brightness dim = new org.bukkit.entity.Display.Brightness(br, br);
-		for (Part p : new Part[]{mBody, mRing, mClock, mArmL, mArmR, mPend, mBladeL, mBladeR}) {
+		for (Part p : new Part[]{mBody, mRing, mClock, mArmL, mArmR, mPend, mBladeL, mBladeR, mGearL, mGearR}) {
 			if (p != null && p.display.isValid()) p.display.setBrightness(dim);
 		}
 		if (core != null && core.display.isValid()) core.display.setBrightness(dim);

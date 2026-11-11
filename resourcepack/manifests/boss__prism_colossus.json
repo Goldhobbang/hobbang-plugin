@@ -2,275 +2,35 @@
   "id": "hobbang:boss/prism_colossus",
   "height_blocks": 7.0,
   "resolution": 16,
-  "texels_per_voxel": 2,
+  "texels_per_voxel": 1,
   "model_units_per_block": 5.0,
   "item_display_scale": 3.2,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "note": "hand-designed cuboid model (make_golems.py, 1.5.x golem remodel); 16px/block pixel textures, original palette only.",
   "parts": [
     {
-      "name": "head",
-      "item_model": "hobbang:boss/prism_colossus/head",
-      "parent": "chest",
-      "pivot_blocks": [
-        0.0,
-        5.782608695652174,
-        0.0
-      ],
-      "translation": [
-        0.0,
-        5.782608695652174,
-        0.0
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 285,
-      "cuboids_voxel": 285,
-      "cuboids_obb": 0,
-      "faces": 1155,
-      "texture_px": 512,
-      "voxels": 5765
-    },
-    {
-      "name": "fist_r",
-      "item_model": "hobbang:boss/prism_colossus/fist_r",
-      "parent": "fore_r",
-      "pivot_blocks": [
-        -2.0938,
-        3.3021739130434784,
-        0.2188
-      ],
-      "translation": [
-        -2.0938,
-        3.3021739130434784,
-        0.2188
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 476,
-      "cuboids_voxel": 476,
-      "cuboids_obb": 0,
-      "faces": 1836,
-      "texture_px": 512,
-      "voxels": 10411
-    },
-    {
-      "name": "fore_r",
-      "item_model": "hobbang:boss/prism_colossus/fore_r",
-      "parent": "arm_r",
-      "pivot_blocks": [
-        -1.7812,
-        4.306521739130435,
-        -0.1562
-      ],
-      "translation": [
-        -1.7812,
-        4.306521739130435,
-        -0.1562
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 290,
-      "cuboids_voxel": 290,
-      "cuboids_obb": 0,
-      "faces": 1154,
-      "texture_px": 512,
-      "voxels": 5680
-    },
-    {
-      "name": "arm_r",
-      "item_model": "hobbang:boss/prism_colossus/arm_r",
-      "parent": "chest",
-      "pivot_blocks": [
-        -1.9782608695652175,
-        5.326086956521739,
-        0.0
-      ],
-      "translation": [
-        -1.9782608695652175,
-        5.326086956521739,
-        0.0
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 278,
-      "cuboids_voxel": 278,
-      "cuboids_obb": 0,
-      "faces": 1061,
-      "texture_px": 512,
-      "voxels": 6794
-    },
-    {
-      "name": "fist_l",
-      "item_model": "hobbang:boss/prism_colossus/fist_l",
-      "parent": "fore_l",
-      "pivot_blocks": [
-        2.0938,
-        3.3021739130434784,
-        0.2188
-      ],
-      "translation": [
-        2.0938,
-        3.3021739130434784,
-        0.2188
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 472,
-      "cuboids_voxel": 472,
-      "cuboids_obb": 0,
-      "faces": 1831,
-      "texture_px": 512,
-      "voxels": 10488
-    },
-    {
-      "name": "fore_l",
-      "item_model": "hobbang:boss/prism_colossus/fore_l",
-      "parent": "arm_l",
-      "pivot_blocks": [
-        1.7187999999999999,
-        4.306521739130435,
-        -0.1562
-      ],
-      "translation": [
-        1.7187999999999999,
-        4.306521739130435,
-        -0.1562
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 283,
-      "cuboids_voxel": 283,
-      "cuboids_obb": 0,
-      "faces": 1075,
-      "texture_px": 512,
-      "voxels": 5703
-    },
-    {
-      "name": "arm_l",
-      "item_model": "hobbang:boss/prism_colossus/arm_l",
-      "parent": "chest",
-      "pivot_blocks": [
-        1.9782608695652175,
-        5.326086956521739,
-        0.0
-      ],
-      "translation": [
-        1.9782608695652175,
-        5.326086956521739,
-        0.0
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 269,
-      "cuboids_voxel": 269,
-      "cuboids_obb": 0,
-      "faces": 1025,
-      "texture_px": 512,
-      "voxels": 7014
-    },
-    {
-      "name": "shin_r",
-      "item_model": "hobbang:boss/prism_colossus/shin_r",
-      "parent": "leg_r",
-      "pivot_blocks": [
-        -0.9062,
-        1.4000000000000001,
-        -0.3542
-      ],
-      "translation": [
-        -0.9062,
-        1.4000000000000001,
-        -0.3542
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 40,
-      "cuboids_voxel": 8,
-      "cuboids_obb": 32,
-      "faces": 135,
-      "texture_px": 256,
-      "voxels": 521
-    },
-    {
-      "name": "leg_r",
-      "item_model": "hobbang:boss/prism_colossus/leg_r",
+      "name": "torso",
+      "item_model": "hobbang:boss/prism_colossus/torso",
       "parent": null,
       "pivot_blocks": [
-        -0.8369565217391306,
+        0.0,
         2.358695652173913,
         0.0
       ],
       "translation": [
-        -0.8369565217391306,
+        0.0,
         2.358695652173913,
         0.0
       ],
       "scale": 3.2,
       "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 67,
-      "cuboids_voxel": 60,
-      "cuboids_obb": 7,
-      "faces": 288,
+      "mode": "box",
+      "cuboids": 8,
+      "cuboids_voxel": 4,
+      "cuboids_obb": 4,
+      "faces": 48,
       "texture_px": 256,
-      "voxels": 1563
-    },
-    {
-      "name": "shin_l",
-      "item_model": "hobbang:boss/prism_colossus/shin_l",
-      "parent": "leg_l",
-      "pivot_blocks": [
-        0.8958,
-        1.4000000000000001,
-        -0.3542
-      ],
-      "translation": [
-        0.8958,
-        1.4000000000000001,
-        -0.3542
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 39,
-      "cuboids_voxel": 11,
-      "cuboids_obb": 28,
-      "faces": 134,
-      "texture_px": 256,
-      "voxels": 522
-    },
-    {
-      "name": "leg_l",
-      "item_model": "hobbang:boss/prism_colossus/leg_l",
-      "parent": null,
-      "pivot_blocks": [
-        0.8369565217391306,
-        2.358695652173913,
-        0.0
-      ],
-      "translation": [
-        0.8369565217391306,
-        2.358695652173913,
-        0.0
-      ],
-      "scale": 3.2,
-      "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 95,
-      "cuboids_voxel": 56,
-      "cuboids_obb": 39,
-      "faces": 364,
-      "texture_px": 256,
-      "voxels": 1557
+      "voxels": 0
     },
     {
       "name": "chest",
@@ -288,38 +48,278 @@
       ],
       "scale": 3.2,
       "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 428,
-      "cuboids_voxel": 330,
-      "cuboids_obb": 98,
-      "faces": 1662,
-      "texture_px": 512,
-      "voxels": 12069
+      "mode": "box",
+      "cuboids": 46,
+      "cuboids_voxel": 7,
+      "cuboids_obb": 39,
+      "faces": 276,
+      "texture_px": 256,
+      "voxels": 0
     },
     {
-      "name": "torso",
-      "item_model": "hobbang:boss/prism_colossus/torso",
-      "parent": null,
+      "name": "head",
+      "item_model": "hobbang:boss/prism_colossus/head",
+      "parent": "chest",
       "pivot_blocks": [
         0.0,
-        2.358695652173913,
+        5.782608695652174,
         0.0
       ],
       "translation": [
         0.0,
+        5.782608695652174,
+        0.0
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 27,
+      "cuboids_voxel": 8,
+      "cuboids_obb": 19,
+      "faces": 162,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "arm_l",
+      "item_model": "hobbang:boss/prism_colossus/arm_l",
+      "parent": "chest",
+      "pivot_blocks": [
+        1.9782608695652175,
+        5.326086956521739,
+        0.0
+      ],
+      "translation": [
+        1.9782608695652175,
+        5.326086956521739,
+        0.0
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 23,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 21,
+      "faces": 138,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "fore_l",
+      "item_model": "hobbang:boss/prism_colossus/fore_l",
+      "parent": "arm_l",
+      "pivot_blocks": [
+        1.7187999999999999,
+        4.306521739130435,
+        -0.1562
+      ],
+      "translation": [
+        1.7187999999999999,
+        4.306521739130435,
+        -0.1562
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 19,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 17,
+      "faces": 114,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "fist_l",
+      "item_model": "hobbang:boss/prism_colossus/fist_l",
+      "parent": "fore_l",
+      "pivot_blocks": [
+        2.0938,
+        3.3021739130434784,
+        0.2188
+      ],
+      "translation": [
+        2.0938,
+        3.3021739130434784,
+        0.2188
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 43,
+      "cuboids_voxel": 15,
+      "cuboids_obb": 28,
+      "faces": 258,
+      "texture_px": 256,
+      "voxels": 0
+    },
+    {
+      "name": "arm_r",
+      "item_model": "hobbang:boss/prism_colossus/arm_r",
+      "parent": "chest",
+      "pivot_blocks": [
+        -1.9782608695652175,
+        5.326086956521739,
+        0.0
+      ],
+      "translation": [
+        -1.9782608695652175,
+        5.326086956521739,
+        0.0
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 23,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 21,
+      "faces": 138,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "fore_r",
+      "item_model": "hobbang:boss/prism_colossus/fore_r",
+      "parent": "arm_r",
+      "pivot_blocks": [
+        -1.7812,
+        4.306521739130435,
+        -0.1562
+      ],
+      "translation": [
+        -1.7812,
+        4.306521739130435,
+        -0.1562
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 19,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 17,
+      "faces": 114,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "fist_r",
+      "item_model": "hobbang:boss/prism_colossus/fist_r",
+      "parent": "fore_r",
+      "pivot_blocks": [
+        -2.0938,
+        3.3021739130434784,
+        0.2188
+      ],
+      "translation": [
+        -2.0938,
+        3.3021739130434784,
+        0.2188
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 43,
+      "cuboids_voxel": 15,
+      "cuboids_obb": 28,
+      "faces": 258,
+      "texture_px": 256,
+      "voxels": 0
+    },
+    {
+      "name": "leg_l",
+      "item_model": "hobbang:boss/prism_colossus/leg_l",
+      "parent": null,
+      "pivot_blocks": [
+        0.8369565217391306,
+        2.358695652173913,
+        0.0
+      ],
+      "translation": [
+        0.8369565217391306,
         2.358695652173913,
         0.0
       ],
       "scale": 3.2,
       "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 67,
-      "cuboids_voxel": 25,
-      "cuboids_obb": 42,
-      "faces": 252,
-      "texture_px": 256,
-      "voxels": 1519
+      "mode": "box",
+      "cuboids": 10,
+      "cuboids_voxel": 1,
+      "cuboids_obb": 9,
+      "faces": 60,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "shin_l",
+      "item_model": "hobbang:boss/prism_colossus/shin_l",
+      "parent": "leg_l",
+      "pivot_blocks": [
+        0.8958,
+        1.4000000000000001,
+        -0.3542
+      ],
+      "translation": [
+        0.8958,
+        1.4000000000000001,
+        -0.3542
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 7,
+      "cuboids_voxel": 6,
+      "cuboids_obb": 1,
+      "faces": 42,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "leg_r",
+      "item_model": "hobbang:boss/prism_colossus/leg_r",
+      "parent": null,
+      "pivot_blocks": [
+        -0.8369565217391306,
+        2.358695652173913,
+        0.0
+      ],
+      "translation": [
+        -0.8369565217391306,
+        2.358695652173913,
+        0.0
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 10,
+      "cuboids_voxel": 1,
+      "cuboids_obb": 9,
+      "faces": 60,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "shin_r",
+      "item_model": "hobbang:boss/prism_colossus/shin_r",
+      "parent": "leg_r",
+      "pivot_blocks": [
+        -0.9062,
+        1.4000000000000001,
+        -0.3542
+      ],
+      "translation": [
+        -0.9062,
+        1.4000000000000001,
+        -0.3542
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 7,
+      "cuboids_voxel": 6,
+      "cuboids_obb": 1,
+      "faces": 42,
+      "texture_px": 128,
+      "voxels": 0
     }
   ],
-  "total_cuboids": 3089
+  "total_cuboids": 285
 }
