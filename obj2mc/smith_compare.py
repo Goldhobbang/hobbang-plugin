@@ -62,6 +62,12 @@ def main(tsv, old_root, out):
     (out / 'abyssal_smith_metrics.txt').write_text(chr(10).join(lines) + chr(10), encoding='utf-8')
     print(chr(10).join(lines))
     grid(tiles, len(VIEWS)).save(out / 'abyssal_smith_compare.jpg', quality=93)
+    close = []
+    t, u, x, n = posed(ROOT / 'resourcepack', frame)
+    for cc, ee, name in ((np.array([0, 7.6, 0]), 3.6, 'head'), (np.array([0, 5.6, 0]), 5.2, 'chest')):
+        for yaw, pitch, vn in ((0, 4, 'front'), (-35, 10, '3/4'), (90, 4, 'side'), (150, 12, 'rear 3/4')):
+            close.append(label(render(t, u, x, yaw, pitch, S, cc, ee, nearest=True)[0], f'{name} - {vn}'))
+    grid(close, 4).save(out / 'abyssal_smith_closeup.jpg', quality=93)
     # texture sheet, 3x nearest
     tex_dir = ROOT / 'resourcepack' / 'hobbang-pack' / 'assets' / 'hobbang' / 'textures' / 'item' / 'boss'
     ims = [(p.parent.name + '/' + p.stem, Image.open(p).convert('RGBA')) for d in ('abyssal_smith', 'smith_hammer')
