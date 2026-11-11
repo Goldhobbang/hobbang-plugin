@@ -6,7 +6,7 @@
   "model_units_per_block": 7.0,
   "item_display_scale": 2.2857142857142856,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "hand-designed cuboid model (make_golems.py, 1.5.x golem remodel); 16px/block pixel textures, original palette only.",
+  "note": "make_golems_v3.py, 16 texels per block, v1 rig.",
   "parts": [
     {
       "name": "body",
@@ -25,10 +25,10 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 95,
-      "cuboids_voxel": 43,
-      "cuboids_obb": 52,
-      "faces": 570,
+      "cuboids": 126,
+      "cuboids_voxel": 98,
+      "cuboids_obb": 28,
+      "faces": 756,
       "texture_px": 256,
       "voxels": 0
     },
@@ -49,11 +49,11 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 11,
-      "cuboids_voxel": 2,
-      "cuboids_obb": 9,
-      "faces": 66,
-      "texture_px": 64,
+      "cuboids": 15,
+      "cuboids_voxel": 11,
+      "cuboids_obb": 4,
+      "faces": 90,
+      "texture_px": 32,
       "voxels": 0
     },
     {
@@ -73,11 +73,11 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 11,
-      "cuboids_voxel": 2,
-      "cuboids_obb": 9,
-      "faces": 66,
-      "texture_px": 64,
+      "cuboids": 15,
+      "cuboids_voxel": 11,
+      "cuboids_obb": 4,
+      "faces": 90,
+      "texture_px": 32,
       "voxels": 0
     },
     {
@@ -101,11 +101,11 @@
         0.3608
       ],
       "mode": "box",
-      "cuboids": 36,
-      "cuboids_voxel": 12,
-      "cuboids_obb": 24,
-      "faces": 216,
-      "texture_px": 128,
+      "cuboids": 84,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 84,
+      "faces": 504,
+      "texture_px": 64,
       "voxels": 0
     },
     {
@@ -129,11 +129,11 @@
         0.9995
       ],
       "mode": "box",
-      "cuboids": 5,
-      "cuboids_voxel": 3,
-      "cuboids_obb": 2,
-      "faces": 30,
-      "texture_px": 32,
+      "cuboids": 4,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 4,
+      "faces": 24,
+      "texture_px": 16,
       "voxels": 0
     },
     {
@@ -153,10 +153,10 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 17,
-      "cuboids_voxel": 3,
-      "cuboids_obb": 14,
-      "faces": 102,
+      "cuboids": 16,
+      "cuboids_voxel": 9,
+      "cuboids_obb": 7,
+      "faces": 96,
       "texture_px": 64,
       "voxels": 0
     },
@@ -177,11 +177,11 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 22,
-      "cuboids_voxel": 2,
-      "cuboids_obb": 20,
-      "faces": 132,
-      "texture_px": 64,
+      "cuboids": 30,
+      "cuboids_voxel": 9,
+      "cuboids_obb": 21,
+      "faces": 180,
+      "texture_px": 128,
       "voxels": 0
     },
     {
@@ -201,10 +201,10 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 17,
-      "cuboids_voxel": 3,
-      "cuboids_obb": 14,
-      "faces": 102,
+      "cuboids": 16,
+      "cuboids_voxel": 9,
+      "cuboids_obb": 7,
+      "faces": 96,
       "texture_px": 64,
       "voxels": 0
     },
@@ -225,11 +225,11 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 22,
-      "cuboids_voxel": 2,
-      "cuboids_obb": 20,
-      "faces": 132,
-      "texture_px": 64,
+      "cuboids": 30,
+      "cuboids_voxel": 9,
+      "cuboids_obb": 21,
+      "faces": 180,
+      "texture_px": 128,
       "voxels": 0
     },
     {
@@ -249,13 +249,13 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 26,
-      "cuboids_voxel": 16,
-      "cuboids_obb": 10,
-      "faces": 156,
+      "cuboids": 30,
+      "cuboids_voxel": 22,
+      "cuboids_obb": 8,
+      "faces": 180,
       "texture_px": 128,
       "voxels": 0
     }
   ],
-  "total_cuboids": 262
+  "total_cuboids": 366
 }
