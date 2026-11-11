@@ -26,7 +26,9 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 /**
@@ -41,6 +43,9 @@ public abstract class DisplayBoss extends Boss {
 	protected int hurtFlash = 0;
 	protected int animTick = 0;
 	protected final List<Part> parts = new ArrayList<>();
+	private final Map<String, Part> modelParts = new HashMap<>();
+	private final BossMotion motion = new BossMotion();
+	protected float lookYaw, lookPitch;
 	private boolean partsBuilt = false;
 	private final Vector3f riderOff = new Vector3f();
 	/** v1.3.0: 리소스팩 모델 사용 여부 (파츠를 만들 때 결정, 설정이 바뀌면 다시 만든다) */
@@ -123,6 +128,34 @@ public abstract class DisplayBoss extends Boss {
 	protected void onHurtBy(EntityDamageEvent e, double amount) {}
 	protected void onPartsRebuilt() {}
 
+	final void cue(BossMotion.Move move, int hit, int live, int recovery) {
+		if (!dying && !dead) motion.play(move, tickCount, hit, live, recovery);
+	}
+
+	protected BossMotion.Frame motion(BossMotion.Move move) {
+		return motion(move, 0);
+	}
+
+	protected BossMotion.Frame motion(BossMotion.Move move, float delay) {
+		return dying || assembling() ? BossMotion.Frame.REST : motion.sample(move, tickCount, delay);
+	}
+
+	protected void aimModel(float eyeHeight, float yawLimit, float pitchLimit, float weight) {
+		LivingEntity target = mob.getTarget();
+		float yaw = 0, pitch = 0;
+		if (!assembling() && !dying && isTargetable(target)) {
+			Location origin = mob.getLocation(), eye = target.getEyeLocation();
+			double x = eye.getX() - origin.getX(), z = eye.getZ() - origin.getZ();
+			double y = eye.getY() - origin.getY() - eyeHeight;
+			if (x * x + z * z > 1e-6) {
+				yaw = BossMotion.wrap((float) Math.toDegrees(Math.atan2(-x, z)) - modelYaw());
+			}
+			pitch = (float) Math.toDegrees(Math.atan2(-y, Math.hypot(x, z)));
+		}
+		lookYaw = BossMotion.mix(lookYaw, BossMotion.clamp(yaw, -yawLimit, yawLimit), weight);
+		lookPitch = BossMotion.mix(lookPitch, BossMotion.clamp(pitch, -pitchLimit, pitchLimit), weight);
+	}
+
 	// ───────── 파츠 ─────────
 	private Location spawnAt() {
 		Location l = mob.getLocation();
@@ -156,7 +189,12 @@ public abstract class DisplayBoss extends Boss {
 		st.editMeta(m -> m.setItemModel(new org.bukkit.NamespacedKey("hobbang", sp.key())));
 		Part p = item(st, 0, 0, 0, sp.scale(), bright);
 		p.id = part;
+		modelParts.put(part, p);
 		return p;
+	}
+
+	protected void placeModel(String id, Rigid rig, float scale) {
+		place(modelParts.get(id), rig, scale);
 	}
 
 	/** 피벗 (보스 발밑 기준, 블록 단위) */
@@ -168,15 +206,6 @@ public abstract class DisplayBoss extends Boss {
 	protected Rigid child(Rigid parent, String parentPart, String childPart) {
 		Vector3f a = pv(kind, parentPart), b = pv(kind, childPart);
 		return parent.at(b.x - a.x, b.y - a.y, b.z - a.z);
-	}
-
-	/**
-	 * v1.5.0 박스 리그 관절: 부모 좌표계에서 오프셋만큼 옮긴 뒤 rest 회전을 건다 (모델 element 회전 한계를 넘는
-	 * 기울기는 여기, 즉 item_display 변환으로 낸다). 애니메이션 회전은 반환값 뒤에 이어 붙인다.
-	 */
-	protected Rigid joint(Rigid parent, String part) {
-		Vector3f[] j = BossModels.rig(kind.id, part);
-		return parent.at(j[0].x, j[0].y, j[0].z).rotX(j[1].x).rotY(j[1].y).rotZ(j[1].z);
 	}
 
 	/** 리그 로컬 좌표 → 월드 좌표 (패턴 시작점: 망치/입/코어) */
@@ -229,8 +258,10 @@ public abstract class DisplayBoss extends Boss {
 		Vector3f s = new Vector3f(p.size).mul(scaleMul * vs);
 		Vector3f off = new Vector3f(p.offset).mul(scaleMul * vs);
 		Vector3f t = off.rotate(r.rot()).add(new Vector3f(r.pos()).mul(vs)).sub(riderOff);
+		if (p.last != null && p.last.getTranslation().equals(t)
+			&& p.last.getLeftRotation().equals(r.rot()) && p.last.getScale().equals(s)
+			&& p.last.getRightRotation().equals(0F, 0F, 0F, 1F)) return;
 		Transformation tr = new Transformation(t, new Quaternionf(r.rot()), s, new Quaternionf());
-		if (tr.equals(p.last)) return;   // v1.5.1: 모양이 그대로면 패킷 없음
 		p.last = tr;
 		p.display.setTransformation(tr);
 		p.display.setInterpolationDelay(0);
@@ -239,6 +270,7 @@ public abstract class DisplayBoss extends Boss {
 	private void discardParts() {
 		for (Part p : parts) { Fx.forget(p.display); p.display.remove(); Fx.LIVE--; }
 		parts.clear();
+		modelParts.clear();
 		for (Entity e : new ArrayList<>(mob.getPassengers())) {
 			if (e.getScoreboardTags().contains(Fx.PART_TAG)) e.remove();
 		}
@@ -295,6 +327,7 @@ public abstract class DisplayBoss extends Boss {
 		}
 		animTick++;
 		if (animTick % ANIM_INTERVAL == 0) {
+			motion.expire(tickCount);
 			updateRiderOffset();
 			poseParts(animTick);
 		}

@@ -1,11 +1,11 @@
 # 홉방 강화 (hobbang-plugin)
 
-Paper 1.21.11 플러그인 **HobbangEnhance** 1.4.4와 전용 리소스팩, obj2mc 변환 파이프라인의 소스 트리입니다.
+Paper 1.21.11 플러그인 **HobbangEnhance** 1.5.0과 전용 리소스팩, obj2mc 변환 파이프라인의 소스 트리입니다.
 바닐라 클라이언트로 접속할 수 있습니다. 커스텀 아이템 ID는 쓰지 않고, 바닐라 아이템에 PDC(`hobbang:id`)와 데이터 컴포넌트를 붙입니다.
 
-이 폴더를 이미 쓰던 작업본 위에 덮어쓸 때 **`models-3d/`는 건드리지 마세요.** 원본 Meshy zip은 여기만 보관합니다. obj2mc가 읽던 `/workspace/mc/models` 풀린 메시는 이 핸드오프에 넣지 않았습니다.
+1.5.0의 보스 4종 변경 및 렌더는 [완료 보고](docs/PROGRESS-1.5.0.md), 인게임 확인 절차는 [테스트 계획](docs/TEST_PLAN-1.5.0.md)에 있습니다.
 
-커밋·푸시는 하지 않은 상태입니다. 비밀값·`.env`는 넣지 않았습니다.
+이 폴더를 이미 쓰던 작업본 위에 덮어쓸 때 **`models-3d/`는 건드리지 마세요.** 원본 Meshy zip은 여기만 보관합니다. obj2mc가 읽던 `/workspace/mc/models` 풀린 메시는 이 핸드오프에 넣지 않았습니다.
 
 ## 폴더 구조
 
@@ -22,8 +22,8 @@ hobbang-plugin/
     hobbang-pack.zip.sha1   위 zip의 SHA-1 (소문자 40자, BOM 없음)
   obj2mc/                   Meshy OBJ → 큐보이드 아이템 모델 파이프라인 (`.venv` 제외)
   weapons/                  든 무기 display JSON과 `make_weapons.py`
-  docs/                     PROGRESS-1.4.x.md
-  dist/                     미리 빌드한 `hobbang-enhance-paper-1.4.4.jar`
+  docs/                     진행 보고, 모델·리그 비교, 인게임 테스트 계획
+  dist/                     1.5.0 jar, 팩 zip 및 SHA1SUMS.txt
 ```
 
 설계 메모의 구버전은 `hobbang-enhance-paper/DESIGN.md`에도 있습니다. 현재(1.4.4) 기준은 `ARCHITECTURE.md`를 보세요.
@@ -37,8 +37,8 @@ Linux / macOS (이 소스를 박스가 빌드할 때 쓰던 것과 동일):
 ```bash
 cd hobbang-enhance-paper
 export JAVA_HOME=/path/to/jdk-21    # 박스에서는 /home/box/jdk/jdk-21.0.13+9
-./gradlew jar
-# 결과: build/libs/hobbang-enhance-paper-1.4.4.jar
+sh ./gradlew jar
+# 결과: build/libs/hobbang-enhance-paper-1.5.0.jar
 ```
 
 Windows (PowerShell):
@@ -46,10 +46,12 @@ Windows (PowerShell):
 ```powershell
 cd hobbang-enhance-paper
 $env:JAVA_HOME = "C:\Path\To\jdk-21"
-.\gradlew.bat jar
+& "$env:JAVA_HOME\bin\java.exe" -cp gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain jar
 ```
 
-1.4.4 미리 빌드된 jar:
+1.5.0 산출물은 `dist/hobbang-enhance-paper-1.5.0.jar`와 `dist/hobbang-pack-1.5.0.zip`에 있습니다. SHA-1은 [SHA1SUMS.txt](dist/SHA1SUMS.txt)에서 확인할 수 있습니다.
+
+1.4.4 보관본:
 
 - 경로: `dist/hobbang-enhance-paper-1.4.4.jar`
 - 크기: 539762 bytes
@@ -73,7 +75,7 @@ python3 make_zip.py ../resourcepack/hobbang-pack ../resourcepack/hobbang-pack.zi
 
 팩 소스에서 무기를 손본 뒤에는 `weapons/*.json`의 display를 `hobbang-pack` 안의 해당 `held.json` / `*_hand.json`과 맞춰 두고 zip을 다시 만드세요. 와이번·보스 메시를 다시 쓰려면 아래 obj2mc를 돌린 뒤 pack 소스가 갱신됐는지 확인하고 zip을 다시 만듭니다.
 
-## 팩 배포 (`gh release create`)
+## 1.4.4 팩 배포 기록 (`gh release create`)
 
 리포: [Goldhobbang/hobbang-plugin](https://github.com/Goldhobbang/hobbang-plugin). 태그는 `pack-vX.Y.Z` 형식입니다.
 
@@ -96,7 +98,7 @@ curl -sL "https://github.com/Goldhobbang/hobbang-plugin/releases/download/pack-v
 # 기대값: eda4401fcb408ab27a49c6c9fd29aa723aac4945 , HTTP 200
 ```
 
-## 홈 서버 설치
+## 홈 서버 1.4.4 설치 기록
 
 경로 (오타 `Deskktoptop`이 실제 폴더명입니다):
 
