@@ -78,7 +78,21 @@ BONEP = (STONE_BASE, STONE_MID, STONE_LIGHT, STONE_HI, (150, 143, 140), (178, 17
 LEATHERP = (APRON_VOID, APRON_DARK, APRON_BASE, APRON_LIGHT, APRON_RUNE, APRON_HI)
 BASALTP = (BASALT_VOID, BASALT_VOID, BASALT_DARK, BASALT_BASE, BASALT_EDGE, BASALT_EDGE)
 HOTP = (MAGMA_DARK, MAGMA_DARK, MAGMA_CRIMSON, MAGMA_RED, MAGMA_ORANGE, MAGMA_GOLD)
-iron = metal(IRONP); iron_s = metal(IRONP, seam=True); iron_plain = metal(IRONP, rivets=False)
+STEELP = (STONE_DARK, STONE_BASE, STONE_MID, STONE_LIGHT, STONE_HI, (150, 143, 140))     # outer plates: one tone up
+iron = metal(STEELP); iron_s = metal(STEELP, seam=True); iron_plain = metal(IRONP, rivets=False)   # inner plates stay dark
+
+
+def iron_inlay(fn, W, H):
+    """outer plate with a cyan inlay along its lower edge: the energy bleeding into the armour"""
+    img = iron(fn, W, H)
+    if fn in SIDE and W >= 6 and H >= 4:
+        rect(img, 1, H - 3, W - 2, H - 3, CYAN_DEEP); rect(img, 2, H - 3, W - 3, H - 3, CYAN_BRIGHT)
+        for x in range(4, W - 3, 5): px(img, x, H - 3, CYAN_WHITE)
+    return img
+
+
+def void(fn, W, H):
+    return canvas(W, H, STONE_VOID)
 bone = metal(BONEP, rivets=False); leather = metal(LEATHERP, rivets=False); basalt = metal(BASALTP, rivets=False)
 
 
@@ -204,7 +218,7 @@ def define_smith():
     box(P, 'torso', (0, 4.28, tz), (tw * 0.92, 0.34, td * 0.98), chain)                        # chain belt
     box(P, 'torso', (0, 4.20, tz + td / 2 + 0.02), (0.56, 0.50, 0.16), iron)                   # buckle
     for sx in (1, -1):
-        box(P, 'torso', (sx * 1.02, 3.62, tz), (0.42, 1.25, td * 0.92), iron_s, ('z', sx * 22.5))      # outer tasset
+        box(P, 'torso', (sx * 1.02, 3.62, tz), (0.42, 1.25, td * 0.92), iron_inlay, ('z', sx * 22.5))  # outer tasset
         box(P, 'torso', (sx * 0.74, 3.30, tz + td / 2 - 0.12), (0.62, 1.05, 0.22), iron, ('y', sx * 22.5))   # front hip plate
         box(P, 'torso', (sx * 0.70, 3.40, tz - td / 2 + 0.16), (0.70, 1.15, 0.22), iron, ('y', -sx * 22.5))  # rear hip plate
         box(P, 'torso', (sx * 1.12, 2.86, tz), (0.36, 0.60, td * 0.70), iron_plain, ('z', sx * 45))    # flared lower tasset
@@ -240,22 +254,29 @@ def define_smith():
     (hx, hy, hz), (hw, hh, hd) = MESH['head']
     add(P, 'head', 'chest', (0.0, 7.2, 0.0))
     Z = hz + hd / 2                                                                             # face plane
-    box(P, 'head', (0, 7.90, hz - 0.02), (hw * 0.62, hh * 0.72, hd * 0.66), blue)               # light inside the skull
-    box(P, 'head', (0, 8.34, hz - 0.06), (hw * 0.92, 0.42, hd * 0.96), bone)                    # cranium dome, lower tier
-    box(P, 'head', (0, 8.60, hz - 0.10), (hw * 0.70, 0.22, hd * 0.74), bone)                    # cranium dome, top tier
-    box(P, 'head', (0, 8.16, Z - 0.10), (hw * 0.96, 0.24, 0.30), bone, ('x', 22.5))             # brow ridge, overhanging
-    box(P, 'head', (0, 7.86, Z - 0.02), (0.22, 0.46, 0.20), bone, ('x', -22.5))                 # nasal bone
-    box(P, 'head', (0, 7.96, Z - 0.30), (hw * 0.78, 0.36, 0.08), socket)                        # socket backing (eyes glow)
+    box(P, 'head', (0, 7.92, hz - 0.05), (0.80, 0.80, 0.80), blue)                              # light inside the skull
+    # cranium: a narrow core, side plates leaning in and sloped front / back plates make a dome, not a helmet
+    box(P, 'head', (0, 8.42, hz - 0.08), (1.00, 0.50, 1.16), bone)
+    box(P, 'head', (0, 8.70, hz - 0.12), (0.70, 0.16, 0.86), bone)
+    box(P, 'head', (0, 8.48, Z - 0.20), (0.92, 0.30, 0.28), bone, ('x', -22.5))                 # forehead, sloping back
+    box(P, 'head', (0, 8.38, hz - hd / 2 + 0.10), (0.92, 0.46, 0.24), bone, ('x', 22.5))        # back of the skull
+    box(P, 'head', (0, 7.90, hz - hd / 2 + 0.08), (0.84, 0.60, 0.14), bone)                     # occiput
+    box(P, 'head', (0, 7.98, Z - 0.04), (0.18, 0.38, 0.22), bone)                               # nasal bridge
+    box(P, 'head', (0, 7.74, Z - 0.12), (0.22, 0.16, 0.10), void)                               # nose cavity
+    box(P, 'head', (0, 7.62, Z - 0.10), (0.66, 0.16, 0.26), bone)                               # maxilla
+    box(P, 'head', (0, 7.50, Z - 0.06), (0.62, 0.12, 0.20), teeth)                              # upper teeth
+    box(P, 'head', (0, 7.36, Z - 0.08), (0.54, 0.10, 0.18), teeth)                              # lower teeth
+    box(P, 'head', (0, 7.24, Z - 0.12), (0.56, 0.20, 0.30), bone, ('x', 22.5))                  # chin, jaw hanging open
     for sx in (1, -1):
-        box(P, 'head', (sx * 0.50, 7.70, Z - 0.12), (0.46, 0.22, 0.30), bone, ('z', sx * 22.5)) # cheekbone, raked
-        box(P, 'head', (sx * (hw / 2 - 0.09), 7.96, hz + 0.05), (0.18, 0.70, hd * 0.70), bone)  # temple wall
-        box(P, 'head', (sx * (hw / 2 - 0.12), 7.52, hz + 0.16), (0.20, 0.50, 0.46), bone, ('x', -22.5))   # jaw hinge
-        box(P, 'head', (sx * 0.56, 8.72, hz - 0.05), (0.20, 0.62, 0.26), crystal, ('z', -sx * 22.5))      # horn crystals
-    box(P, 'head', (0, 8.90, hz - 0.02), (0.22, 0.60, 0.28), crystal)                           # crown crystal
-    box(P, 'head', (0, 7.56, Z - 0.08), (0.86, 0.16, 0.26), teeth)                              # upper teeth
-    box(P, 'head', (0, 7.34, Z - 0.14), (0.78, 0.22, 0.36), bone, ('x', 22.5))                  # lower jaw, hanging open
-    box(P, 'head', (0, 7.43, Z - 0.06), (0.70, 0.10, 0.20), teeth)                              # lower teeth
-    box(P, 'head', (0, 7.86, hz - hd / 2 + 0.06), (hw * 0.80, 0.80, 0.16), bone)                # occiput
+        box(P, 'head', (sx * 0.60, 8.38, hz - 0.08), (0.26, 0.50, 1.06), bone, ('z', sx * 22.5))        # dome side, leaning in
+        box(P, 'head', (sx * 0.34, 8.14, Z - 0.04), (0.62, 0.20, 0.30), bone, ('z', sx * 22.5))         # brow half: a scowl
+        box(P, 'head', (sx * 0.34, 7.94, Z - 0.22), (0.44, 0.32, 0.10), socket)                         # deep socket + ember
+        box(P, 'head', (sx * 0.52, 7.72, Z - 0.10), (0.44, 0.20, 0.34), bone, ('z', sx * 22.5))         # cheekbone, raked
+        box(P, 'head', (sx * 0.70, 7.76, hz + 0.15), (0.14, 0.18, 0.70), bone)                          # zygomatic arch
+        box(P, 'head', (sx * 0.64, 8.00, hz - 0.05), (0.14, 0.46, 0.80), bone)                          # temple, recessed
+        box(P, 'head', (sx * 0.40, 7.40, hz + 0.20), (0.14, 0.44, 0.50), bone, ('x', -22.5))            # jaw ramus
+        box(P, 'head', (sx * 0.50, 8.80, hz - 0.08), (0.20, 0.62, 0.26), crystal, ('z', -sx * 22.5))    # horn crystals
+    box(P, 'head', (0, 8.98, hz - 0.05), (0.22, 0.60, 0.28), crystal)                           # crown crystal
 
     # ---------------- arms
     (ax, ay, az), (aw, ah, ad) = MESH['arm']
@@ -267,7 +288,7 @@ def define_smith():
         a = add(P, f'arm_{q}', 'chest', (sx * 2.0, 6.8, 0.0))
         box(P, a, (sx * ax, ay - 0.25, az + 0.20), (aw * 0.55, ah * 0.74, ad * 0.50), blue)             # energy humerus
         for i, (dy, w_, d_) in enumerate(((0.62, 1.30, 1.50), (0.22, 1.16, 1.36), (-0.16, 1.02, 1.22))):   # 3 pauldron tiers
-            box(P, a, (sx * (ax + 0.16 + i * 0.07), ay + dy, az + 0.14), (w_, 0.30, d_), iron_s, ('z', -sx * 22.5))
+            box(P, a, (sx * (ax + 0.16 + i * 0.07), ay + dy, az + 0.14), (w_, 0.30, d_), iron_inlay, ('z', -sx * 22.5))
         box(P, a, (sx * (ax + 0.02), 7.36, az + 0.14), (0.26, 0.60, 0.30), crystal, ('z', -sx * 22.5))   # shoulder crystal
         box(P, a, (sx * (ax + aw / 2 - 0.02), 5.80, az + 0.20), (0.18, 0.90, ad * 0.62), iron)           # outer arm plate
         box(P, a, (sx * ax, 5.80, az + 0.20 + ad * 0.30), (aw * 0.56, 0.80, 0.16), iron_plain)           # front plate
@@ -305,7 +326,7 @@ def define_smith():
         sh = add(P, f'shin_{q}', lg, sp)
         box(P, sh, (sx * sx_, sy_, sz_), (sw * 0.52, shh * 1.05, sd * 0.50), blue)                       # energy tibia
         box(P, sh, (sx * sx_, 1.52, sz_ + sd / 2 - 0.16), (0.70, 0.44, 0.44), iron, ('x', 45))           # knee cop (diamond)
-        box(P, sh, (sx * sx_, sy_ - 0.06, sz_ + sd / 2 - 0.22), (sw * 0.82, shh * 0.84, 0.22), iron_s, ('x', 22.5))   # greave
+        box(P, sh, (sx * sx_, sy_ - 0.06, sz_ + sd / 2 - 0.22), (sw * 0.82, shh * 0.84, 0.22), iron_inlay, ('x', 22.5))   # greave
         box(P, sh, (sx * (sx_ + sw / 2 - 0.10), sy_, sz_), (0.20, shh * 0.92, sd * 0.80), iron, ('z', -sx * 22.5))
         box(P, sh, (sx * sx_, sy_, sz_ - sd / 2 + 0.14), (sw * 0.78, shh * 0.88, 0.20), iron_plain, ('x', -22.5))     # calf plate
         ft = add(P, f'foot_{q}', sh, fp)
@@ -330,7 +351,7 @@ def define_hammer():
         box(P, 'hammer', (X, Y + sy * 0.30, 0), (1.14, 0.10, 0.30), basalt)                    # centre strap
     for sx in (1, -1):                                                                          # side slabs: two per side, a slot between
         for sz in (1, -1):
-            box(P, 'hammer', (X + sx * 0.58, Y, sz * 0.50), (0.18, 0.84, 0.52), basalt)
+            box(P, 'hammer', (X + sx * 0.58, Y, sz * 0.50), (0.18, 0.56, 0.52), basalt)
     for sz in (1, -1):
         box(P, 'hammer', (X, Y, sz * 0.96), (1.32, 1.20, 0.28), metal(BASALTP, rivets=True))    # striking caps
         box(P, 'hammer', (X, Y, sz * 1.12), (0.80, 0.70, 0.10), fire)                           # hot face

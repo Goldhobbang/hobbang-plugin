@@ -1,5 +1,5 @@
-silhouette front: IoU 0.737, model area / mesh area 0.876
-silhouette side: IoU 0.802, model area / mesh area 0.958
-silhouette 3/4: IoU 0.853, model area / mesh area 1.081
+silhouette front: IoU 0.808, model area / mesh area 1.188
+silhouette side: IoU 0.818, model area / mesh area 1.192
+silhouette 3/4: IoU 0.824, model area / mesh area 1.200
 mesh  bbox w/h/d 6.03 / 9.00 / 3.00
-model bbox w/h/d 5.95 / 9.20 / 2.61
+model bbox w/h/d 6.41 / 8.84 / 3.11
