@@ -1,0 +1,16 @@
+{
+  "replace": false,
+  "values": [
+    "hobbang:excavation",
+    "hobbang:timber",
+    "hobbang:forge_affinity",
+    "hobbang:fragility_curse",
+    "hobbang:telekinesis",
+    "hobbang:auto_smelt",
+    "hobbang:life_mending",
+    "hobbang:superior_sharpness",
+    "hobbang:superior_protection",
+    "hobbang:thunderstrike",
+    "hobbang:explosive"
+  ]
+}

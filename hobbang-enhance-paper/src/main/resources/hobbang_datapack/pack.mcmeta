@@ -1,0 +1,8 @@
+{
+  "pack": {
+    "description": "홉방 강화 (Paper 플러그인 내장 데이터팩)",
+    "pack_format": 94,
+    "min_format": 94,
+    "max_format": 94
+  }
+}

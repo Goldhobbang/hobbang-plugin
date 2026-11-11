@@ -1,0 +1,21 @@
+{
+  "anvil_cost": 4,
+  "description": {
+    "text": "급소"
+  },
+  "effects": {},
+  "min_cost": {
+    "base": 12,
+    "per_level_above_first": 12
+  },
+  "max_cost": {
+    "base": 62,
+    "per_level_above_first": 12
+  },
+  "max_level": 3,
+  "slots": [
+    "mainhand"
+  ],
+  "supported_items": "#minecraft:enchantable/sharp_weapon",
+  "weight": 2
+}

@@ -1,0 +1,34 @@
+{
+  "id": "hobbang:weapon/crystal_greatsword",
+  "height_blocks": 2.3,
+  "resolution": 32,
+  "texels_per_voxel": 2,
+  "model_units_per_block": 13.0,
+  "item_display_scale": 1.2307692307692308,
+  "front": "+Z (boss local, yaw 0 = south)",
+  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "parts": [
+    {
+      "name": "held",
+      "item_model": "hobbang:weapon/crystal_greatsword/held",
+      "parent": null,
+      "pivot_blocks": [
+        0.0,
+        0.52,
+        0.0
+      ],
+      "translation": [
+        0.0,
+        0.52,
+        0.0
+      ],
+      "scale": 1.2307692307692308,
+      "spin_axis": null,
+      "cuboids": 49,
+      "faces": 226,
+      "texture_px": 256,
+      "voxels": 892
+    }
+  ],
+  "total_cuboids": 49
+}

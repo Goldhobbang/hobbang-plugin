@@ -1,0 +1,41 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:diamond_sword"
+    },
+    "title": {
+      "text": "강화의 고수"
+    },
+    "description": {
+      "text": "장비를 +10 강화하세요"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "c": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "predicates": {
+              "minecraft:custom_data": "{PublicBukkitValues:{\"hobbang:level\":10}}"
+            }
+          }
+        ]
+      }
+    },
+    "code": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "parent": "hobbang:first",
+  "requirements": [
+    [
+      "c",
+      "code"
+    ]
+  ]
+}

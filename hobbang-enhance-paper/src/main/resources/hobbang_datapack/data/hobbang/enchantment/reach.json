@@ -1,0 +1,44 @@
+{
+  "anvil_cost": 4,
+  "description": {
+    "text": "사거리"
+  },
+  "effects": {
+    "minecraft:attributes": [
+      {
+        "attribute": "minecraft:entity_interaction_range",
+        "id": "hobbang:enchantment.reach",
+        "operation": "add_value",
+        "amount": {
+          "type": "minecraft:linear",
+          "base": 0.5,
+          "per_level_above_first": 0.5
+        }
+      },
+      {
+        "attribute": "minecraft:block_interaction_range",
+        "id": "hobbang:enchantment.reach_block",
+        "operation": "add_value",
+        "amount": {
+          "type": "minecraft:linear",
+          "base": 0.5,
+          "per_level_above_first": 0.5
+        }
+      }
+    ]
+  },
+  "min_cost": {
+    "base": 12,
+    "per_level_above_first": 15
+  },
+  "max_cost": {
+    "base": 62,
+    "per_level_above_first": 15
+  },
+  "max_level": 2,
+  "slots": [
+    "mainhand"
+  ],
+  "supported_items": "#hobbang:reach_items",
+  "weight": 2
+}

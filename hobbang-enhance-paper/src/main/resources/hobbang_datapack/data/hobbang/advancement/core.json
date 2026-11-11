@@ -1,0 +1,37 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:knowledge_book",
+      "components": {
+        "minecraft:enchantment_glint_override": true,
+        "minecraft:item_model": "minecraft:ender_eye"
+      }
+    },
+    "title": {
+      "text": "심연을 들여다보다"
+    },
+    "description": {
+      "text": "심연의 핵을 만드세요"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "c": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:knowledge_book",
+            "predicates": {
+              "minecraft:custom_data": "{PublicBukkitValues:{\"hobbang:id\":\"abyss_core\"}}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "parent": "hobbang:forge"
+}

@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "hobbang:lifesteal",
+    "hobbang:soul_harvest",
+    "hobbang:frostbite",
+    "hobbang:vitality",
+    "hobbang:swiftness",
+    "hobbang:fragility_curse",
+    "hobbang:venom",
+    "hobbang:critical",
+    "hobbang:reach",
+    "hobbang:stomping"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "hobbang:weapon/stormcaller",
+  "height_blocks": 2.2,
+  "resolution": 24,
+  "texels_per_voxel": 2,
+  "model_units_per_block": 14.5,
+  "item_display_scale": 1.103448275862069,
+  "front": "+Z (boss local, yaw 0 = south)",
+  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "parts": [
+    {
+      "name": "held",
+      "item_model": "hobbang:weapon/stormcaller/held",
+      "parent": null,
+      "pivot_blocks": [
+        0.0,
+        0.6,
+        0.0
+      ],
+      "translation": [
+        0.0,
+        0.6,
+        0.0
+      ],
+      "scale": 1.103448275862069,
+      "spin_axis": null,
+      "cuboids": 203,
+      "faces": 906,
+      "texture_px": 256,
+      "voxels": 2522
+    }
+  ],
+  "total_cuboids": 203
+}

@@ -1,0 +1,43 @@
+{
+  "id": "hobbang:boss/smith_hammer",
+  "height_blocks": 4.2,
+  "resolution": 12,
+  "texels_per_voxel": 2,
+  "model_units_per_block": 8.0,
+  "item_display_scale": 2.0,
+  "front": "+Z (boss local, yaw 0 = south)",
+  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "parts": [
+    {
+      "name": "hammer",
+      "item_model": "hobbang:boss/smith_hammer/hammer",
+      "parent": null,
+      "pivot_blocks": [
+        0.3,
+        2.9,
+        0.0
+      ],
+      "translation": [
+        0.3,
+        2.9,
+        0.0
+      ],
+      "scale": 2.0,
+      "spin_axis": null,
+      "cuboids": 259,
+      "faces": 997,
+      "texture_px": 512,
+      "voxels": 4241
+    }
+  ],
+  "total_cuboids": 259,
+  "attach": {
+    "boss": "abyssal_smith",
+    "part": "hammer",
+    "pivot_blocks": [
+      -2.35,
+      3.5,
+      0.45
+    ]
+  }
+}

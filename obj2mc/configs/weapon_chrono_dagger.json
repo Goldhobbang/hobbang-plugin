@@ -1,0 +1,28 @@
+{
+ "id": "weapon/chrono_dagger",
+ "namespace": "hobbang",
+ "obj": "/workspace/mc/models/chrono_scythe/Meshy_AI_chrono_long_scythe_20261110_texture_obj/Meshy_AI_chrono_long_scythe_20261110_texture.obj",
+ "texture": "/workspace/mc/models/chrono_scythe/Meshy_AI_chrono_long_scythe_20261110_texture_obj/Meshy_AI_chrono_long_scythe_20261110_texture.png",
+ "height_blocks": 2.5,
+ "resolution": 24,
+ "texels_per_voxel": 2,
+ "color_knn": 4,
+ "sample_offset_vox": 0.25,
+ "min_speck_voxels": 6,
+ "per_part_speck_voxels": 3,
+ "layout_height": 2.5,
+ "parts": [
+  {
+   "name": "held",
+   "parent": null,
+   "pivot": [
+    0.54,
+    0.55,
+    0
+   ],
+   "regions": [
+    {}
+   ]
+  }
+ ]
+}

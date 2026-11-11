@@ -1,0 +1,126 @@
+{
+  "id": "hobbang:boss/chrono_sentinel",
+  "height_blocks": 5.0,
+  "resolution": 24,
+  "texels_per_voxel": 2,
+  "model_units_per_block": 7.0,
+  "item_display_scale": 2.2857142857142856,
+  "front": "+Z (boss local, yaw 0 = south)",
+  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "parts": [
+    {
+      "name": "ring",
+      "item_model": "hobbang:boss/chrono_sentinel/ring",
+      "parent": "body",
+      "pivot_blocks": [
+        0.0041,
+        4.2407,
+        0.1224
+      ],
+      "translation": [
+        0.0041,
+        4.2407,
+        0.1224
+      ],
+      "scale": 2.2857142857142856,
+      "spin_axis": [
+        0.0041,
+        0.9326,
+        0.3608
+      ],
+      "cuboids": 538,
+      "faces": 2409,
+      "texture_px": 512,
+      "voxels": 7120
+    },
+    {
+      "name": "clock",
+      "item_model": "hobbang:boss/chrono_sentinel/clock",
+      "parent": "body",
+      "pivot_blocks": [
+        0.0013,
+        3.1295,
+        0.5763
+      ],
+      "translation": [
+        0.0013,
+        3.1295,
+        0.5763
+      ],
+      "scale": 2.2857142857142856,
+      "spin_axis": [
+        -0.0033,
+        -0.0311,
+        0.9995
+      ],
+      "cuboids": 73,
+      "faces": 318,
+      "texture_px": 256,
+      "voxels": 4985
+    },
+    {
+      "name": "arm_r",
+      "item_model": "hobbang:boss/chrono_sentinel/arm_r",
+      "parent": "body",
+      "pivot_blocks": [
+        -0.9821428571428573,
+        3.6607142857142856,
+        0.0
+      ],
+      "translation": [
+        -0.9821428571428573,
+        3.6607142857142856,
+        0.0
+      ],
+      "scale": 2.2857142857142856,
+      "spin_axis": null,
+      "cuboids": 865,
+      "faces": 3496,
+      "texture_px": 512,
+      "voxels": 12105
+    },
+    {
+      "name": "arm_l",
+      "item_model": "hobbang:boss/chrono_sentinel/arm_l",
+      "parent": "body",
+      "pivot_blocks": [
+        0.9821428571428573,
+        3.6607142857142856,
+        0.0
+      ],
+      "translation": [
+        0.9821428571428573,
+        3.6607142857142856,
+        0.0
+      ],
+      "scale": 2.2857142857142856,
+      "spin_axis": null,
+      "cuboids": 861,
+      "faces": 3351,
+      "texture_px": 512,
+      "voxels": 12156
+    },
+    {
+      "name": "body",
+      "item_model": "hobbang:boss/chrono_sentinel/body",
+      "parent": null,
+      "pivot_blocks": [
+        0.0,
+        2.5,
+        0.0
+      ],
+      "translation": [
+        0.0,
+        2.5,
+        0.0
+      ],
+      "scale": 2.2857142857142856,
+      "spin_axis": null,
+      "cuboids": 1561,
+      "faces": 6343,
+      "texture_px": 1024,
+      "voxels": 33829
+    }
+  ],
+  "total_cuboids": 3898
+}

@@ -1,0 +1,422 @@
+{
+  "anvil_cost": 8,
+  "description": {
+    "text": "상위 날카로움",
+    "color": "gold"
+  },
+  "effects": {
+    "minecraft:damage": [
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:linear",
+            "base": 4.0,
+            "per_level_above_first": 1.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:inverted",
+          "term": {
+            "condition": "minecraft:entity_properties",
+            "entity": "attacker",
+            "predicate": {
+              "equipment": {
+                "mainhand": {
+                  "predicates": {
+                    "minecraft:enchantments": [
+                      {
+                        "enchantments": "minecraft:sharpness",
+                        "levels": {
+                          "min": 1
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": 3.0,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 1,
+                        "max": 1
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": 2.5,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 2,
+                        "max": 2
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": 2.0,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 3,
+                        "max": 3
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": 1.5,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 4,
+                        "max": 4
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": 1.0,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 5,
+                        "max": 5
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": 0.5,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 6,
+                        "max": 6
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": 0.0,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 7,
+                        "max": 7
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": -0.5,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 8,
+                        "max": 8
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": -1.0,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 9,
+                        "max": 9
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "effect": {
+          "type": "minecraft:add",
+          "value": {
+            "type": "minecraft:clamped",
+            "value": {
+              "type": "minecraft:linear",
+              "base": -1.5,
+              "per_level_above_first": 1.0
+            },
+            "min": 0.0,
+            "max": 100.0
+          }
+        },
+        "requirements": {
+          "condition": "minecraft:entity_properties",
+          "entity": "attacker",
+          "predicate": {
+            "equipment": {
+              "mainhand": {
+                "predicates": {
+                  "minecraft:enchantments": [
+                    {
+                      "enchantments": "minecraft:sharpness",
+                      "levels": {
+                        "min": 10,
+                        "max": 10
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "exclusive_set": [
+    "minecraft:smite",
+    "minecraft:bane_of_arthropods"
+  ],
+  "min_cost": {
+    "base": 30,
+    "per_level_above_first": 15
+  },
+  "max_cost": {
+    "base": 80,
+    "per_level_above_first": 15
+  },
+  "max_level": 3,
+  "slots": [
+    "mainhand"
+  ],
+  "supported_items": "#minecraft:enchantable/sharp_weapon",
+  "weight": 1
+}

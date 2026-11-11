@@ -1,0 +1,139 @@
+{
+  "id": "hobbang:boss/abyssal_smith",
+  "height_blocks": 9.0,
+  "resolution": 12,
+  "texels_per_voxel": 2,
+  "model_units_per_block": 4.25,
+  "item_display_scale": 3.764705882352941,
+  "front": "+Z (boss local, yaw 0 = south)",
+  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "parts": [
+    {
+      "name": "head",
+      "item_model": "hobbang:boss/abyssal_smith/head",
+      "parent": "torso",
+      "pivot_blocks": [
+        0.0,
+        7.2,
+        0.0
+      ],
+      "translation": [
+        0.0,
+        7.2,
+        0.0
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "cuboids": 180,
+      "faces": 726,
+      "texture_px": 256,
+      "voxels": 4595
+    },
+    {
+      "name": "arm_r",
+      "item_model": "hobbang:boss/abyssal_smith/arm_r",
+      "parent": "torso",
+      "pivot_blocks": [
+        -2.0,
+        6.8,
+        0.0
+      ],
+      "translation": [
+        -2.0,
+        6.8,
+        0.0
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "cuboids": 427,
+      "faces": 1732,
+      "texture_px": 512,
+      "voxels": 7670
+    },
+    {
+      "name": "arm_l",
+      "item_model": "hobbang:boss/abyssal_smith/arm_l",
+      "parent": "torso",
+      "pivot_blocks": [
+        2.0,
+        6.8,
+        0.0
+      ],
+      "translation": [
+        2.0,
+        6.8,
+        0.0
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "cuboids": 445,
+      "faces": 1771,
+      "texture_px": 512,
+      "voxels": 7544
+    },
+    {
+      "name": "leg_r",
+      "item_model": "hobbang:boss/abyssal_smith/leg_r",
+      "parent": null,
+      "pivot_blocks": [
+        -0.9,
+        2.6,
+        0.0
+      ],
+      "translation": [
+        -0.9,
+        2.6,
+        0.0
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "cuboids": 304,
+      "faces": 1149,
+      "texture_px": 512,
+      "voxels": 10991
+    },
+    {
+      "name": "leg_l",
+      "item_model": "hobbang:boss/abyssal_smith/leg_l",
+      "parent": null,
+      "pivot_blocks": [
+        0.9,
+        2.6,
+        0.0
+      ],
+      "translation": [
+        0.9,
+        2.6,
+        0.0
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "cuboids": 305,
+      "faces": 1162,
+      "texture_px": 512,
+      "voxels": 11000
+    },
+    {
+      "name": "torso",
+      "item_model": "hobbang:boss/abyssal_smith/torso",
+      "parent": null,
+      "pivot_blocks": [
+        0.0,
+        2.7,
+        0.0
+      ],
+      "translation": [
+        0.0,
+        2.7,
+        0.0
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "cuboids": 1083,
+      "faces": 4211,
+      "texture_px": 1024,
+      "voxels": 39735
+    }
+  ],
+  "total_cuboids": 2744
+}

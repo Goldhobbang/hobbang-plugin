@@ -1,0 +1,24 @@
+{
+  "anvil_cost": 8,
+  "description": {
+    "text": "생명 수선"
+  },
+  "effects": {},
+  "exclusive_set": [
+    "minecraft:mending"
+  ],
+  "min_cost": {
+    "base": 20,
+    "per_level_above_first": 15
+  },
+  "max_cost": {
+    "base": 70,
+    "per_level_above_first": 15
+  },
+  "max_level": 3,
+  "slots": [
+    "any"
+  ],
+  "supported_items": "#minecraft:enchantable/durability",
+  "weight": 1
+}

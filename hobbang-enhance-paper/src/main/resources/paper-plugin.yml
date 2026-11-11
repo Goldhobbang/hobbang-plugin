@@ -1,0 +1,11 @@
+name: HobbangEnhance
+version: '${version}'
+main: com.hobbang.enhance.HobbangPlugin
+bootstrapper: com.hobbang.enhance.HobbangBootstrap
+api-version: '1.21.11'
+description: 홉방 강화 — 장비 강화(+15), 강화대 창, 소환대, 보스 4종(신규 패턴), 보스 무기, 커스텀 인첸트 20종, 저렴한 인첸트 (바닐라 클라이언트 지원)
+authors: [hobbang]
+permissions:
+  hobbang.admin:
+    description: /hobbang 관리자 명령어 (kit, set, boss, give, book, displays, reload)
+    default: op

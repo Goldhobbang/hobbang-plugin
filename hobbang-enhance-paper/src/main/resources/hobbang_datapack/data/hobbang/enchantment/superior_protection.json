@@ -1,0 +1,27 @@
+{
+  "anvil_cost": 8,
+  "description": {
+    "text": "상위 보호",
+    "color": "gold"
+  },
+  "effects": {},
+  "exclusive_set": [
+    "minecraft:fire_protection",
+    "minecraft:blast_protection",
+    "minecraft:projectile_protection"
+  ],
+  "min_cost": {
+    "base": 30,
+    "per_level_above_first": 15
+  },
+  "max_cost": {
+    "base": 80,
+    "per_level_above_first": 15
+  },
+  "max_level": 3,
+  "slots": [
+    "armor"
+  ],
+  "supported_items": "#minecraft:enchantable/armor",
+  "weight": 1
+}
