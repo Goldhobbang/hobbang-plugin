@@ -68,6 +68,8 @@ public abstract class DisplayBoss extends Boss {
 	protected boolean dying = false;
 	protected int deathTick = 0, deathLen = 0;
 	protected org.bukkit.entity.Player deathKiller;
+	/** v1.5.0: 마지막으로 때린 플레이어 (치명타 이벤트에서 못 구했을 때 방송용) */
+	protected org.bukkit.entity.Player lastHitter;
 	protected org.bukkit.Location deathAt;
 	private Transformation[] deathRest;
 	private Transformation[] assembleCompressed;
@@ -972,6 +974,11 @@ public abstract class DisplayBoss extends Boss {
 		}
 		if (dying) { e.setCancelled(true); return; }
 		double amount = e.getDamage();
+		if (e instanceof EntityDamageByEntityEvent hit0) {
+			org.bukkit.entity.Entity dm = hit0.getDamager();
+			if (dm instanceof org.bukkit.entity.Player pl0) lastHitter = pl0;
+			else if (dm instanceof org.bukkit.entity.Projectile pj0 && pj0.getShooter() instanceof org.bukkit.entity.Player pl0) lastHitter = pl0;
+		}
 		e.setDamage(Math.min(amount * damageMultiplier(), 40.0));
 		if (health() - e.getFinalDamage() <= 0) {
 			e.setCancelled(true);
@@ -980,7 +987,7 @@ public abstract class DisplayBoss extends Boss {
 				if (dmg instanceof org.bukkit.entity.Player pl) deathKiller = pl;
 				else if (dmg instanceof org.bukkit.entity.Projectile proj && proj.getShooter() instanceof org.bukkit.entity.Player pl) deathKiller = pl;
 			}
-			if (deathKiller == null) deathKiller = mob.getKiller();
+			if (deathKiller == null) deathKiller = lastHitter != null ? lastHitter : mob.getKiller();
 			startDeath();
 			return;
 		}
@@ -1020,14 +1027,19 @@ public abstract class DisplayBoss extends Boss {
 
 	protected void onDeathStart() {}
 
-	private void tickDeath() {
+	protected void tickDeath() {
 		deathTick++;
 		float u = Math.min(1F, deathTick / (float) deathLen);
-		if (deathTick == 1 || deathTick % ANIM_INTERVAL == 0) {
-			updateRiderOffset();
-			poseDeath(u);
+		// v1.5.0: 연출 중 예외가 나도 finishDeath 는 반드시 도달 (예전엔 예외가 틱을 끊어 정산·discard 가 미뤄졌다)
+		try {
+			if (deathTick == 1 || deathTick % ANIM_INTERVAL == 0) {
+				updateRiderOffset();
+				poseDeath(u);
+			}
+			deathFx(deathTick, u);
+		} catch (Exception ex) {
+			if (deathTick < 4) com.hobbang.enhance.HobbangPlugin.get().getLogger().warning("death anim error (" + kind.id + "): " + ex);
 		}
-		deathFx(deathTick, u);
 		if (deathTick >= deathLen) finishDeath();
 	}
 
@@ -1063,13 +1075,20 @@ public abstract class DisplayBoss extends Boss {
 		dying = false;
 		org.bukkit.Location at = (deathAt != null ? deathAt : (mob.isValid() ? mob.getLocation() : null));
 		if (at == null) at = new org.bukkit.Location(org.bukkit.Bukkit.getWorlds().get(0), 0, 64, 0);
-		org.bukkit.entity.Player killer = deathKiller != null ? deathKiller : (mob.isValid() ? mob.getKiller() : null);
-		settleRewards(at, killer);
-		com.hobbang.enhance.arena.ArenaDress.restore(this);
-		Fx.discardOwned(uuid);
-		discardParts();
-		hideBar();
-		if (mob.isValid() && !mob.isDead()) mob.remove();
+		org.bukkit.entity.Player killer = deathKiller != null ? deathKiller : (lastHitter != null ? lastHitter : (mob.isValid() ? mob.getKiller() : null));
+		final org.bukkit.Location fat = at;
+		// v1.5.0: 단계마다 격리 — 보상/투기장 복구에서 예외가 나도 파츠 discard·히트박스 제거는 항상 실행
+		safe("rewards", () -> settleRewards(fat, killer));
+		safe("arena", () -> com.hobbang.enhance.arena.ArenaDress.restore(this));
+		safe("fx", () -> Fx.discardOwned(uuid));
+		safe("parts", this::discardParts);
+		safe("bar", this::hideBar);
+		safe("mob", () -> { if (mob.isValid() && !mob.isDead()) mob.remove(); });
+	}
+
+	private void safe(String what, Runnable r) {
+		try { r.run(); }
+		catch (Exception ex) { com.hobbang.enhance.HobbangPlugin.get().getLogger().warning("finishDeath " + what + " (" + kind.id + "): " + ex); }
 	}
 
 	@Override

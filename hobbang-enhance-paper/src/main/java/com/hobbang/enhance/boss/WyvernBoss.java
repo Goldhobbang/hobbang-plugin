@@ -292,17 +292,35 @@ public class WyvernBoss extends DisplayBoss {
 		return mob.getLocation().toVector();
 	}
 
+	/**
+	 * v1.5.0: 이동 상태는 직접 들고 있는다. 1.21.11 좀벌레(AI/중력 끔)는 setVelocity 의 Y 가 먹지 않아
+	 * 히트박스가 높이 고정이었다 → XZ 는 속도로, Y 는 승객(파츠)을 유지한 채 텔레포트로 옮긴다.
+	 */
+	private final Vector vel = new Vector();
+
+	private void drive(Vector v) {
+		vel.copy(v);
+		mob.setVelocity(new Vector(v.getX(), 0, v.getZ()));
+		double dy = v.getY();
+		if (Math.abs(dy) < 1e-4) return;
+		Location l = mob.getLocation();
+		l.add(0, dy, 0);
+		// 땅/블록을 뚫고 내려가지 않게 (아래로 갈 때만 검사)
+		if (dy < 0 && BU.solidAt(mob.getWorld(), new Vector(l.getX(), l.getY(), l.getZ()))) { vel.setY(0); return; }
+		mob.teleport(l, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+	}
+
 	private void steer(Vector desired, double accel, double maxSpeed) {
 		Vector d = desired.clone().subtract(pos());
 		double len = d.length();
-		Vector v = mob.getVelocity().multiply(0.88);
+		Vector v = vel.clone().multiply(0.88);
 		if (len > 1e-6) v.add(d.multiply(1 / len).multiply(Math.min(len, 6) * accel));
 		if (v.length() > maxSpeed) v.normalize().multiply(maxSpeed);
-		mob.setVelocity(v);
+		drive(v);
 	}
 
 	private void faceVelocity(float maxTurn) {
-		Vector v = mob.getVelocity();
+		Vector v = vel;
 		double hz = v.getX() * v.getX() + v.getZ() * v.getZ();
 		if (hz > 1e-3) {
 			float want = (float) Math.toDegrees(Math.atan2(-v.getX(), v.getZ()));
@@ -403,11 +421,11 @@ public class WyvernBoss extends DisplayBoss {
 				Vector d = diveTarget.clone().subtract(pos());
 				double len = d.length();
 				Vector dir = len > 1e-6 ? d.clone().multiply(1 / len) : new Vector(0, -1, 0);
-				mob.setVelocity(dir.clone().multiply(phase >= 3 ? 2.0 : 1.6));
+				drive(dir.clone().multiply(phase >= 3 ? 2.0 : 1.6));
 				faceVelocity(30);
 				w.spawnParticle(Particle.CLOUD, here.getX(), here.getY() + 0.5, here.getZ(), 3, 0.5, 0.3, 0.5, 0.01);
 				if (len < 2.0 || modeTimer <= 0 || (modeTimer < 38 && collided(dir))) {
-					mob.setVelocity(new Vector());
+					drive(new Vector());
 					BU.sound(here, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 2.5F, 0.7F);
 					w.spawnParticle(Particle.EXPLOSION_EMITTER, here.getX(), here.getY(), here.getZ(), 1, 0, 0, 0, 0);
 					w.spawnParticle(Particle.GUST_EMITTER_LARGE, here.getX(), here.getY(), here.getZ(), 1, 0, 0, 0, 0);
@@ -419,7 +437,8 @@ public class WyvernBoss extends DisplayBoss {
 				}
 			}
 			case M_REST -> {
-				mob.setVelocity(mob.getVelocity().multiply(0.5).add(new Vector(0, mob.isOnGround() ? 0 : -0.08, 0)));
+				// 착지 후엔 남은 속도를 죽이고, 공중이면 천천히 내려앉는다 (블록 검사는 drive 가 함)
+				drive(vel.clone().multiply(0.5).setY(-0.12));
 				if (modeTimer % 10 == 0) w.spawnParticle(Particle.CLOUD, here.getX(), here.getY() + 1, here.getZ(), 4, 0.6, 0.3, 0.6, 0.01);
 				if (modeTimer <= 0) { mode = M_CLIMB; modeTimer = 30; BU.sound(here, Sound.ENTITY_ENDER_DRAGON_FLAP, SoundCategory.HOSTILE, 3F, 0.8F); }
 			}
@@ -578,21 +597,16 @@ public class WyvernBoss extends DisplayBoss {
 	@Override
 	protected void onDeathStart() {
 		deathU = 0;
-		mob.setGravity(mode != M_REST && !mob.isOnGround());
+		mob.setGravity(false);   // v1.5.0: 낙하는 drive() 로 직접 (중력/속도 Y 가 안 먹는다)
 		BU.sound(mob.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 3F, 0.5F);
 	}
 
 	@Override
 	protected void poseDeath(float u) {
 		deathU = u;
-		if (u < 0.32F && mob.hasGravity()) {
-			org.bukkit.util.Vector v = mob.getVelocity();
-			mob.setVelocity(new org.bukkit.util.Vector(v.getX() * 0.7, Math.min(v.getY(), -0.55), v.getZ() * 0.7));
-			if (mob.isOnGround()) { mob.setGravity(false); mob.setVelocity(new org.bukkit.util.Vector()); }
-		} else {
-			mob.setGravity(false);
-			mob.setVelocity(new org.bukkit.util.Vector());
-		}
+		// 처음 0.32 구간엔 땅에 닿을 때까지 떨어진다 (3틱마다 호출되므로 틱당 0.55 × 3)
+		if (u < 0.32F && mode != M_REST) drive(new Vector(vel.getX() * 0.7, -1.65, vel.getZ() * 0.7));
+		else drive(new Vector());
 		if (modelMode) poseModel(animTick, 8, -30);
 		else poseParts(animTick); // 레거시 블록 모델: 기존 목/꼬리 + 기울어짐은 poseParts가 flyRoll을 씀
 	}

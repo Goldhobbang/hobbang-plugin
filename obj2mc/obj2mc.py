@@ -44,12 +44,28 @@ def log(*a):
 
 
 # ----------------------------------------------------------------------------- mesh
+MODELS_ROOT = os.path.join(HERE, '..', 'work', 'models')
+
+
+def find_asset(base, p):
+    """config paths were written for the build box (/workspace/mc/models/...). If the path does not
+    exist, look for the same file name under MODELS_ROOT (zips from models-3d/ unpacked there)."""
+    q = os.path.join(base, p)
+    if os.path.exists(q):
+        return q
+    name = os.path.basename(p)
+    for root, _, fs in os.walk(MODELS_ROOT):
+        if name in fs:
+            return os.path.join(root, name)
+    raise FileNotFoundError(p)
+
+
 def load_mesh(cfg, base):
-    path = os.path.join(base, cfg['obj'])
+    path = find_asset(base, cfg['obj'])
     m = trimesh.load(path, process=False, force='mesh')
     tex_path = cfg.get('texture')
     if tex_path:
-        tex = np.array(Image.open(os.path.join(base, tex_path)).convert('RGBA'))
+        tex = np.array(Image.open(find_asset(base, tex_path)).convert('RGBA'))
     else:
         tex = np.array(m.visual.material.image.convert('RGBA'))
     v = np.asarray(m.vertices, np.float64)
@@ -495,7 +511,7 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('config')
-    ap.add_argument('--pack', default='/workspace/mc/resourcepack/hobbang-pack')
+    ap.add_argument('--pack', default=os.path.join(HERE, '..', 'resourcepack', 'hobbang-pack'))
     ap.add_argument('--resolution', type=float)
     ap.add_argument('--texels', type=int)
     ap.add_argument('--preview', action='store_true')

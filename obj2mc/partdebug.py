@@ -19,7 +19,7 @@ def gridify(im, center, ext, horiz_axis_sign=1):
     return im
 
 cfg = json.load(open(sys.argv[1])); base = os.path.dirname(os.path.abspath(sys.argv[1]))
-pack = os.environ.get('PACK', '/workspace/mc/resourcepack/hobbang-pack')
+pack = os.environ.get('PACK', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'resourcepack', 'hobbang-pack'))
 mid = cfg['id']
 man = json.load(open(os.path.join(os.path.dirname(os.path.abspath(pack)), 'manifests', mid.replace('/', '__') + '.json')))
 v, f, uv, tex = obj2mc.load_mesh(cfg, base)
@@ -37,5 +37,5 @@ for yaw, nm, sg in [(0, 'front (horiz=+X)', 1), (90, 'side from +X (horiz=-Z)', 
     for i, p in enumerate(man['parts']):
         dr.rectangle([5, 25 + 14 * i, 15, 35 + 14 * i], fill=tuple(int(x) for x in pal[0, i, :3])); dr.text((20, 24 + 14 * i), p['name'], fill=(255, 255, 255))
     ims.append(label(gridify(blend, c, e), nm))
-out = os.path.join(os.environ.get('PREVIEWS', '/workspace/mc/resourcepack/previews'), mid.split('/')[-1] + '_partdebug.png')
+out = os.path.join(os.environ.get('PREVIEWS', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'work', 'previews')), mid.split('/')[-1] + '_partdebug.png')
 grid(ims, 2).save(out); print(out)

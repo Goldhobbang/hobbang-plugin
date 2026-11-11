@@ -52,7 +52,7 @@ def pack_tris(pack, man):
 VIEWS = [('front', 0, 8), ('3/4', -40, 15), ('side', 90, 5), ('back 3/4', 145, 15)]
 
 
-def make_previews(cfg, base, pack, man, outdir='/workspace/mc/resourcepack/previews', size=480):
+def make_previews(cfg, base, pack, man, outdir=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'work', 'previews'), size=480):
     os.makedirs(outdir, exist_ok=True)
     tag = man['id'].split('/')[-1]
     v, f, uv, tex = load_mesh(cfg, base)

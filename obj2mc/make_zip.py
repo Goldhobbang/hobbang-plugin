@@ -1,7 +1,7 @@
 """Zip the pack deterministically and print sha1 (for server.properties resource-pack-sha1)."""
 import hashlib, os, sys, zipfile
-src = sys.argv[1] if len(sys.argv) > 1 else '/workspace/mc/resourcepack/hobbang-pack'
-dst = sys.argv[2] if len(sys.argv) > 2 else '/workspace/mc/resourcepack/hobbang-pack.zip'
+src = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'resourcepack', 'hobbang-pack')
+dst = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'resourcepack', 'hobbang-pack.zip')
 files = []
 for root, _, fs in os.walk(src):
     for f in fs:

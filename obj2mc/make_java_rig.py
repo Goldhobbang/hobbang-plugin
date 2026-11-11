@@ -1,7 +1,7 @@
 """manifests/boss__*.json -> BossModels.java (pivot/scale/spin-axis table for the plugin)."""
 import json, glob, os, sys
 man_dir = os.path.join(os.path.dirname(__file__), '..', 'resourcepack', 'manifests')
-out = sys.argv[1] if len(sys.argv) > 1 else '/workspace/mc/hobbang-enhance-paper/src/main/java/com/hobbang/enhance/boss/BossModels.java'
+out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), '..', 'hobbang-enhance-paper', 'src', 'main', 'java', 'com', 'hobbang', 'enhance', 'boss', 'BossModels.java')
 f = lambda v: '%.4fF' % v
 lines = []
 for path in sorted(glob.glob(os.path.join(man_dir, 'boss__*.json'))):

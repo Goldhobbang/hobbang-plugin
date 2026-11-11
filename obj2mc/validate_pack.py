@@ -4,7 +4,7 @@ model element bounds (-16..32), face names, uv ranges, texture refs -> PNG files
 (and that they live under textures/item so the items atlas picks them up)."""
 import json, os, sys, zipfile
 from PIL import Image
-pack = sys.argv[1] if len(sys.argv) > 1 else '/workspace/mc/resourcepack/hobbang-pack'
+pack = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'resourcepack', 'hobbang-pack')
 client = '/home/box/.gradle/caches/fabric-loom/1.21.11/minecraft-client.jar'
 err = []; warn = []
 meta = json.load(open(os.path.join(pack, 'pack.mcmeta')))['pack']

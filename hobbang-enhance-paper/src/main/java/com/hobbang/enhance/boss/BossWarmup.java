@@ -81,4 +81,54 @@ public final class BossWarmup {
 			}
 		}, 1L, 1L);
 	}
+
+	/**
+	 * v1.5.0: 첫 대장장이 소환 스파이크(~104ms)는 디스플레이 모델 로딩만이 아니라 보스 클래스 초기화,
+	 * 위더 스켈레톤 + 장비 + 탑승 디스플레이(발광) 경로의 첫 실행 비용이 섞여 있다. 같은 경로를 한 번
+	 * 미리 밟는다 (보이지 않는 더미, 바로 제거. 방송/투기장/소리 없음).
+	 */
+	private static void heavy(World w, Location at, List<ItemStack> items) {
+		try {
+			for (String c : new String[]{"SmithBoss", "ColossusBoss", "SentinelBoss", "WyvernBoss", "AssembleAnim", "BossPatterns", "BU", "Fx", "Rigid", "BossModels"})
+				Class.forName("com.hobbang.enhance.boss." + c);
+			Class.forName("com.hobbang.enhance.arena.ArenaDress");
+			if (!w.isChunkLoaded(at.getBlockX() >> 4, at.getBlockZ() >> 4)) return;
+			org.bukkit.entity.WitherSkeleton ws = w.spawn(at, org.bukkit.entity.WitherSkeleton.class, e -> {
+				e.setPersistent(false);
+				e.setAI(false);
+				e.setSilent(true);
+				e.setInvisible(true);
+				e.setRemoveWhenFarAway(true);
+				var sc = e.getAttribute(org.bukkit.attribute.Attribute.SCALE);
+				if (sc != null) sc.setBaseValue(3.0);
+				if (e.getEquipment() != null) {
+					e.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
+					e.getEquipment().setItemInMainHand(com.hobbang.enhance.item.HItem.SMITH_HAMMER.create());
+				}
+			});
+			List<org.bukkit.entity.Display> ds = new ArrayList<>();
+			for (ItemStack st : items) {
+				ItemDisplay d = w.spawn(at, ItemDisplay.class, e -> {
+					e.setPersistent(false);
+					e.setItemStack(st);
+					e.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+					e.setViewRange(0);
+					e.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
+					e.setGlowColorOverride(org.bukkit.Color.fromRGB(0x8040C0));
+					e.setGlowing(true);
+					e.setInterpolationDuration(3);
+					e.setTransformation(new Transformation(new Vector3f(0, 1, 0), new Quaternionf().rotateX(0.4F), new Vector3f(1F), new Quaternionf()));
+				});
+				ws.addPassenger(d);
+				ds.add(d);
+				if (ds.size() >= 8) break;
+			}
+			Bukkit.getScheduler().runTaskLater(HobbangPlugin.get(), () -> {
+				for (var d : ds) d.remove();
+				ws.remove();
+			}, 3L);
+		} catch (Exception ex) {
+			HobbangPlugin.get().getLogger().warning("보스 워밍업(히트박스 경로) 실패: " + ex);
+		}
+	}
 }

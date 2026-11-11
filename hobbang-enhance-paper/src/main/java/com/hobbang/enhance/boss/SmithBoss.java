@@ -211,6 +211,8 @@ public class SmithBoss extends DisplayBoss {
 	@Override
 	protected void serverTick() {
 		if (dead) return;
+		// v1.5.0: 죽음 연출 틱 누락 수정 — 이 분기가 없어서 무릎 꿇기·finishDeath 가 돌지 않았다
+		if (dying) { tickDeath(); return; }
 		tickParts();
 		if (assembling()) return;
 		EntityEquipment eq = mob.getEquipment();
