@@ -343,7 +343,7 @@ public class SmithBoss extends DisplayBoss {
 			for (int h = 0; h < need; h++) if (w.getBlockAt(bx, by + h, bz).isCollidable()) return false;
 			Location to = new Location(w, bx + 0.5, by, bz + 0.5, mob.getLocation().getYaw(), 0);
 			// v1.3.0: 모델 파츠(탑승 디스플레이)를 태운 채로 순간이동
-			return mob.teleport(to, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+			return mob.teleport(to);   // 1.21.10+: 탑승 파츠는 기본으로 유지된다
 		}
 		return false;
 	}

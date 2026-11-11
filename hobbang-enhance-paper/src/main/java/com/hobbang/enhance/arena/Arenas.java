@@ -194,7 +194,7 @@ public final class Arenas implements Listener {
 			Location to = a.spawn().add(0.5, b.kind.lift, 0.5);
 			to.setYaw(l.getYaw());
 			b.mob.getWorld().spawnParticle(Particle.REVERSE_PORTAL, l.getX(), l.getY() + 2, l.getZ(), 40, 1, 2, 1, 0.05);
-			b.mob.teleport(to, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+			b.mob.teleport(to);   // 1.21.10+: 탑승 파츠는 기본으로 유지된다 (RETAIN_PASSENGERS 플래그 제거 예정)
 		}
 	}
 }

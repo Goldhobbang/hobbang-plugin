@@ -22,6 +22,14 @@ import java.util.List;
 public final class BossWarmup {
 	private BossWarmup() {}
 
+	/** 워밍업 더미 (3틱 뒤 제거 예약). 그 전에 플러그인이 꺼지면 shutdown() 이 지운다 */
+	private static final List<org.bukkit.entity.Entity> PENDING = new ArrayList<>();
+
+	public static void shutdown() {
+		for (org.bukkit.entity.Entity e : PENDING) if (e.isValid()) e.remove();
+		PENDING.clear();
+	}
+
 	public static void start() {
 		List<World> worlds = Bukkit.getWorlds();
 		if (worlds.isEmpty()) return;
@@ -89,7 +97,7 @@ public final class BossWarmup {
 	 */
 	private static void heavy(World w, Location at, List<ItemStack> items) {
 		try {
-			for (String c : new String[]{"SmithBoss", "ColossusBoss", "SentinelBoss", "WyvernBoss", "AssembleAnim", "BossPatterns", "BU", "Fx", "Rigid", "BossModels"})
+			for (String c : new String[]{"SmithBoss", "ColossusBoss", "SentinelBoss", "WyvernBoss", "AssembleAnim", "BossPatterns", "BU", "Fx", "Rigid", "BossModels", "BossPoses", "BossMotion"})
 				Class.forName("com.hobbang.enhance.boss." + c);
 			Class.forName("com.hobbang.enhance.arena.ArenaDress");
 			if (!w.isChunkLoaded(at.getBlockX() >> 4, at.getBlockZ() >> 4)) return;
@@ -121,12 +129,11 @@ public final class BossWarmup {
 				});
 				ws.addPassenger(d);
 				ds.add(d);
+				PENDING.add(d);
 				if (ds.size() >= 8) break;
 			}
-			Bukkit.getScheduler().runTaskLater(HobbangPlugin.get(), () -> {
-				for (var d : ds) d.remove();
-				ws.remove();
-			}, 3L);
+			PENDING.add(ws);
+			Bukkit.getScheduler().runTaskLater(HobbangPlugin.get(), BossWarmup::shutdown, 3L);
 		} catch (Exception ex) {
 			HobbangPlugin.get().getLogger().warning("보스 워밍업(히트박스 경로) 실패: " + ex);
 		}

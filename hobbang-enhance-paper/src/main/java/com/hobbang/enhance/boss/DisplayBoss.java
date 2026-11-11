@@ -39,6 +39,8 @@ import java.util.Random;
  */
 public abstract class DisplayBoss extends Boss {
 	public static final int ANIM_INTERVAL = 3;
+	/** 사망 연출이 시작된 히트박스 표시 (엔티티와 함께 저장됨). 연출 도중 청크가 언로드됐다가 다시 로드되면 BossManager 가 지운다 */
+	public static final String DYING_TAG = "hobbang_dying";
 
 	protected int hurtFlash = 0;
 	protected int animTick = 0;
@@ -1044,6 +1046,7 @@ public abstract class DisplayBoss extends Boss {
 	protected void startDeath() {
 		if (dying || dead) return;
 		dying = true;
+		mob.addScoreboardTag(DYING_TAG);
 		deathTick = 0;
 		deathLen = Math.max(1, deathDuration());
 		deathAt = mob.getLocation().clone();

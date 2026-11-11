@@ -241,7 +241,7 @@ public class WyvernBoss extends DisplayBoss {
 		l.add(0, dy, 0);
 		// 땅/블록을 뚫고 내려가지 않게 (아래로 갈 때만 검사)
 		if (dy < 0 && BU.solidAt(mob.getWorld(), new Vector(l.getX(), l.getY(), l.getZ()))) { vel.setY(0); return; }
-		mob.teleport(l, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+		mob.teleport(l, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN);   // 1.21.10+: 탑승 파츠는 기본으로 유지된다
 	}
 
 	private void steer(Vector desired, double accel, double maxSpeed) {
