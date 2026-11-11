@@ -1,8 +1,8 @@
 {
  "id": "boss/abyssal_smith",
  "namespace": "hobbang",
- "obj": "/workspace/mc/models/smith_body/Meshy_AI_abyssal_smith_body_20261110_texture_obj/Meshy_AI_abyssal_smith_body_20261110_texture.obj",
- "texture": "/workspace/mc/models/smith_body/Meshy_AI_abyssal_smith_body_20261110_texture_obj/Meshy_AI_abyssal_smith_body_20261110_texture.png",
+ "obj": "../source/abyssal_smith/smith_body/Meshy_AI_abyssal_smith_body_20261110_texture_obj/Meshy_AI_abyssal_smith_body_20261110_texture.obj",
+ "texture": "../source/abyssal_smith/smith_body/Meshy_AI_abyssal_smith_body_20261110_texture_obj/Meshy_AI_abyssal_smith_body_20261110_texture.png",
  "height_blocks": 9.0,
  "source_yaw_deg": 0,
  "resolution": 12,

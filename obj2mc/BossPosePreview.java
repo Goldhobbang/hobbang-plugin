@@ -15,6 +15,8 @@ public final class BossPosePreview {
 
 	private static void smith() {
 		String boss = "abyssal_smith";
+		BossPoses.smith(output(boss, "Idle"), 0, 0, 0, 0, 0,
+			Frame.REST, Frame.REST, Frame.REST, Frame.REST, Frame.REST, Frame.REST);
 		String[] titles = {"Stride", "Hammer raised", "Impact", "Recovery"};
 		int[] ages = {-1, 6, 10, 16};
 		for (int i = 0; i < titles.length; i++) {
