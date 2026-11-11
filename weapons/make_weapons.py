@@ -75,7 +75,16 @@ def main():
         wj(f'{mdl}/{wid}_icon.json', {'parent': 'minecraft:item/handheld', 'textures': {'layer0': f'hobbang:item/weapon/{wid}_icon'}})
         hand = f'{mdl}/{wid}_hand.json'
         if wid in MODEL3D:
-            m = json.load(open(f'{mdl}/{wid}/held.json'))
+            # Keep dedicated hand geometry and UVs when a weapon has a hand atlas.
+            current = {}
+            if os.path.exists(hand):
+                with open(hand, encoding='utf-8') as source:
+                    current = json.load(source)
+            if current.get('textures', {}).get('t') == f'hobbang:item/weapon/{wid}/hand':
+                m = current
+            else:
+                with open(f'{mdl}/{wid}/held.json', encoding='utf-8') as source:
+                    m = json.load(source)
             m['display'] = json.load(open(os.path.join(HERE, MODEL3D[wid])))
             m['textures']['particle'] = f'hobbang:item/weapon/{wid}_icon'
             json.dump(m, open(hand, 'w'), separators=(',', ':'))
