@@ -11,7 +11,7 @@
     {
       "name": "head",
       "item_model": "hobbang:boss/abyssal_smith/head",
-      "parent": "torso",
+      "parent": "chest",
       "pivot_blocks": [
         0.0,
         7.2,
@@ -25,17 +25,65 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "voxel",
-      "cuboids": 180,
-      "cuboids_voxel": 180,
+      "cuboids": 181,
+      "cuboids_voxel": 181,
       "cuboids_obb": 0,
-      "faces": 726,
+      "faces": 731,
       "texture_px": 256,
-      "voxels": 4595
+      "voxels": 4659
+    },
+    {
+      "name": "hand_r",
+      "item_model": "hobbang:boss/abyssal_smith/hand_r",
+      "parent": "fore_r",
+      "pivot_blocks": [
+        -2.2917,
+        4.45,
+        0.2083
+      ],
+      "translation": [
+        -2.2917,
+        4.45,
+        0.2083
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "voxel",
+      "cuboids": 185,
+      "cuboids_voxel": 185,
+      "cuboids_obb": 0,
+      "faces": 757,
+      "texture_px": 256,
+      "voxels": 2303
+    },
+    {
+      "name": "fore_r",
+      "item_model": "hobbang:boss/abyssal_smith/fore_r",
+      "parent": "arm_r",
+      "pivot_blocks": [
+        -2.0278,
+        5.3,
+        0.0278
+      ],
+      "translation": [
+        -2.0278,
+        5.3,
+        0.0278
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "obb",
+      "cuboids": 43,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 41,
+      "faces": 131,
+      "texture_px": 128,
+      "voxels": 41
     },
     {
       "name": "arm_r",
       "item_model": "hobbang:boss/abyssal_smith/arm_r",
-      "parent": "torso",
+      "parent": "chest",
       "pivot_blocks": [
         -2.0,
         6.8,
@@ -48,18 +96,66 @@
       ],
       "scale": 3.764705882352941,
       "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 298,
-      "cuboids_voxel": 201,
-      "cuboids_obb": 97,
-      "faces": 1127,
-      "texture_px": 512,
-      "voxels": 2652
+      "mode": "obb",
+      "cuboids": 109,
+      "cuboids_voxel": 1,
+      "cuboids_obb": 108,
+      "faces": 340,
+      "texture_px": 256,
+      "voxels": 32
+    },
+    {
+      "name": "hand_l",
+      "item_model": "hobbang:boss/abyssal_smith/hand_l",
+      "parent": "fore_l",
+      "pivot_blocks": [
+        2.2917,
+        4.45,
+        0.2083
+      ],
+      "translation": [
+        2.2917,
+        4.45,
+        0.2083
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "voxel",
+      "cuboids": 191,
+      "cuboids_voxel": 191,
+      "cuboids_obb": 0,
+      "faces": 765,
+      "texture_px": 256,
+      "voxels": 2338
+    },
+    {
+      "name": "fore_l",
+      "item_model": "hobbang:boss/abyssal_smith/fore_l",
+      "parent": "arm_l",
+      "pivot_blocks": [
+        2.0278,
+        5.3,
+        0.0278
+      ],
+      "translation": [
+        2.0278,
+        5.3,
+        0.0278
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "obb",
+      "cuboids": 53,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 51,
+      "faces": 172,
+      "texture_px": 128,
+      "voxels": 41
     },
     {
       "name": "arm_l",
       "item_model": "hobbang:boss/abyssal_smith/arm_l",
-      "parent": "torso",
+      "parent": "chest",
       "pivot_blocks": [
         2.0,
         6.8,
@@ -73,12 +169,60 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "obb",
-      "cuboids": 158,
-      "cuboids_voxel": 0,
-      "cuboids_obb": 158,
-      "faces": 512,
+      "cuboids": 93,
+      "cuboids_voxel": 1,
+      "cuboids_obb": 92,
+      "faces": 299,
       "texture_px": 256,
-      "voxels": 0
+      "voxels": 32
+    },
+    {
+      "name": "foot_r",
+      "item_model": "hobbang:boss/abyssal_smith/foot_r",
+      "parent": "shin_r",
+      "pivot_blocks": [
+        -1.3056,
+        0.65,
+        0.25
+      ],
+      "translation": [
+        -1.3056,
+        0.65,
+        0.25
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "obb",
+      "cuboids": 5,
+      "cuboids_voxel": 1,
+      "cuboids_obb": 4,
+      "faces": 27,
+      "texture_px": 128,
+      "voxels": 12
+    },
+    {
+      "name": "shin_r",
+      "item_model": "hobbang:boss/abyssal_smith/shin_r",
+      "parent": "leg_r",
+      "pivot_blocks": [
+        -1.1389,
+        1.55,
+        -0.0833
+      ],
+      "translation": [
+        -1.1389,
+        1.55,
+        -0.0833
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "obb",
+      "cuboids": 57,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 55,
+      "faces": 190,
+      "texture_px": 256,
+      "voxels": 56
     },
     {
       "name": "leg_r",
@@ -97,12 +241,60 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "obb",
-      "cuboids": 32,
-      "cuboids_voxel": 0,
-      "cuboids_obb": 32,
-      "faces": 108,
+      "cuboids": 35,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 33,
+      "faces": 120,
       "texture_px": 256,
-      "voxels": 0
+      "voxels": 140
+    },
+    {
+      "name": "foot_l",
+      "item_model": "hobbang:boss/abyssal_smith/foot_l",
+      "parent": "shin_l",
+      "pivot_blocks": [
+        1.3056,
+        0.65,
+        0.1944
+      ],
+      "translation": [
+        1.3056,
+        0.65,
+        0.1944
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "obb",
+      "cuboids": 5,
+      "cuboids_voxel": 1,
+      "cuboids_obb": 4,
+      "faces": 27,
+      "texture_px": 128,
+      "voxels": 9
+    },
+    {
+      "name": "shin_l",
+      "item_model": "hobbang:boss/abyssal_smith/shin_l",
+      "parent": "leg_l",
+      "pivot_blocks": [
+        1.0833,
+        1.55,
+        -0.0833
+      ],
+      "translation": [
+        1.0833,
+        1.55,
+        -0.0833
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "obb",
+      "cuboids": 54,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 52,
+      "faces": 183,
+      "texture_px": 256,
+      "voxels": 50
     },
     {
       "name": "leg_l",
@@ -121,12 +313,36 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "obb",
-      "cuboids": 24,
-      "cuboids_voxel": 0,
-      "cuboids_obb": 24,
-      "faces": 88,
+      "cuboids": 37,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 35,
+      "faces": 125,
       "texture_px": 256,
-      "voxels": 0
+      "voxels": 140
+    },
+    {
+      "name": "chest",
+      "item_model": "hobbang:boss/abyssal_smith/chest",
+      "parent": "torso",
+      "pivot_blocks": [
+        0.0,
+        4.5,
+        0.0
+      ],
+      "translation": [
+        0.0,
+        4.5,
+        0.0
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "mixed",
+      "cuboids": 447,
+      "cuboids_voxel": 388,
+      "cuboids_obb": 59,
+      "faces": 1731,
+      "texture_px": 512,
+      "voxels": 14601
     },
     {
       "name": "torso",
@@ -145,13 +361,13 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "mixed",
-      "cuboids": 796,
-      "cuboids_voxel": 723,
-      "cuboids_obb": 73,
-      "faces": 3045,
-      "texture_px": 1024,
-      "voxels": 22977
+      "cuboids": 361,
+      "cuboids_voxel": 348,
+      "cuboids_obb": 13,
+      "faces": 1427,
+      "texture_px": 512,
+      "voxels": 9474
     }
   ],
-  "total_cuboids": 1488
+  "total_cuboids": 1856
 }

@@ -46,6 +46,8 @@ public class ColossusBoss extends DisplayBoss {
 
 	private Part legL, legR, torso, chest, core, head, eyeL, eyeR, crown, armL, armR, fistL, fistR, shL, shR, back1, back2, back3;
 	private final Part[] orbit = new Part[3];
+	/** v1.5.0 리그 추가 파츠 (리소스팩 모델 모드): 상체, 전완·주먹, 정강이 */
+	private Part mChest, mForeL, mForeR, mFistL, mFistR, mShinL, mShinR;
 	/** v1.2.0 블록 모델 → v1.3.0 크기 (모델 4.6 → 7.0 블록) */
 	private static final float LEGACY = 7.0F / 4.8F;
 	private static final double SLAM_R = 6.9;
@@ -79,8 +81,12 @@ public class ColossusBoss extends DisplayBoss {
 	@Override
 	protected void buildParts() {
 		legL = legR = torso = chest = core = head = eyeL = eyeR = crown = armL = armR = fistL = fistR = shL = shR = back1 = back2 = back3 = null;
+		mChest = mForeL = mForeR = mFistL = mFistR = mShinL = mShinR = null;
 		if (modelMode) {
-			// v1.3.0: 리소스팩 모델 6파츠 + 2페이즈 궤도 수정(블록)
+			// v1.5.0: 리소스팩 모델 13파츠 (골반/상체/머리, 팔 3마디, 다리 2마디) + 2페이즈 궤도 수정(블록)
+			mChest = model("chest", false);
+			mForeL = model("fore_l", false); mForeR = model("fore_r", false); mFistL = model("fist_l", false); mFistR = model("fist_r", false);
+			mShinL = model("shin_l", false); mShinR = model("shin_r", false);
 			torso = model("torso", false); legL = model("leg_l", false); legR = model("leg_r", false);
 			head = model("head", false); armL = model("arm_l", false); armR = model("arm_r", false);
 			for (int i = 0; i < 3; i++) orbit[i] = block(bd(Material.PURPLE_STAINED_GLASS), -0.35F, -0.35F, -0.35F, 0.7F, 0.7F, 0.7F, true);
@@ -190,16 +196,39 @@ public class ColossusBoss extends DisplayBoss {
 		}
 		if (swingAnim > 0) armRX = -110 + (10 - swingAnim) * 10;
 		org.joml.Vector3f ll = pv(kind, "leg_l"), lr = pv(kind, "leg_r"), tp = pv(kind, "torso");
-		place(legL, root.at(ll.x, ll.y, ll.z).rotX(sw));
-		place(legR, root.at(lr.x, lr.y, lr.z).rotX(-sw));
-		Rigid body = root.at(tp.x, tp.y + breathe, tp.z).rotX(lean);
-		place(torso, body);
+		// 다리: 앞으로 나가는 쪽 무릎이 굽는다 (rotX + = 뒤로)
+		Rigid lgL = root.at(ll.x, ll.y, ll.z).rotX(sw);
+		place(legL, lgL);
+		place(mShinL, child(lgL, "leg_l", "shin_l").rotX(Math.max(0, -sw) * 0.8F + 3));
+		Rigid lgR = root.at(lr.x, lr.y, lr.z).rotX(-sw);
+		place(legR, lgR);
+		place(mShinR, child(lgR, "leg_r", "shin_r").rotX(Math.max(0, sw) * 0.8F + 3));
+		// 골반은 조금, 상체가 나머지를 숙인다
+		Rigid pelvis = root.at(tp.x, tp.y + breathe, tp.z).rotX(lean * 0.4F);
+		place(torso, pelvis);
+		Rigid body = child(pelvis, "torso", "chest").rotX(lean * 0.6F).rotY(sw * 0.1F);
+		place(mChest, body);
 		float headYaw = wrap(mob.getLocation().getYaw() - mob.getBodyYaw());
-		Rigid hd = child(body, "torso", "head").rotY(-Math.max(-60, Math.min(60, headYaw)));
+		Rigid hd = child(body, "chest", "head").rotY(-Math.max(-60, Math.min(60, headYaw)));
 		headRig = hd.at(0, 0.45F, 0.6F);
 		place(head, hd);
-		place(armL, child(body, "torso", "arm_l").rotX(armLX).rotZ(-armLZ));
-		place(armR, child(body, "torso", "arm_r").rotX(armRX).rotZ(-armRZ));
+		// 팔 3마디: 팔꿈치는 앞으로 굽고, 주먹이 조금 더 따라온다. 내려찍기 예비동작에서 크게 접는다.
+		float elbow = -10 - Math.abs(sw) * 0.3F;
+		float elbowL = elbow, elbowR = elbow;
+		if (action == ACT_SLAM) elbowL = elbowR = actionTimer > 6 ? -35 : -8;
+		else if (action == ACT_SPIKE) elbowR = actionTimer > 4 ? -40 : -8;
+		else if (action == ACT_RAIN) elbowL = elbowR = -15;
+		if (swingAnim > 0) elbowR = -35 + (10 - swingAnim) * 3;
+		Rigid aL = child(body, "chest", "arm_l").rotX(armLX).rotZ(-armLZ);
+		place(armL, aL);
+		Rigid fL = child(aL, "arm_l", "fore_l").rotX(elbowL);
+		place(mForeL, fL);
+		place(mFistL, child(fL, "fore_l", "fist_l").rotX(elbowL * 0.4F));
+		Rigid aR = child(body, "chest", "arm_r").rotX(armRX).rotZ(-armRZ);
+		place(armR, aR);
+		Rigid fR = child(aR, "arm_r", "fore_r").rotX(elbowR);
+		place(mForeR, fR);
+		place(mFistR, child(fR, "fore_r", "fist_r").rotX(elbowR * 0.4F));
 		float orbScale = phase >= 2 ? 1.0F : 0.0F;
 		for (int i = 0; i < 3; i++) {
 			Rigid o = root.at(0, 4.2F + sin(t * 0.1F + i) * 0.4F, 0).rotY(t * (phase >= 3 ? 9 : 5) + i * 120).at(3.4F, 0, 0).rotX(t * 8).rotZ(t * 5);
@@ -513,9 +542,26 @@ public class ColossusBoss extends DisplayBoss {
 		tumble(legR, root.at(lr.x, lr.y, lr.z), u, 0.08F, -1,  0.5F);
 		Rigid body = root.at(tp.x, tp.y, tp.z);
 		tumble(torso, body, u, 0.16F, 1, 0.2F);
-		if (head != null) tumble(head, modelMode ? child(body, "torso", "head") : body.at(0, 1.6F, 0.3F), u, 0.24F, -1, 0.9F);
-		if (armL != null) tumble(armL, modelMode ? child(body, "torso", "arm_l") : body.at(1.3F, 0.6F, 0), u, 0.12F, 1, 0.8F);
-		if (armR != null) tumble(armR, modelMode ? child(body, "torso", "arm_r") : body.at(-1.3F, 0.6F, 0), u, 0.20F, -1, 0.7F);
+		if (modelMode) {
+			// v1.5.0: 마디마다 따로 떨어진다 (끝마디가 먼저)
+			Rigid ch = child(body, "torso", "chest");
+			tumble(mChest, ch, u, 0.20F, -1, 0.3F);
+			tumble(head, child(ch, "chest", "head"), u, 0.24F, -1, 0.9F);
+			Rigid aL = child(ch, "chest", "arm_l"), aR = child(ch, "chest", "arm_r");
+			tumble(armL, aL, u, 0.14F, 1, 0.8F);
+			tumble(armR, aR, u, 0.22F, -1, 0.7F);
+			Rigid fL = child(aL, "arm_l", "fore_l"), fR = child(aR, "arm_r", "fore_r");
+			tumble(mForeL, fL, u, 0.08F, 1, 0.9F);
+			tumble(mForeR, fR, u, 0.16F, -1, 0.8F);
+			tumble(mFistL, child(fL, "fore_l", "fist_l"), u, 0.03F, 1, 1.0F);
+			tumble(mFistR, child(fR, "fore_r", "fist_r"), u, 0.10F, -1, 1.0F);
+			tumble(mShinL, child(root.at(ll.x, ll.y, ll.z), "leg_l", "shin_l"), u, 0.05F, 1, 0.3F);
+			tumble(mShinR, child(root.at(lr.x, lr.y, lr.z), "leg_r", "shin_r"), u, 0.12F, -1, 0.3F);
+		} else {
+			if (head != null) tumble(head, body.at(0, 1.6F, 0.3F), u, 0.24F, -1, 0.9F);
+			if (armL != null) tumble(armL, body.at(1.3F, 0.6F, 0), u, 0.12F, 1, 0.8F);
+			if (armR != null) tumble(armR, body.at(-1.3F, 0.6F, 0), u, 0.20F, -1, 0.7F);
+		}
 		if (chest != null) tumble(chest, body.at(0, 0.6F, 0.6F), u, 0.22F, 1, 0.4F);
 		if (core != null) tumble(core, body.at(0, 0.5F, 0.5F), u, 0.18F, -1, 0.3F);
 		if (crown != null) tumble(crown, (headRig != null ? headRig : body).at(0, 0.8F, 0), u, 0.28F, 1, 1.1F);

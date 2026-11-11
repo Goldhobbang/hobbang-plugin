@@ -47,6 +47,8 @@ public class SentinelBoss extends DisplayBoss {
 	private final Part[] ringB = new Part[10];
 	/** v1.3.0 리소스팩 모델 파츠 (톱니 고리 / 시계 코어는 따로 회전) */
 	private Part mBody, mRing, mClock, mArmL, mArmR;
+	/** v1.5.0: 하부 진자(모래시계)와 팔 칼날을 따로 움직인다 */
+	private Part mPend, mBladeL, mBladeR;
 	private Rigid coreRig;
 	private float ringAngle = 0, clockAngle = 0, deathU = 0, deathSpin = 1;
 	private int castAnim = 0;
@@ -85,12 +87,13 @@ public class SentinelBoss extends DisplayBoss {
 	@Override
 	protected void buildParts() {
 		core = face = hourHand = minHand = bell = pendRod = pendBob = label = null;
-		mBody = mRing = mClock = mArmL = mArmR = null;
+		mBody = mRing = mClock = mArmL = mArmR = mPend = mBladeL = mBladeR = null;
 		java.util.Arrays.fill(ringA, null);
 		java.util.Arrays.fill(ringB, null);
 		if (modelMode) {
 			mBody = model("body", false); mArmL = model("arm_l", false); mArmR = model("arm_r", false);
 			mRing = model("ring", false); mClock = model("clock", true);
+			mPend = model("pendulum", false); mBladeL = model("blade_l", false); mBladeR = model("blade_r", false);
 			label = text(Component.empty(), 0, 0, 0, 1.6F);
 			return;
 		}
@@ -159,8 +162,17 @@ public class SentinelBoss extends DisplayBoss {
 		place(mClock, coreRig.rotAxis(-clockAngle, cs.spinAxis()), sc);
 		float lift = castAnim > 0 ? -70 * Math.min(1F, castAnim / 6F) : 0;
 		float sway = dying ? 0 : sin(t * 0.05F) * 6;
-		place(mArmL, child(b, "body", "arm_l").rotX(lift + sway).rotZ(castAnim > 0 ? 25 : 4), sc);
-		place(mArmR, child(b, "body", "arm_r").rotX(lift - sway).rotZ(castAnim > 0 ? -25 : -4), sc);
+		Rigid aL = child(b, "body", "arm_l").rotX(lift + sway).rotZ(castAnim > 0 ? 25 : 4);
+		Rigid aR = child(b, "body", "arm_r").rotX(lift - sway).rotZ(castAnim > 0 ? -25 : -4);
+		place(mArmL, aL, sc);
+		place(mArmR, aR, sc);
+		// 칼날은 팔보다 반 박자 늦게 따라오고, 시전 때 앞으로 꺾인다
+		float bl = dying ? 0 : sin(t * 0.05F - 0.8F) * 5;
+		float bladeCast = castAnim > 0 ? -28 * Math.min(1F, castAnim / 6F) : 0;
+		place(mBladeL, child(aL, "arm_l", "blade_l").rotX(bladeCast + bl), sc);
+		place(mBladeR, child(aR, "arm_r", "blade_r").rotX(bladeCast - bl), sc);
+		// 진자: 톱니 속도에 맞춰 좌우로 흔들린다 (과부하·사망 때 멈춤)
+		place(mPend, child(b, "body", "pendulum").rotZ(sin(clockAngle * 0.035F) * 12 * Math.min(1F, Math.abs(sp))), sc);
 		place(label, root.at(0, 5.7F, 0), sc);
 	}
 
@@ -465,7 +477,7 @@ public class SentinelBoss extends DisplayBoss {
 	private void applyDeathLights(float u) {
 		int br = u < 0.20F ? Math.max(0, (int) (15 * (1F - u / 0.20F))) : 0;
 		org.bukkit.entity.Display.Brightness dim = new org.bukkit.entity.Display.Brightness(br, br);
-		for (Part p : new Part[]{mBody, mRing, mClock, mArmL, mArmR}) {
+		for (Part p : new Part[]{mBody, mRing, mClock, mArmL, mArmR, mPend, mBladeL, mBladeR}) {
 			if (p != null && p.display.isValid()) p.display.setBrightness(dim);
 		}
 		if (core != null && core.display.isValid()) core.display.setBrightness(dim);

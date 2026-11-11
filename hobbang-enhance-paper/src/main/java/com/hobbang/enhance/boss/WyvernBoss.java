@@ -50,10 +50,12 @@ public class WyvernBoss extends DisplayBoss {
 	public float spawnFold = 0;
 	public float spawnPitch = 0;
 	/** v1.4.4 관절 리그 (목/척추/꼬리/다리 분절) */
+	/** v1.5.0 박스 리그 36파트: 목 3 + 머리 + 턱, 척추 body/waist/hips, 꼬리 6, 날개 = 상박/전완/손가락 3(날개막 판 포함), 다리 4×3 */
 	private static final String[] W_PARTS = {
-		"body", "hips", "neck_1", "neck_2", "head",
-		"wing_l", "wing_r",
-		"tail_1", "tail_2", "tail_3", "tail_4",
+		"body", "waist", "hips", "neck_1", "neck_2", "neck_3", "head", "jaw",
+		"wing_arm_l", "wing_fore_l", "wing_f1_l", "wing_f2_l", "wing_f3_l",
+		"wing_arm_r", "wing_fore_r", "wing_f1_r", "wing_f2_r", "wing_f3_r",
+		"tail_1", "tail_2", "tail_3", "tail_4", "tail_5", "tail_6",
 		"thigh_fl", "shin_fl", "foot_fl", "thigh_fr", "shin_fr", "foot_fr",
 		"thigh_hl", "shin_hl", "foot_hl", "thigh_hr", "shin_hr", "foot_hr"
 	};
@@ -183,32 +185,34 @@ public class WyvernBoss extends DisplayBoss {
 		}
 	}
 
-	/** v1.4.4: 분절 리그 — 목 시선, 척추 파동, 꼬리 체인, 호흡, 비행/착지 다리 */
+	/**
+	 * v1.5.0: 박스 리그 36파트 (obj2mc/make_wyvern.py). 관절 rest 자세는 joint() 가 걸고, 여기서는 그 위에 움직임만 더한다.
+	 * 목·꼬리는 마디마다 위상을 늦춰 물결치고, 날개는 어깨(퍼덕임) → 팔꿈치 → 손가락 3개가 순서대로 접혔다 펴진다.
+	 */
 	private void poseModel(float t, float amp, float base) {
 		boolean rest = mode == M_REST;
 		boolean dive = mode == M_DIVE || mode == M_DIVE_AIM;
-		yoff = lerp(0.25F, yoff, rest ? 0F : -0.45F);
+		yoff = lerp(0.25F, yoff, rest ? 0F : -0.2F);
 		flyBlend = lerp(0.18F, flyBlend, rest ? 0F : 1F);
 		float breath = sin(t * 0.06F);
 		float sway = sin(flap);
 
-		// look-at: 목·머리에 나눠 걸고, 급하게 튀지 않게 보간
+		// look-at: 목 마디와 머리에 나눠 걸고, 급하게 튀지 않게 보간
 		float wantY = 0, wantP = dive ? 16 : sin(t * 0.07F + 1) * 4;
 		LivingEntity tgt = mob.getTarget();
 		if (tgt != null && tgt.isValid()) {
-			org.bukkit.util.Vector to = tgt.getEyeLocation().toVector().subtract(mob.getLocation().toVector().add(new org.bukkit.util.Vector(0, 2.8, 0)));
+			org.bukkit.util.Vector to = tgt.getEyeLocation().toVector().subtract(mob.getLocation().toVector().add(new org.bukkit.util.Vector(0, 2.6, 0)));
 			double hz = Math.sqrt(to.getX() * to.getX() + to.getZ() * to.getZ()) + 1e-3;
 			float yawTo = (float) Math.toDegrees(Math.atan2(-to.getX(), to.getZ()));
-			wantY = clamp(wrap(yawTo - flyYaw), -38, 38);
+			wantY = clamp(wrap(yawTo - flyYaw), -48, 48);
 			float pitTo = (float) Math.toDegrees(Math.atan2(-to.getY(), hz));
-			wantP = clamp(pitTo + flyPitch * 0.35F, -28, 32);
+			wantP = clamp(pitTo + flyPitch * 0.35F, -30, 36);
 		}
 		lookY = lerp(0.22F, lookY, wantY);
 		lookP = lerp(0.22F, lookP, wantP);
 
 		Rigid root = Rigid.yaw(modelYaw());
 		float bob = rest ? breath * 0.04F : sway * -0.22F + breath * 0.06F;
-		org.joml.Vector3f bp = pv(kind, "body");
 		float dRoll = 0, dPitch = 0, dSink = 0, dScale = 1F;
 		if (dying) {
 			float fall = deathU < 0.32F ? deathU / 0.32F : 1F;
@@ -223,68 +227,77 @@ public class WyvernBoss extends DisplayBoss {
 			lookY = lerp(0.25F, lookY, 0);
 			yoff = lerp(0.3F, yoff, -0.1F);
 		}
-		Rigid b = root.at(bp.x, bp.y + yoff + bob - dSink, bp.z)
+		Rigid b = joint(root.at(0, yoff + bob - dSink, 0), "body")
 			.rotX(-flyPitch + spawnPitch + breath * 2.5F + dPitch)
 			.rotZ(flyRoll + dRoll);
 		place(mp("body"), b, (1F + breath * 0.015F) * dScale);
 
-		// 척추: 엉덩이가 가슴에 대해 살짝 늦게 출렁인다
-		Rigid hips = child(b, "body", "hips")
-			.rotY(sin(t * 0.08F) * (4 + 8 * flyBlend))
-			.rotX(sin(t * 0.07F - 0.6F) * (3 + 6 * flyBlend) - breath * 1.5F);
+		// 척추 전·중·후: 허리와 엉덩이가 가슴에 대해 차례로 늦게 출렁인다
+		float spA = 4 + 8 * flyBlend, spB = 3 + 6 * flyBlend;
+		Rigid waist = joint(b, "waist").rotY(sin(t * 0.08F) * spA * 0.45F).rotX(sin(t * 0.07F - 0.6F) * spB * 0.45F - breath * 0.7F);
+		place(mp("waist"), waist, dScale);
+		Rigid hips = joint(waist, "hips").rotY(sin(t * 0.08F - 0.35F) * spA * 0.55F).rotX(sin(t * 0.07F - 0.95F) * spB * 0.55F - breath * 0.8F);
 		place(mp("hips"), hips, dScale);
 
-		// 목 2단 + 머리 (시선 + 흔들림)
+		// 목 3단 + 머리 + 턱. 비행 중엔 목을 앞으로 뻗고(rest 는 서 있는 S자), 시선은 마디에 나눠 건다.
 		float nSwayY = sin(t * 0.05F) * 4, nSwayP = sin(t * 0.07F) * 3;
-		Rigid n1 = child(b, "body", "neck_1").rotY(lookY * 0.34F + nSwayY).rotX(lookP * 0.28F + nSwayP);
+		Rigid n1 = joint(b, "neck_1").rotY(lookY * 0.24F + nSwayY).rotX(lookP * 0.20F + nSwayP + 24 * flyBlend);
 		place(mp("neck_1"), n1, dScale);
-		Rigid n2 = child(n1, "neck_1", "neck_2").rotY(lookY * 0.36F + nSwayY * 0.6F).rotX(lookP * 0.34F + nSwayP * 0.6F);
+		Rigid n2 = joint(n1, "neck_2").rotY(lookY * 0.26F + sin(t * 0.05F - 0.45F) * 3).rotX(lookP * 0.24F + sin(t * 0.07F - 0.45F) * 2.2F + 8 * flyBlend);
 		place(mp("neck_2"), n2, dScale);
-		Rigid hd = child(n2, "neck_2", "head").rotY(lookY * 0.30F).rotX(lookP * 0.38F + (dive ? 8 : 0));
-		headRig = hd.at(0, 0.15F, 0.85F);
+		Rigid n3 = joint(n2, "neck_3").rotY(lookY * 0.25F + sin(t * 0.05F - 0.9F) * 2).rotX(lookP * 0.24F + sin(t * 0.07F - 0.9F) * 1.6F - 8 * flyBlend);
+		place(mp("neck_3"), n3, dScale);
+		Rigid hd = joint(n3, "head").rotY(lookY * 0.25F).rotX(lookP * 0.32F - 20 * flyBlend + (dive ? 8 : 0));
+		headRig = hd.at(0, -0.1F, 1.05F);
 		place(mp("head"), hd, dScale);
+		float jawOpen = dying ? 30 * Math.min(1F, deathU * 3) : dive ? 26 : Math.max(0, sin(t * 0.05F)) * 7;
+		place(mp("jaw"), joint(hd, "jaw").rotX(jawOpen), dScale);
 
-		// 꼬리 4단, 위상 지연 follow-through
-		String[] tails = {"tail_1", "tail_2", "tail_3", "tail_4"};
-		String[] tpar = {"hips", "tail_1", "tail_2", "tail_3"};
+		// 꼬리 6단, 위상 지연 follow-through
 		Rigid tl = hips;
-		for (int i = 0; i < 4; i++) {
-			float lag = i * 0.85F;
-			tl = child(tl, tpar[i], tails[i])
-				.rotY(sin(t * 0.12F - lag) * (8 + 4 * flyBlend) + (dying ? 18 * deathU * (i + 1) : 0))
-				.rotX(sin(t * 0.09F - lag) * (4 + 2 * flyBlend) + 3 * flyBlend + (dying ? 12 * deathU : 0));
-			place(mp(tails[i]), tl, dScale);
+		for (int i = 0; i < 6; i++) {
+			float lag = i * 0.6F;
+			tl = joint(tl, "tail_" + (i + 1))
+				.rotY(sin(t * 0.12F - lag) * (6 + 3 * flyBlend) + (dying ? 12 * deathU * (i + 1) : 0))
+				.rotX(sin(t * 0.09F - lag) * (3 + 1.5F * flyBlend) + 2 * flyBlend + (dying ? 8 * deathU : 0));
+			place(mp("tail_" + (i + 1)), tl, dScale);
 		}
 
-		// 날개 (기존 퍼덕임 + 급강하 접기 유지)
-		float a = rest ? -28 : -18 + base * 0.6F + sway * amp;
-		float fold = (rest ? 25 : 0) + 55 * spawnFold;
-		place(mp("wing_l"), child(b, "body", "wing_l").rotZ(a - (dying ? 40 * Math.min(1F, Math.max(0, deathU - 0.28F) / 0.42F) : 0)).rotY(-fold), dScale);
-		place(mp("wing_r"), child(b, "body", "wing_r").rotZ(-a + (dying ? 40 * Math.min(1F, Math.max(0, deathU - 0.28F) / 0.42F) : 0)).rotY(fold), dScale);
+		// 날개: fold 0 = rest(활짝), 1 = 접힘. 업스트로크에서 반쯤 접고 다운스트로크에서 편다.
+		// 왼쪽(+X) 기준: rotZ + = 들어올림, rotY + = 뒤로 젖힘. 오른쪽은 부호 반대.
+		float a = rest ? -40 : -30 + base * 0.6F + sway * amp;
+		float up = rest || dive ? 0 : Math.max(0, (float) Math.cos(flap));
+		float fold = clamp((rest ? 0.8F : dive ? 0.6F : 0.3F * up) + spawnFold, 0, 1);
+		float dWing = dying ? 40 * Math.min(1F, Math.max(0, deathU - 0.28F) / 0.42F) : 0;
+		if (dying) fold = Math.max(fold, Math.min(1F, deathU * 1.6F));
+		float[] fClose = {70, 38, 6};
+		for (int sd = 0; sd < 2; sd++) {
+			float sx = sd == 0 ? 1 : -1;
+			String q = sd == 0 ? "_l" : "_r";
+			Rigid arm = joint(b, "wing_arm" + q).rotZ(sx * (a - dWing)).rotY(sx * 30 * fold);
+			place(mp("wing_arm" + q), arm, dScale);
+			Rigid fore = joint(arm, "wing_fore" + q).rotY(sx * 62 * fold).rotZ(sx * sin(flap - 0.5F) * 6 * (1 - fold));
+			place(mp("wing_fore" + q), fore, dScale);
+			for (int f = 0; f < 3; f++) {
+				float ripple = sin(flap - 0.9F - f * 0.35F) * (4 + 2 * f) * (1 - fold);   // 날개막 출렁임 (뒤 손가락일수록 늦게)
+				place(mp("wing_f" + (f + 1) + q), joint(fore, "wing_f" + (f + 1) + q).rotY(sx * fClose[f] * fold).rotZ(sx * ripple), dScale);
+			}
+		}
 
-		// 다리. flyBlend 0 = 서기(메시 기본), 1 = 비행 자세
-		// rotX+ = 피치 다운 / 뒤를 향함. 뒷다리: 뒤로 살짝 + 무릎 굽힘 + 발 오므림.
-		// 앞다리: 가슴 쪽으로 말아 올림.
-		float fsw = sway * 7 * flyBlend;          // 날갯짓에 맞춘 미세 흔들림
-		float hThigh = lerp(flyBlend, 0, 28 + fsw);
-		float hShin  = lerp(flyBlend, 0, 42);
-		float hFoot  = lerp(flyBlend, 0, 22);
-		float fThigh = lerp(flyBlend, 0, -48 + fsw * 0.6F);
-		float fShin  = lerp(flyBlend, 0, 58);
-		float fFoot  = lerp(flyBlend, 0, 18);
-		poseLeg(b, "body", "thigh_fl", "shin_fl", "foot_fl", fThigh, fShin, fFoot, dScale);
-		poseLeg(b, "body", "thigh_fr", "shin_fr", "foot_fr", fThigh, fShin, fFoot, dScale);
-		poseLeg(hips, "hips", "thigh_hl", "shin_hl", "foot_hl", hThigh, hShin, hFoot, dScale);
-		poseLeg(hips, "hips", "thigh_hr", "shin_hr", "foot_hr", hThigh, hShin, hFoot, dScale);
+		// 다리. flyBlend 0 = 서기(rest), 1 = 몸 아래로 접어 넣기 (rotX + = 뒤로)
+		float fsw = sway * 6 * flyBlend;
+		poseLeg(b, "fl", 70 * flyBlend + fsw * 0.6F, 35 * flyBlend, 45 * flyBlend, dScale);
+		poseLeg(b, "fr", 70 * flyBlend + fsw * 0.6F, 35 * flyBlend, 45 * flyBlend, dScale);
+		poseLeg(hips, "hl", 85 * flyBlend + fsw, 10 * flyBlend, 50 * flyBlend, dScale);
+		poseLeg(hips, "hr", 85 * flyBlend + fsw, 10 * flyBlend, 50 * flyBlend, dScale);
 	}
 
-	private void poseLeg(Rigid parent, String parentName, String thigh, String shin, String foot,
-			float thighX, float shinX, float footX, float sc) {
-		Rigid th = child(parent, parentName, thigh).rotX(thighX);
-		place(mp(thigh), th, sc);
-		Rigid sh = child(th, thigh, shin).rotX(shinX);
-		place(mp(shin), sh, sc);
-		place(mp(foot), child(sh, shin, foot).rotX(footX), sc);
+	private void poseLeg(Rigid parent, String tag, float thighX, float shinX, float footX, float sc) {
+		Rigid th = joint(parent, "thigh_" + tag).rotX(thighX);
+		place(mp("thigh_" + tag), th, sc);
+		Rigid sh = joint(th, "shin_" + tag).rotX(shinX);
+		place(mp("shin_" + tag), sh, sc);
+		place(mp("foot_" + tag), joint(sh, "foot_" + tag).rotX(footX), sc);
 	}
 
 	// ───────── 비행 ─────────

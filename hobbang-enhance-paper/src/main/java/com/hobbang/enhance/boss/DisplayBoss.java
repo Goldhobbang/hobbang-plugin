@@ -170,6 +170,15 @@ public abstract class DisplayBoss extends Boss {
 		return parent.at(b.x - a.x, b.y - a.y, b.z - a.z);
 	}
 
+	/**
+	 * v1.5.0 박스 리그 관절: 부모 좌표계에서 오프셋만큼 옮긴 뒤 rest 회전을 건다 (모델 element 회전 한계를 넘는
+	 * 기울기는 여기, 즉 item_display 변환으로 낸다). 애니메이션 회전은 반환값 뒤에 이어 붙인다.
+	 */
+	protected Rigid joint(Rigid parent, String part) {
+		Vector3f[] j = BossModels.rig(kind.id, part);
+		return parent.at(j[0].x, j[0].y, j[0].z).rotX(j[1].x).rotY(j[1].y).rotZ(j[1].z);
+	}
+
 	/** 리그 로컬 좌표 → 월드 좌표 (패턴 시작점: 망치/입/코어) */
 	protected org.bukkit.util.Vector worldPoint(Rigid r, float lx, float ly, float lz) {
 		Vector3f p = new Vector3f(lx, ly, lz).rotate(r.rot()).add(r.pos()).mul(vs);

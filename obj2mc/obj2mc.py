@@ -159,12 +159,15 @@ def scale_layout(cfg):
     sc = lambda v: None if v is None else v * k
     for p in parts:
         if isinstance(p.get('pivot'), list):
-            p['pivot'] = [x * k for x in p['pivot']]
+            p['pivot'] = [None if x is None else x * k for x in p['pivot']]
+        if p.get('joint_cap'):
+            p['joint_cap'] *= k
         for key in ('regions', 'exclude', 'obb_regions'):
             for r in p.get(key, []):
                 for f in ('min', 'max', 'center'):
                     if f in r: r[f] = [sc(x) for x in r[f]]
                 if 'radius' in r: r['radius'] *= k
+                if 'sector' in r: r['sector']['center'] = [x * k for x in r['sector']['center']]
     return parts
 
 
@@ -180,6 +183,13 @@ def in_region(c, r):
         if ax:
             d[:, 'xyz'.index(ax)] = 0
         m &= np.einsum('ij,ij->i', d, d) <= r['radius'] ** 2
+    if 'sector' in r:
+        # angular wedge about an axis: {"center":[u,v], "axis":"z", "from":deg, "to":deg}, angle = atan2(dv, du),
+        # (u,v) = (x,y) for axis z, (z,x) for axis y, (y,z) for axis x; counter-clockwise from `from` to `to`
+        sct = r['sector']
+        iu, iv = {'x': (1, 2), 'y': (2, 0), 'z': (0, 1)}[sct.get('axis', 'z')]
+        ang = np.degrees(np.arctan2(c[:, iv] - sct['center'][1], c[:, iu] - sct['center'][0]))
+        m &= ((ang - sct['from']) % 360.0) <= ((sct['to'] - sct['from']) % 360.0)
     for a in range(3):
         if mn[a] is not None: m &= c[:, a] >= mn[a]
         if mx[a] is not None: m &= c[:, a] < mx[a]
@@ -404,6 +414,13 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
             p['pivot'] = [round(float(x), 4) for x in centroid]
         elif p['pivot'] == 'bbox_center':
             p['pivot'] = [round(float(x), 4) for x in (bmin + bmax) / 2]
+        elif any(x is None for x in p['pivot']):
+            # null coordinate = centre of this part's voxels near the given coordinates (joint on a curved limb)
+            given = [i_ for i_ in range(3) if p['pivot'][i_] is not None]
+            tol = cfg.get('pivot_tol', 0.15) * cfg['height_blocks'] / cfg.get('layout_height', cfg['height_blocks'])
+            dd = np.abs(cen[:, given] - np.array([p['pivot'][i_] for i_ in given])).max(1) if given else np.zeros(len(cen))
+            near = cen[dd <= max(tol, dd.min() + 1e-9)]
+            p['pivot'] = [round(float(np.median(near[:, i_])), 4) if p['pivot'][i_] is None else p['pivot'][i_] for i_ in range(3)]
         if p.get('spin'):
             # spin axis = direction of least spread (normal of a ring / disc), via PCA
             w, vec = np.linalg.eigh(np.cov((cen - centroid).T))
@@ -412,6 +429,32 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
         piv = np.array(p['pivot'], float)
         ext_max = max(ext_max, np.abs(bmin - piv).max(), np.abs(bmax - piv).max())
         part_boxes.append((pocc if pocc.any() else None, obb_pts))
+    # joint caps: solid within `joint_cap` (cube half-size) of a child's pivot is duplicated into the neighbour part,
+    # so a rotated joint never opens a gap
+    names = [p['name'] for p in parts]
+    allc = None
+    for pi, p in enumerate(parts):
+        if not p.get('joint_cap') or part_boxes[pi] is None:
+            continue
+        other = p.get('cap_with', p.get('parent'))
+        if other not in names or part_boxes[names.index(other)] is None:
+            continue
+        oi = names.index(other)
+        if allc is None:
+            gi = np.argwhere(grid >= 0)
+            allc = (gi + lo + 0.5) / res
+            glab = grid[gi[:, 0], gi[:, 1], gi[:, 2]]
+        # cube (not sphere) so the cap merges into a few cuboids; each side only receives the OTHER part's voxels
+        near = np.abs(allc - np.array(p['pivot'], float)).max(1) <= p['joint_cap']
+        for qi, src in ((pi, oi), (oi, pi)):
+            sel = near & (glab == src)
+            if not sel.any():
+                continue
+            po, ob = part_boxes[qi]
+            if po is None:
+                po = np.zeros(grid.shape, bool)
+            po[tuple(gi[sel].T)] = True
+            part_boxes[qi] = (po, ob)
     margin = cfg.get('bound_margin_units', 0.5)
     k_units_per_block = min(16.0 * cfg.get('max_units_per_pixel', 1.0) * res / 16.0,
                             (24.0 - margin) / ext_max)

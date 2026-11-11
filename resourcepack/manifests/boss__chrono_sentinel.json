@@ -65,6 +65,30 @@
       "voxels": 4985
     },
     {
+      "name": "blade_r",
+      "item_model": "hobbang:boss/chrono_sentinel/blade_r",
+      "parent": "arm_r",
+      "pivot_blocks": [
+        -1.7708,
+        2.5535714285714284,
+        0.1875
+      ],
+      "translation": [
+        -1.7708,
+        2.5535714285714284,
+        0.1875
+      ],
+      "scale": 2.2857142857142856,
+      "spin_axis": null,
+      "mode": "mixed",
+      "cuboids": 299,
+      "cuboids_voxel": 122,
+      "cuboids_obb": 177,
+      "faces": 1051,
+      "texture_px": 512,
+      "voxels": 1755
+    },
+    {
       "name": "arm_r",
       "item_model": "hobbang:boss/chrono_sentinel/arm_r",
       "parent": "body",
@@ -80,13 +104,37 @@
       ],
       "scale": 2.2857142857142856,
       "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 580,
-      "cuboids_voxel": 403,
-      "cuboids_obb": 177,
-      "faces": 2188,
+      "mode": "voxel",
+      "cuboids": 321,
+      "cuboids_voxel": 321,
+      "cuboids_obb": 0,
+      "faces": 1315,
       "texture_px": 512,
-      "voxels": 6146
+      "voxels": 5003
+    },
+    {
+      "name": "blade_l",
+      "item_model": "hobbang:boss/chrono_sentinel/blade_l",
+      "parent": "arm_l",
+      "pivot_blocks": [
+        1.7708,
+        2.5535714285714284,
+        0.1875
+      ],
+      "translation": [
+        1.7708,
+        2.5535714285714284,
+        0.1875
+      ],
+      "scale": 2.2857142857142856,
+      "spin_axis": null,
+      "mode": "mixed",
+      "cuboids": 293,
+      "cuboids_voxel": 129,
+      "cuboids_obb": 164,
+      "faces": 1020,
+      "texture_px": 512,
+      "voxels": 1774
     },
     {
       "name": "arm_l",
@@ -104,13 +152,37 @@
       ],
       "scale": 2.2857142857142856,
       "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 576,
-      "cuboids_voxel": 412,
-      "cuboids_obb": 164,
-      "faces": 2143,
+      "mode": "voxel",
+      "cuboids": 332,
+      "cuboids_voxel": 332,
+      "cuboids_obb": 0,
+      "faces": 1324,
       "texture_px": 512,
-      "voxels": 6104
+      "voxels": 4963
+    },
+    {
+      "name": "pendulum",
+      "item_model": "hobbang:boss/chrono_sentinel/pendulum",
+      "parent": "body",
+      "pivot_blocks": [
+        0.0,
+        2.1964285714285716,
+        0.2292
+      ],
+      "translation": [
+        0.0,
+        2.1964285714285716,
+        0.2292
+      ],
+      "scale": 2.2857142857142856,
+      "spin_axis": null,
+      "mode": "voxel",
+      "cuboids": 621,
+      "cuboids_voxel": 621,
+      "cuboids_obb": 0,
+      "faces": 2592,
+      "texture_px": 512,
+      "voxels": 11248
     },
     {
       "name": "body",
@@ -129,13 +201,13 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "voxel",
-      "cuboids": 1561,
-      "cuboids_voxel": 1561,
+      "cuboids": 978,
+      "cuboids_voxel": 978,
       "cuboids_obb": 0,
-      "faces": 6343,
+      "faces": 3923,
       "texture_px": 1024,
-      "voxels": 33829
+      "voxels": 23063
     }
   ],
-  "total_cuboids": 3328
+  "total_cuboids": 3455
 }

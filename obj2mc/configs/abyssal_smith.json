@@ -15,7 +15,7 @@
  "parts": [
   {
    "name": "head",
-   "parent": "torso",
+   "parent": "chest",
    "pivot": [
     0,
     7.2,
@@ -34,16 +34,18 @@
       null
      ]
     }
-   ]
+   ],
+   "joint_cap": 0.18
   },
   {
-   "name": "arm_r",
-   "parent": "torso",
+   "name": "hand_r",
+   "parent": "fore_r",
    "pivot": [
-    -2.0,
-    6.8,
-    0
+    null,
+    4.45,
+    null
    ],
+   "joint_cap": 0.132,
    "regions": [
     {
      "min": [
@@ -53,30 +55,71 @@
      ],
      "max": [
       -1.55,
-      7.6,
-      null
-     ]
-    }
-   ],
-   "mode": "mixed",
-   "obb_regions": [
-    {
-     "min": [
-      null,
-      4.55,
+      4.45,
       null
      ]
     }
    ]
   },
   {
-   "name": "arm_l",
-   "parent": "torso",
+   "name": "fore_r",
+   "parent": "arm_r",
    "pivot": [
-    2.0,
+    null,
+    5.3,
+    null
+   ],
+   "joint_cap": 0.168,
+   "mode": "obb",
+   "regions": [
+    {
+     "min": [
+      null,
+      4.45,
+      null
+     ],
+     "max": [
+      -1.55,
+      5.3,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "arm_r",
+   "parent": "chest",
+   "pivot": [
+    -2.0,
     6.8,
     0
    ],
+   "joint_cap": 0.24,
+   "mode": "obb",
+   "regions": [
+    {
+     "min": [
+      null,
+      5.3,
+      null
+     ],
+     "max": [
+      -1.55,
+      7.6,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "hand_l",
+   "parent": "fore_l",
+   "pivot": [
+    null,
+    4.45,
+    null
+   ],
+   "joint_cap": 0.132,
    "regions": [
     {
      "min": [
@@ -86,44 +129,223 @@
      ],
      "max": [
       null,
+      4.45,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "fore_l",
+   "parent": "arm_l",
+   "pivot": [
+    null,
+    5.3,
+    null
+   ],
+   "joint_cap": 0.168,
+   "mode": "obb",
+   "regions": [
+    {
+     "min": [
+      1.55,
+      4.45,
+      null
+     ],
+     "max": [
+      null,
+      5.3,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "arm_l",
+   "parent": "chest",
+   "pivot": [
+    2.0,
+    6.8,
+    0
+   ],
+   "joint_cap": 0.24,
+   "mode": "obb",
+   "regions": [
+    {
+     "min": [
+      1.55,
+      5.3,
+      null
+     ],
+     "max": [
+      null,
       7.6,
       null
      ]
     }
+   ]
+  },
+  {
+   "name": "foot_r",
+   "parent": "shin_r",
+   "pivot": [
+    null,
+    0.65,
+    null
    ],
-   "mode": "obb"
+   "joint_cap": 0.132,
+   "mode": "obb",
+   "obb": {
+    "fill": 0.88,
+    "min_dim": 3
+   },
+   "regions": [
+    {
+     "min": [
+      null,
+      null,
+      null
+     ],
+     "max": [
+      -0.0,
+      0.65,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "shin_r",
+   "parent": "leg_r",
+   "pivot": [
+    null,
+    1.55,
+    null
+   ],
+   "joint_cap": 0.168,
+   "mode": "obb",
+   "obb": {
+    "fill": 0.88,
+    "min_dim": 3
+   },
+   "regions": [
+    {
+     "min": [
+      null,
+      null,
+      null
+     ],
+     "max": [
+      -0.0,
+      1.55,
+      null
+     ]
+    }
+   ]
   },
   {
    "name": "leg_r",
    "parent": null,
+   "cap_with": "torso",
    "pivot": [
     -0.9,
     2.6,
     0
    ],
-   "regions": [
-    {
-     "max": [
-      0.0,
-      2.6,
-      null
-     ]
-    }
-   ],
+   "joint_cap": 0.24,
    "mode": "obb",
    "obb": {
     "fill": 0.88,
     "min_dim": 3
-   }
+   },
+   "regions": [
+    {
+     "min": [
+      null,
+      null,
+      null
+     ],
+     "max": [
+      -0.0,
+      2.6,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "foot_l",
+   "parent": "shin_l",
+   "pivot": [
+    null,
+    0.65,
+    null
+   ],
+   "joint_cap": 0.132,
+   "mode": "obb",
+   "obb": {
+    "fill": 0.88,
+    "min_dim": 3
+   },
+   "regions": [
+    {
+     "min": [
+      0.0,
+      null,
+      null
+     ],
+     "max": [
+      null,
+      0.65,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "shin_l",
+   "parent": "leg_l",
+   "pivot": [
+    null,
+    1.55,
+    null
+   ],
+   "joint_cap": 0.168,
+   "mode": "obb",
+   "obb": {
+    "fill": 0.88,
+    "min_dim": 3
+   },
+   "regions": [
+    {
+     "min": [
+      0.0,
+      null,
+      null
+     ],
+     "max": [
+      null,
+      1.55,
+      null
+     ]
+    }
+   ]
   },
   {
    "name": "leg_l",
    "parent": null,
+   "cap_with": "torso",
    "pivot": [
     0.9,
     2.6,
     0
    ],
+   "joint_cap": 0.24,
+   "mode": "obb",
+   "obb": {
+    "fill": 0.88,
+    "min_dim": 3
+   },
    "regions": [
     {
      "min": [
@@ -137,12 +359,41 @@
       null
      ]
     }
+   ]
+  },
+  {
+   "name": "chest",
+   "parent": "torso",
+   "pivot": [
+    0,
+    4.5,
+    0
    ],
-   "mode": "obb",
-   "obb": {
-    "fill": 0.88,
-    "min_dim": 3
-   }
+   "joint_cap": 0.3,
+   "mode": "mixed",
+   "obb_regions": [
+    {
+     "min": [
+      null,
+      3.0,
+      null
+     ],
+     "max": [
+      null,
+      7.5,
+      -0.05
+     ]
+    }
+   ],
+   "regions": [
+    {
+     "min": [
+      null,
+      4.5,
+      null
+     ]
+    }
+   ]
   },
   {
    "name": "torso",
@@ -151,9 +402,6 @@
     0,
     2.7,
     0
-   ],
-   "regions": [
-    {}
    ],
    "mode": "mixed",
    "obb_regions": [
@@ -169,6 +417,9 @@
       -0.05
      ]
     }
+   ],
+   "regions": [
+    {}
    ]
   }
  ],

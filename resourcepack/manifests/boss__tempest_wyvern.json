@@ -1,492 +1,114 @@
 {
   "id": "hobbang:boss/tempest_wyvern",
   "height_blocks": 6.0,
-  "resolution": 16,
-  "texels_per_voxel": 2,
-  "model_units_per_block": 6.75,
-  "item_display_scale": 2.3703703703703702,
+  "resolution": 0,
+  "texels_per_voxel": 0,
+  "model_units_per_block": 10.0,
+  "item_display_scale": 1.6,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "note": "hand-designed box rig (make_wyvern.py). rest pose = chain of local_offset + rest_rot (deg, applied X then Y then Z in the parent frame); pivot_blocks is the resulting rest-pose pivot in boss space.",
   "parts": [
     {
-      "name": "foot_fl",
-      "item_model": "hobbang:boss/tempest_wyvern/foot_fl",
-      "parent": "shin_fl",
-      "pivot_blocks": [
-        0.6000000000000001,
-        0.33,
-        2.325
-      ],
-      "translation": [
-        0.6000000000000001,
-        0.33,
-        2.325
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 50,
-      "cuboids_voxel": 50,
-      "cuboids_obb": 0,
-      "faces": 220,
-      "texture_px": 256,
-      "voxels": 827
-    },
-    {
-      "name": "foot_fr",
-      "item_model": "hobbang:boss/tempest_wyvern/foot_fr",
-      "parent": "shin_fr",
-      "pivot_blocks": [
-        -0.6000000000000001,
-        0.33,
-        2.325
-      ],
-      "translation": [
-        -0.6000000000000001,
-        0.33,
-        2.325
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 49,
-      "cuboids_voxel": 49,
-      "cuboids_obb": 0,
-      "faces": 218,
-      "texture_px": 256,
-      "voxels": 813
-    },
-    {
-      "name": "foot_hl",
-      "item_model": "hobbang:boss/tempest_wyvern/foot_hl",
-      "parent": "shin_hl",
-      "pivot_blocks": [
-        0.6000000000000001,
-        0.33,
-        -0.15000000000000002
-      ],
-      "translation": [
-        0.6000000000000001,
-        0.33,
-        -0.15000000000000002
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 42,
-      "cuboids_voxel": 42,
-      "cuboids_obb": 0,
-      "faces": 181,
-      "texture_px": 128,
-      "voxels": 520
-    },
-    {
-      "name": "foot_hr",
-      "item_model": "hobbang:boss/tempest_wyvern/foot_hr",
-      "parent": "shin_hr",
-      "pivot_blocks": [
-        -0.6000000000000001,
-        0.33,
-        -0.15000000000000002
-      ],
-      "translation": [
-        -0.6000000000000001,
-        0.33,
-        -0.15000000000000002
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 62,
-      "cuboids_voxel": 62,
-      "cuboids_obb": 0,
-      "faces": 259,
-      "texture_px": 256,
-      "voxels": 762
-    },
-    {
-      "name": "shin_fl",
-      "item_model": "hobbang:boss/tempest_wyvern/shin_fl",
-      "parent": "thigh_fl",
-      "pivot_blocks": [
-        0.6000000000000001,
-        0.72,
-        2.2199999999999998
-      ],
-      "translation": [
-        0.6000000000000001,
-        0.72,
-        2.2199999999999998
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 58,
-      "cuboids_voxel": 58,
-      "cuboids_obb": 0,
-      "faces": 257,
-      "texture_px": 256,
-      "voxels": 771
-    },
-    {
-      "name": "shin_fr",
-      "item_model": "hobbang:boss/tempest_wyvern/shin_fr",
-      "parent": "thigh_fr",
-      "pivot_blocks": [
-        -0.6000000000000001,
-        0.72,
-        2.2199999999999998
-      ],
-      "translation": [
-        -0.6000000000000001,
-        0.72,
-        2.2199999999999998
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 52,
-      "cuboids_voxel": 52,
-      "cuboids_obb": 0,
-      "faces": 230,
-      "texture_px": 256,
-      "voxels": 809
-    },
-    {
-      "name": "shin_hl",
-      "item_model": "hobbang:boss/tempest_wyvern/shin_hl",
-      "parent": "thigh_hl",
-      "pivot_blocks": [
-        0.6000000000000001,
-        0.72,
-        -0.12
-      ],
-      "translation": [
-        0.6000000000000001,
-        0.72,
-        -0.12
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 54,
-      "cuboids_voxel": 54,
-      "cuboids_obb": 0,
-      "faces": 234,
-      "texture_px": 128,
-      "voxels": 610
-    },
-    {
-      "name": "shin_hr",
-      "item_model": "hobbang:boss/tempest_wyvern/shin_hr",
-      "parent": "thigh_hr",
-      "pivot_blocks": [
-        -0.6000000000000001,
-        0.72,
-        -0.12
-      ],
-      "translation": [
-        -0.6000000000000001,
-        0.72,
-        -0.12
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 51,
-      "cuboids_voxel": 51,
-      "cuboids_obb": 0,
-      "faces": 207,
-      "texture_px": 128,
-      "voxels": 705
-    },
-    {
-      "name": "thigh_fl",
-      "item_model": "hobbang:boss/tempest_wyvern/thigh_fl",
-      "parent": "body",
-      "pivot_blocks": [
-        0.63,
-        1.3800000000000001,
-        1.875
-      ],
-      "translation": [
-        0.63,
-        1.3800000000000001,
-        1.875
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 102,
-      "cuboids_voxel": 102,
-      "cuboids_obb": 0,
-      "faces": 418,
-      "texture_px": 256,
-      "voxels": 1226
-    },
-    {
-      "name": "thigh_fr",
-      "item_model": "hobbang:boss/tempest_wyvern/thigh_fr",
-      "parent": "body",
-      "pivot_blocks": [
-        -0.63,
-        1.3800000000000001,
-        1.875
-      ],
-      "translation": [
-        -0.63,
-        1.3800000000000001,
-        1.875
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 69,
-      "cuboids_voxel": 69,
-      "cuboids_obb": 0,
-      "faces": 289,
-      "texture_px": 256,
-      "voxels": 990
-    },
-    {
-      "name": "thigh_hl",
-      "item_model": "hobbang:boss/tempest_wyvern/thigh_hl",
-      "parent": "hips",
-      "pivot_blocks": [
-        0.63,
-        1.3800000000000001,
-        -0.07500000000000001
-      ],
-      "translation": [
-        0.63,
-        1.3800000000000001,
-        -0.07500000000000001
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 109,
-      "cuboids_voxel": 109,
-      "cuboids_obb": 0,
-      "faces": 450,
-      "texture_px": 256,
-      "voxels": 1420
-    },
-    {
-      "name": "thigh_hr",
-      "item_model": "hobbang:boss/tempest_wyvern/thigh_hr",
-      "parent": "hips",
-      "pivot_blocks": [
-        -0.63,
-        1.3800000000000001,
-        -0.07500000000000001
-      ],
-      "translation": [
-        -0.63,
-        1.3800000000000001,
-        -0.07500000000000001
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 32,
-      "cuboids_voxel": 32,
-      "cuboids_obb": 0,
-      "faces": 136,
-      "texture_px": 128,
-      "voxels": 679
-    },
-    {
-      "name": "head",
-      "item_model": "hobbang:boss/tempest_wyvern/head",
-      "parent": "neck_2",
+      "name": "body",
+      "item_model": "hobbang:boss/tempest_wyvern/body",
+      "parent": null,
       "pivot_blocks": [
         0.0,
-        3.1500000000000004,
-        2.13
+        1.564,
+        0.374
       ],
       "translation": [
         0.0,
-        3.1500000000000004,
-        2.13
+        1.564,
+        0.374
       ],
-      "scale": 2.3703703703703702,
+      "scale": 1.6,
       "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 490,
-      "cuboids_voxel": 490,
-      "cuboids_obb": 0,
-      "faces": 2129,
-      "texture_px": 512,
-      "voxels": 5166
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        1.564,
+        0.374
+      ],
+      "rest_rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 4,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 4,
+      "faces": 24,
+      "texture_px": 128,
+      "voxels": 0
     },
     {
-      "name": "neck_2",
-      "item_model": "hobbang:boss/tempest_wyvern/neck_2",
-      "parent": "neck_1",
-      "pivot_blocks": [
-        0.0,
-        2.925,
-        1.35
-      ],
-      "translation": [
-        0.0,
-        2.925,
-        1.35
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 207,
-      "cuboids_voxel": 207,
-      "cuboids_obb": 0,
-      "faces": 900,
-      "texture_px": 256,
-      "voxels": 2931
-    },
-    {
-      "name": "neck_1",
-      "item_model": "hobbang:boss/tempest_wyvern/neck_1",
+      "name": "waist",
+      "item_model": "hobbang:boss/tempest_wyvern/waist",
       "parent": "body",
       "pivot_blocks": [
         0.0,
-        2.625,
-        0.6000000000000001
+        1.564,
+        -0.17
       ],
       "translation": [
         0.0,
-        2.625,
-        0.6000000000000001
+        1.564,
+        -0.17
       ],
-      "scale": 2.3703703703703702,
+      "scale": 1.6,
       "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 103,
-      "cuboids_voxel": 103,
-      "cuboids_obb": 0,
-      "faces": 471,
-      "texture_px": 256,
-      "voxels": 861
-    },
-    {
-      "name": "wing_l",
-      "item_model": "hobbang:boss/tempest_wyvern/wing_l",
-      "parent": "body",
-      "pivot_blocks": [
-        0.8250000000000001,
-        3.0,
-        0.6000000000000001
-      ],
-      "translation": [
-        0.8250000000000001,
-        3.0,
-        0.6000000000000001
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 404,
-      "cuboids_voxel": 404,
-      "cuboids_obb": 0,
-      "faces": 1784,
-      "texture_px": 512,
-      "voxels": 4298
-    },
-    {
-      "name": "wing_r",
-      "item_model": "hobbang:boss/tempest_wyvern/wing_r",
-      "parent": "body",
-      "pivot_blocks": [
-        -0.8250000000000001,
-        3.0,
-        0.6000000000000001
-      ],
-      "translation": [
-        -0.8250000000000001,
-        3.0,
-        0.6000000000000001
-      ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 410,
-      "cuboids_voxel": 410,
-      "cuboids_obb": 0,
-      "faces": 1841,
-      "texture_px": 512,
-      "voxels": 3733
-    },
-    {
-      "name": "tail_4",
-      "item_model": "hobbang:boss/tempest_wyvern/tail_4",
-      "parent": "tail_3",
-      "pivot_blocks": [
+      "mode": "box",
+      "local_offset": [
         0.0,
-        2.0250000000000004,
-        -2.7
-      ],
-      "translation": [
         0.0,
-        2.0250000000000004,
-        -2.7
+        -0.544
       ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 226,
-      "cuboids_voxel": 226,
-      "cuboids_obb": 0,
-      "faces": 992,
-      "texture_px": 256,
-      "voxels": 2074
-    },
-    {
-      "name": "tail_3",
-      "item_model": "hobbang:boss/tempest_wyvern/tail_3",
-      "parent": "tail_2",
-      "pivot_blocks": [
+      "rest_rot": [
         0.0,
-        1.5750000000000002,
-        -1.875
-      ],
-      "translation": [
         0.0,
-        1.5750000000000002,
-        -1.875
+        0.0
       ],
-      "scale": 2.3703703703703702,
-      "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 83,
-      "cuboids_voxel": 83,
-      "cuboids_obb": 0,
-      "faces": 349,
+      "cuboids": 4,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 4,
+      "faces": 24,
       "texture_px": 128,
-      "voxels": 808
+      "voxels": 0
     },
     {
-      "name": "tail_2",
-      "item_model": "hobbang:boss/tempest_wyvern/tail_2",
-      "parent": "tail_1",
+      "name": "hips",
+      "item_model": "hobbang:boss/tempest_wyvern/hips",
+      "parent": "waist",
       "pivot_blocks": [
         0.0,
-        1.5,
-        -1.275
+        1.564,
+        -1.02
       ],
       "translation": [
         0.0,
-        1.5,
-        -1.275
+        1.564,
+        -1.02
       ],
-      "scale": 2.3703703703703702,
+      "scale": 1.6,
       "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 102,
-      "cuboids_voxel": 102,
-      "cuboids_obb": 0,
-      "faces": 446,
-      "texture_px": 256,
-      "voxels": 859
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.0,
+        -0.85
+      ],
+      "rest_rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 4,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 4,
+      "faces": 24,
+      "texture_px": 128,
+      "voxels": 0
     },
     {
       "name": "tail_1",
@@ -494,72 +116,1122 @@
       "parent": "hips",
       "pivot_blocks": [
         0.0,
-        1.6500000000000001,
-        -0.75
+        1.53,
+        -1.802
       ],
       "translation": [
         0.0,
-        1.6500000000000001,
-        -0.75
+        1.53,
+        -1.802
       ],
-      "scale": 2.3703703703703702,
+      "scale": 1.6,
       "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 122,
-      "cuboids_voxel": 122,
-      "cuboids_obb": 0,
-      "faces": 547,
-      "texture_px": 256,
-      "voxels": 1077
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.034,
+        -0.782
+      ],
+      "rest_rot": [
+        -8.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 4,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 4,
+      "faces": 24,
+      "texture_px": 64,
+      "voxels": 0
     },
     {
-      "name": "hips",
-      "item_model": "hobbang:boss/tempest_wyvern/hips",
+      "name": "tail_2",
+      "item_model": "hobbang:boss/tempest_wyvern/tail_2",
+      "parent": "tail_1",
+      "pivot_blocks": [
+        0.0,
+        1.4306,
+        -2.5091
+      ],
+      "translation": [
+        0.0,
+        1.4306,
+        -2.5091
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.0,
+        -0.714
+      ],
+      "rest_rot": [
+        -4.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 4,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 4,
+      "faces": 24,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "tail_3",
+      "item_model": "hobbang:boss/tempest_wyvern/tail_3",
+      "parent": "tail_2",
+      "pivot_blocks": [
+        0.0,
+        1.2893,
+        -3.1742
+      ],
+      "translation": [
+        0.0,
+        1.2893,
+        -3.1742
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.0,
+        -0.68
+      ],
+      "rest_rot": [
+        2.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 3,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 3,
+      "faces": 18,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "tail_4",
+      "item_model": "hobbang:boss/tempest_wyvern/tail_4",
+      "parent": "tail_3",
+      "pivot_blocks": [
+        0.0,
+        1.1712,
+        -3.8439
+      ],
+      "translation": [
+        0.0,
+        1.1712,
+        -3.8439
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.0,
+        -0.68
+      ],
+      "rest_rot": [
+        4.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 2,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 2,
+      "faces": 12,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "tail_5",
+      "item_model": "hobbang:boss/tempest_wyvern/tail_5",
+      "parent": "tail_4",
+      "pivot_blocks": [
+        0.0,
+        1.1036,
+        -4.4863
+      ],
+      "translation": [
+        0.0,
+        1.1036,
+        -4.4863
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.0,
+        -0.646
+      ],
+      "rest_rot": [
+        4.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 2,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 2,
+      "faces": 12,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "tail_6",
+      "item_model": "hobbang:boss/tempest_wyvern/tail_6",
+      "parent": "tail_5",
+      "pivot_blocks": [
+        0.0,
+        1.0823,
+        -5.0979
+      ],
+      "translation": [
+        0.0,
+        1.0823,
+        -5.0979
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.0,
+        -0.612
+      ],
+      "rest_rot": [
+        4.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 3,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 3,
+      "faces": 18,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "neck_1",
+      "item_model": "hobbang:boss/tempest_wyvern/neck_1",
       "parent": "body",
       "pivot_blocks": [
         0.0,
-        1.7249999999999999,
-        -0.30000000000000004
+        1.734,
+        0.918
       ],
       "translation": [
         0.0,
-        1.7249999999999999,
-        -0.30000000000000004
+        1.734,
+        0.918
       ],
-      "scale": 2.3703703703703702,
+      "scale": 1.6,
       "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 114,
-      "cuboids_voxel": 114,
-      "cuboids_obb": 0,
-      "faces": 480,
-      "texture_px": 256,
-      "voxels": 1844
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.17,
+        0.544
+      ],
+      "rest_rot": [
+        -38.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 3,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 3,
+      "faces": 18,
+      "texture_px": 64,
+      "voxels": 0
     },
     {
-      "name": "body",
-      "item_model": "hobbang:boss/tempest_wyvern/body",
-      "parent": null,
+      "name": "neck_2",
+      "item_model": "hobbang:boss/tempest_wyvern/neck_2",
+      "parent": "neck_1",
       "pivot_blocks": [
         0.0,
-        1.7999999999999998,
-        0.22499999999999998
+        2.1317,
+        1.4271
       ],
       "translation": [
         0.0,
-        1.7999999999999998,
-        0.22499999999999998
+        2.1317,
+        1.4271
       ],
-      "scale": 2.3703703703703702,
+      "scale": 1.6,
       "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 740,
-      "cuboids_voxel": 740,
-      "cuboids_obb": 0,
-      "faces": 3008,
-      "texture_px": 512,
-      "voxels": 15182
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.0,
+        0.646
+      ],
+      "rest_rot": [
+        -12.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 3,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 3,
+      "faces": 18,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "neck_3",
+      "item_model": "hobbang:boss/tempest_wyvern/neck_3",
+      "parent": "neck_2",
+      "pivot_blocks": [
+        0.0,
+        2.6005,
+        1.8204
+      ],
+      "translation": [
+        0.0,
+        2.6005,
+        1.8204
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.0,
+        0.612
+      ],
+      "rest_rot": [
+        12.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 3,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 3,
+      "faces": 18,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "head",
+      "item_model": "hobbang:boss/tempest_wyvern/head",
+      "parent": "neck_3",
+      "pivot_blocks": [
+        0.0,
+        2.9564,
+        2.2759
+      ],
+      "translation": [
+        0.0,
+        2.9564,
+        2.2759
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        0.0,
+        0.578
+      ],
+      "rest_rot": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 21,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 21,
+      "faces": 126,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "jaw",
+      "item_model": "hobbang:boss/tempest_wyvern/jaw",
+      "parent": "head",
+      "pivot_blocks": [
+        0.0,
+        2.8145,
+        2.4411
+      ],
+      "translation": [
+        0.0,
+        2.8145,
+        2.4411
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.136,
+        0.17
+      ],
+      "rest_rot": [
+        6.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 11,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 11,
+      "faces": 66,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "thigh_fl",
+      "item_model": "hobbang:boss/tempest_wyvern/thigh_fl",
+      "parent": "body",
+      "pivot_blocks": [
+        0.4896,
+        1.326,
+        0.68
+      ],
+      "translation": [
+        0.4896,
+        1.326,
+        0.68
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.4896,
+        -0.238,
+        0.306
+      ],
+      "rest_rot": [
+        -25.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 1,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 1,
+      "faces": 6,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "shin_fl",
+      "item_model": "hobbang:boss/tempest_wyvern/shin_fl",
+      "parent": "thigh_fl",
+      "pivot_blocks": [
+        0.4896,
+        0.7097,
+        0.9674
+      ],
+      "translation": [
+        0.4896,
+        0.7097,
+        0.9674
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.68,
+        0.0
+      ],
+      "rest_rot": [
+        45.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 1,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 1,
+      "faces": 6,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "foot_fl",
+      "item_model": "hobbang:boss/tempest_wyvern/foot_fl",
+      "parent": "shin_fl",
+      "pivot_blocks": [
+        0.4896,
+        0.1027,
+        0.7464
+      ],
+      "translation": [
+        0.4896,
+        0.1027,
+        0.7464
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.646,
+        0.0
+      ],
+      "rest_rot": [
+        -20.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 7,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 7,
+      "faces": 42,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "thigh_fr",
+      "item_model": "hobbang:boss/tempest_wyvern/thigh_fr",
+      "parent": "body",
+      "pivot_blocks": [
+        -0.4896,
+        1.326,
+        0.68
+      ],
+      "translation": [
+        -0.4896,
+        1.326,
+        0.68
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        -0.4896,
+        -0.238,
+        0.306
+      ],
+      "rest_rot": [
+        -25.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 1,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 1,
+      "faces": 6,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "shin_fr",
+      "item_model": "hobbang:boss/tempest_wyvern/shin_fr",
+      "parent": "thigh_fr",
+      "pivot_blocks": [
+        -0.4896,
+        0.7097,
+        0.9674
+      ],
+      "translation": [
+        -0.4896,
+        0.7097,
+        0.9674
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.68,
+        0.0
+      ],
+      "rest_rot": [
+        45.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 1,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 1,
+      "faces": 6,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "foot_fr",
+      "item_model": "hobbang:boss/tempest_wyvern/foot_fr",
+      "parent": "shin_fr",
+      "pivot_blocks": [
+        -0.4896,
+        0.1027,
+        0.7464
+      ],
+      "translation": [
+        -0.4896,
+        0.1027,
+        0.7464
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.646,
+        0.0
+      ],
+      "rest_rot": [
+        -20.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 7,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 7,
+      "faces": 42,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "thigh_hl",
+      "item_model": "hobbang:boss/tempest_wyvern/thigh_hl",
+      "parent": "hips",
+      "pivot_blocks": [
+        0.4624,
+        1.36,
+        -1.394
+      ],
+      "translation": [
+        0.4624,
+        1.36,
+        -1.394
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.4624,
+        -0.204,
+        -0.374
+      ],
+      "rest_rot": [
+        -30.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 1,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 1,
+      "faces": 6,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "shin_hl",
+      "item_model": "hobbang:boss/tempest_wyvern/shin_hl",
+      "parent": "thigh_hl",
+      "pivot_blocks": [
+        0.4624,
+        0.7122,
+        -1.02
+      ],
+      "translation": [
+        0.4624,
+        0.7122,
+        -1.02
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.748,
+        0.0
+      ],
+      "rest_rot": [
+        60.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 1,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 1,
+      "faces": 6,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "foot_hl",
+      "item_model": "hobbang:boss/tempest_wyvern/foot_hl",
+      "parent": "shin_hl",
+      "pivot_blocks": [
+        0.4624,
+        0.1233,
+        -1.36
+      ],
+      "translation": [
+        0.4624,
+        0.1233,
+        -1.36
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.68,
+        0.0
+      ],
+      "rest_rot": [
+        -30.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 7,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 7,
+      "faces": 42,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "thigh_hr",
+      "item_model": "hobbang:boss/tempest_wyvern/thigh_hr",
+      "parent": "hips",
+      "pivot_blocks": [
+        -0.4624,
+        1.36,
+        -1.394
+      ],
+      "translation": [
+        -0.4624,
+        1.36,
+        -1.394
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        -0.4624,
+        -0.204,
+        -0.374
+      ],
+      "rest_rot": [
+        -30.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 1,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 1,
+      "faces": 6,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "shin_hr",
+      "item_model": "hobbang:boss/tempest_wyvern/shin_hr",
+      "parent": "thigh_hr",
+      "pivot_blocks": [
+        -0.4624,
+        0.7122,
+        -1.02
+      ],
+      "translation": [
+        -0.4624,
+        0.7122,
+        -1.02
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.748,
+        0.0
+      ],
+      "rest_rot": [
+        60.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 1,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 1,
+      "faces": 6,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "foot_hr",
+      "item_model": "hobbang:boss/tempest_wyvern/foot_hr",
+      "parent": "shin_hr",
+      "pivot_blocks": [
+        -0.4624,
+        0.1233,
+        -1.36
+      ],
+      "translation": [
+        -0.4624,
+        0.1233,
+        -1.36
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.0,
+        -0.68,
+        0.0
+      ],
+      "rest_rot": [
+        -30.0,
+        0.0,
+        0.0
+      ],
+      "cuboids": 7,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 7,
+      "faces": 42,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "wing_arm_l",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_arm_l",
+      "parent": "body",
+      "pivot_blocks": [
+        0.4216,
+        1.972,
+        0.612
+      ],
+      "translation": [
+        0.4216,
+        1.972,
+        0.612
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        0.4216,
+        0.408,
+        0.238
+      ],
+      "rest_rot": [
+        0.0,
+        12.0,
+        32.0
+      ],
+      "cuboids": 2,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 2,
+      "faces": 12,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "wing_fore_l",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_fore_l",
+      "parent": "wing_arm_l",
+      "pivot_blocks": [
+        1.2677,
+        2.5125,
+        0.4322
+      ],
+      "translation": [
+        1.2677,
+        2.5125,
+        0.4322
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        1.02,
+        0.0,
+        0.0
+      ],
+      "rest_rot": [
+        0.0,
+        -30.0,
+        -14.0
+      ],
+      "cuboids": 3,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 3,
+      "faces": 18,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "wing_f1_l",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_f1_l",
+      "parent": "wing_fore_l",
+      "pivot_blocks": [
+        2.3351,
+        2.7901,
+        0.7786
+      ],
+      "translation": [
+        2.3351,
+        2.7901,
+        0.7786
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        1.156,
+        0.0,
+        0.0
+      ],
+      "rest_rot": [
+        0.0,
+        8.0,
+        0.0
+      ],
+      "cuboids": 2,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 2,
+      "faces": 12,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "wing_f2_l",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_f2_l",
+      "parent": "wing_fore_l",
+      "pivot_blocks": [
+        2.3351,
+        2.7901,
+        0.7786
+      ],
+      "translation": [
+        2.3351,
+        2.7901,
+        0.7786
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        1.156,
+        0.0,
+        0.0
+      ],
+      "rest_rot": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "cuboids": 6,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 6,
+      "faces": 36,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "wing_f3_l",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_f3_l",
+      "parent": "wing_fore_l",
+      "pivot_blocks": [
+        2.3351,
+        2.7901,
+        0.7786
+      ],
+      "translation": [
+        2.3351,
+        2.7901,
+        0.7786
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        1.156,
+        0.0,
+        0.0
+      ],
+      "rest_rot": [
+        0.0,
+        74.0,
+        0.0
+      ],
+      "cuboids": 9,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 9,
+      "faces": 54,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "wing_arm_r",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_arm_r",
+      "parent": "body",
+      "pivot_blocks": [
+        -0.4216,
+        1.972,
+        0.612
+      ],
+      "translation": [
+        -0.4216,
+        1.972,
+        0.612
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        -0.4216,
+        0.408,
+        0.238
+      ],
+      "rest_rot": [
+        0.0,
+        -12.0,
+        -32.0
+      ],
+      "cuboids": 2,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 2,
+      "faces": 12,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "wing_fore_r",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_fore_r",
+      "parent": "wing_arm_r",
+      "pivot_blocks": [
+        -1.2677,
+        2.5125,
+        0.4322
+      ],
+      "translation": [
+        -1.2677,
+        2.5125,
+        0.4322
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        -1.02,
+        0.0,
+        0.0
+      ],
+      "rest_rot": [
+        0.0,
+        30.0,
+        14.0
+      ],
+      "cuboids": 3,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 3,
+      "faces": 18,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "wing_f1_r",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_f1_r",
+      "parent": "wing_fore_r",
+      "pivot_blocks": [
+        -2.3351,
+        2.7901,
+        0.7786
+      ],
+      "translation": [
+        -2.3351,
+        2.7901,
+        0.7786
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        -1.156,
+        0.0,
+        0.0
+      ],
+      "rest_rot": [
+        0.0,
+        -8.0,
+        0.0
+      ],
+      "cuboids": 2,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 2,
+      "faces": 12,
+      "texture_px": 64,
+      "voxels": 0
+    },
+    {
+      "name": "wing_f2_r",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_f2_r",
+      "parent": "wing_fore_r",
+      "pivot_blocks": [
+        -2.3351,
+        2.7901,
+        0.7786
+      ],
+      "translation": [
+        -2.3351,
+        2.7901,
+        0.7786
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        -1.156,
+        0.0,
+        0.0
+      ],
+      "rest_rot": [
+        0.0,
+        -40.0,
+        0.0
+      ],
+      "cuboids": 6,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 6,
+      "faces": 36,
+      "texture_px": 128,
+      "voxels": 0
+    },
+    {
+      "name": "wing_f3_r",
+      "item_model": "hobbang:boss/tempest_wyvern/wing_f3_r",
+      "parent": "wing_fore_r",
+      "pivot_blocks": [
+        -2.3351,
+        2.7901,
+        0.7786
+      ],
+      "translation": [
+        -2.3351,
+        2.7901,
+        0.7786
+      ],
+      "scale": 1.6,
+      "spin_axis": null,
+      "mode": "box",
+      "local_offset": [
+        -1.156,
+        0.0,
+        0.0
+      ],
+      "rest_rot": [
+        0.0,
+        -74.0,
+        0.0
+      ],
+      "cuboids": 9,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 9,
+      "faces": 54,
+      "texture_px": 128,
+      "voxels": 0
     }
   ],
-  "total_cuboids": 3731
+  "total_cuboids": 151
 }

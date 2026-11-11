@@ -63,7 +63,7 @@ final class AssembleAnim {
 	static int role(String id, float restY, float height) {
 		if (id != null && !id.isEmpty()) {
 			String s = id.toLowerCase();
-			if (s.contains("leg")) return 0;
+			if (s.contains("leg") || s.contains("thigh") || s.contains("shin") || s.contains("foot") || s.contains("boot")) return 0;
 			if (s.contains("hammer") || s.contains("weapon")) return 4;
 			if (s.contains("head") || s.contains("ring") || s.contains("clock") || s.contains("crown")
 				|| s.contains("eye") || s.contains("horn") || s.contains("jaw") || s.contains("neck")
@@ -75,7 +75,7 @@ final class AssembleAnim {
 				if (s.contains("clock")) return 3;
 				return s.contains("orbit") || s.contains("back") ? 5 : 1;
 			}
-			if (s.contains("torso") || s.equals("body") || s.contains("belly")) return 1;
+			if (s.contains("torso") || s.equals("body") || s.contains("belly") || s.contains("waist") || s.contains("hips") || s.contains("pelvis")) return 1;
 		}
 		if (height < 0.5F) height = 4F;
 		float k = Math.max(0F, Math.min(1F, restY / height));

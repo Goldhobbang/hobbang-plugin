@@ -77,14 +77,19 @@ public class SmithBoss extends DisplayBoss {
 	@Override protected void onPhaseChange(int newPhase) {}
 
 	// ───────── 모델 (v1.3.0) ─────────
-	private Part pTorso, pLegL, pLegR, pHead, pArmL, pArmR, pHammer;
+	private Part pTorso, pChest, pLegL, pLegR, pShinL, pShinR, pFootL, pFootR, pHead, pArmL, pArmR, pForeL, pForeR, pHandL, pHandR, pHammer;
 
 	@Override
 	protected void buildParts() {
-		pTorso = pLegL = pLegR = pHead = pArmL = pArmR = pHammer = null;
+		pTorso = pChest = pLegL = pLegR = pShinL = pShinR = pFootL = pFootR = pHead = pArmL = pArmR = pForeL = pForeR = pHandL = pHandR = pHammer = null;
 		if (!modelMode) return;   // 블록 모델 모드: 위더 스켈레톤 자체가 외형
-		pTorso = model("torso", false); pLegL = model("leg_l", false); pLegR = model("leg_r", false);
-		pHead = model("head", false); pArmL = model("arm_l", false); pArmR = model("arm_r", false); pHammer = model("hammer", false);
+		// v1.5.0 리그 16파트: 골반(torso)/상체(chest)/머리, 팔 = 상박-전완-손, 다리 = 허벅지-정강이-발, 망치는 오른손에
+		pTorso = model("torso", false); pChest = model("chest", false); pHead = model("head", false);
+		pLegL = model("leg_l", false); pShinL = model("shin_l", false); pFootL = model("foot_l", false);
+		pLegR = model("leg_r", false); pShinR = model("shin_r", false); pFootR = model("foot_r", false);
+		pArmL = model("arm_l", false); pForeL = model("fore_l", false); pHandL = model("hand_l", false);
+		pArmR = model("arm_r", false); pForeR = model("fore_r", false); pHandR = model("hand_r", false);
+		pHammer = model("hammer", false);
 	}
 
 	@Override
@@ -157,20 +162,48 @@ public class SmithBoss extends DisplayBoss {
 			wrist = -20 + (10 - swingAnim) * 2;
 		}
 		Vector3f tp = pv(kind, "torso");
-		Rigid torso = root.at(tp.x, tp.y + breathe, tp.z).rotX(lean);
+		// 골반은 조금만, 상체가 나머지를 숙인다 (상·하체 분리). 걸을 때 상체가 다리 반대로 살짝 돈다.
+		Rigid torso = root.at(tp.x, tp.y + breathe, tp.z).rotX(lean * 0.35F);
 		place(pTorso, torso);
-		Vector3f ll = pv(kind, "leg_l"), lr = pv(kind, "leg_r");
-		place(pLegL, root.at(ll.x, ll.y, ll.z).rotX(-sw));
-		place(pLegR, root.at(lr.x, lr.y, lr.z).rotX(sw));
+		Rigid chest = child(torso, "torso", "chest").rotX(lean * 0.65F + sin(t * 0.07F) * 1.2F).rotY(-sw * 0.12F);
+		place(pChest, chest);
+		poseLeg(root, "_l", pLegL, pShinL, pFootL, -sw, 0, 1F);
+		poseLeg(root, "_r", pLegR, pShinR, pFootR, sw, 0, 1F);
 		float headYaw = wrapDeg(mob.getLocation().getYaw() - mob.getBodyYaw());
-		headRig = child(torso, "torso", "head").rotY(-Math.max(-50, Math.min(50, headYaw))).rotX(slamTimer > SLAM_HIT ? -8 : 0);
+		headRig = child(chest, "chest", "head").rotY(-Math.max(-50, Math.min(50, headYaw))).rotX(slamTimer > SLAM_HIT ? -8 : 0);
 		place(pHead, headRig);
-		place(pArmL, child(torso, "torso", "arm_l").rotX(armLX).rotZ(-4));
-		Rigid armR = child(torso, "torso", "arm_r").rotX(armRX).rotZ(armRZ);
+		// 팔: 팔꿈치는 앞으로만 굽는다 (rotX 음수). 내려찍기 예비동작에서 더 접는다.
+		float elbowL = -8 - Math.abs(sw) * 0.35F, elbowR = -10 - Math.abs(sw) * 0.35F;
+		if (slamTimer > SLAM_HIT) elbowR = -40;
+		else if (slamTimer > 0) elbowR = -6;
+		else if (swingAnim > 0) elbowR = -30 + (10 - swingAnim) * 2.5F;
+		Rigid armL = child(chest, "chest", "arm_l").rotX(armLX).rotZ(-4);
+		place(pArmL, armL);
+		Rigid foreL = child(armL, "arm_l", "fore_l").rotX(elbowL);
+		place(pForeL, foreL);
+		place(pHandL, child(foreL, "fore_l", "hand_l").rotX(elbowL * 0.3F));
+		Rigid armR = child(chest, "chest", "arm_r").rotX(armRX).rotZ(armRZ);
 		place(pArmR, armR);
+		Rigid foreR = child(armR, "arm_r", "fore_r").rotX(elbowR);
+		place(pForeR, foreR);
+		Rigid handR = child(foreR, "fore_r", "hand_r").rotX(wrist * 0.35F);
+		place(pHandR, handR);
 		// v1.4.3: 손잡이는 주먹, 머리는 팔과 수직(앞으로) — 플레이어 망치 그립과 같게
-		hammerRig = child(armR, "arm_r", "hammer").rotX(wrist - 90F);
+		hammerRig = child(handR, "hand_r", "hammer").rotX(wrist * 0.65F - 90F);
 		place(pHammer, hammerRig);
+	}
+
+	/** 다리 3관절. swing + = 뒤로. 앞으로 나가는 다리는 무릎을 굽혀 발을 든다. kneel 0..1 = 무릎 꿇기 */
+	private void poseLeg(Rigid root, String q, Part thigh, Part shin, Part foot, float swing, float kneel, float sc) {
+		Vector3f lp = pv(kind, "leg" + q);
+		float knee = Math.max(0, -swing) * 0.9F + 4;
+		float th = swing * (1 - kneel) - 35 * kneel;
+		float kn = knee * (1 - kneel) + 115 * kneel;
+		Rigid t0 = root.at(lp.x, lp.y, lp.z).rotX(th);
+		place(thigh, t0, sc);
+		Rigid s0 = child(t0, "leg" + q, "shin" + q).rotX(kn);
+		place(shin, s0, sc);
+		place(foot, child(s0, "shin" + q, "foot" + q).rotX(-(th + kn) * 0.6F * (1 - kneel)), sc);
 	}
 
 	/** 망치 머리 (월드 좌표). 블록 모델 모드에서는 몸 앞 1.5블록 */
@@ -570,20 +603,30 @@ public class SmithBoss extends DisplayBoss {
 		float sc = Math.max(0.05F, 1F - fade);
 		Rigid root = Rigid.yaw(modelYaw());
 		Vector3f tp = pv(kind, "torso");
-		// 다리가 접히면 골반이 내려간다
-		float hipDrop = kneel * 0.85F;
-		Rigid torso = root.at(tp.x, tp.y - hipDrop - sink, tp.z).rotX(8 * kneel + 38 * slump);
+		// 무릎을 꿇으면 골반이 내려간다 (허벅지 앞으로, 정강이는 뒤로 눕는다)
+		float hipDrop = kneel * 1.4F;
+		Rigid base = root.at(0, -hipDrop - sink, 0);
+		Rigid torso = base.at(tp.x, tp.y, tp.z).rotX(6 * kneel + 10 * slump);
 		place(pTorso, torso, sc);
-		Vector3f ll = pv(kind, "leg_l"), lr = pv(kind, "leg_r");
-		place(pLegL, root.at(ll.x, ll.y - sink, ll.z).rotX(55 * kneel), sc);
-		place(pLegR, root.at(lr.x, lr.y - sink, lr.z).rotX(50 * kneel), sc);
-		headRig = child(torso, "torso", "head").rotX(28 * slump);
+		Rigid chest = child(torso, "torso", "chest").rotX(4 * kneel + 30 * slump);
+		place(pChest, chest, sc);
+		poseLeg(base, "_l", pLegL, pShinL, pFootL, 0, kneel, sc);
+		poseLeg(base, "_r", pLegR, pShinR, pFootR, 0, kneel * 0.92F, sc);
+		headRig = child(chest, "chest", "head").rotX(28 * slump);
 		place(pHead, headRig, sc);
-		place(pArmL, child(torso, "torso", "arm_l").rotX(20 * slump).rotZ(-12 * slump), sc);
-		Rigid armR = child(torso, "torso", "arm_r").rotX(-25 * hammerDown + 15 * slump).rotZ(8 * hammerDown);
+		Rigid armL = child(chest, "chest", "arm_l").rotX(20 * slump).rotZ(-12 * slump);
+		place(pArmL, armL, sc);
+		Rigid foreL = child(armL, "arm_l", "fore_l").rotX(-25 * slump);
+		place(pForeL, foreL, sc);
+		place(pHandL, child(foreL, "fore_l", "hand_l"), sc);
+		Rigid armR = child(chest, "chest", "arm_r").rotX(-25 * hammerDown + 15 * slump).rotZ(8 * hammerDown);
 		place(pArmR, armR, sc);
+		Rigid foreR = child(armR, "arm_r", "fore_r").rotX(-15 * hammerDown);
+		place(pForeR, foreR, sc);
+		Rigid handR = child(foreR, "fore_r", "hand_r");
+		place(pHandR, handR, sc);
 		// 망치가 손에서 아래로 내려 머리가 바닥에
-		hammerRig = child(armR, "arm_r", "hammer").rotX(-90F + 70 * hammerDown);
+		hammerRig = child(handR, "hand_r", "hammer").rotX(-90F + 70 * hammerDown);
 		place(pHammer, hammerRig, sc);
 	}
 

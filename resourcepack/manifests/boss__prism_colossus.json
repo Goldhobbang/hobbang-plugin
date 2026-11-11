@@ -9,9 +9,81 @@
   "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
   "parts": [
     {
+      "name": "head",
+      "item_model": "hobbang:boss/prism_colossus/head",
+      "parent": "chest",
+      "pivot_blocks": [
+        0.0,
+        5.782608695652174,
+        0.0
+      ],
+      "translation": [
+        0.0,
+        5.782608695652174,
+        0.0
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "voxel",
+      "cuboids": 290,
+      "cuboids_voxel": 290,
+      "cuboids_obb": 0,
+      "faces": 1180,
+      "texture_px": 512,
+      "voxels": 5821
+    },
+    {
+      "name": "fist_r",
+      "item_model": "hobbang:boss/prism_colossus/fist_r",
+      "parent": "fore_r",
+      "pivot_blocks": [
+        -2.0938,
+        3.3021739130434784,
+        0.2188
+      ],
+      "translation": [
+        -2.0938,
+        3.3021739130434784,
+        0.2188
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "voxel",
+      "cuboids": 466,
+      "cuboids_voxel": 466,
+      "cuboids_obb": 0,
+      "faces": 1794,
+      "texture_px": 512,
+      "voxels": 10370
+    },
+    {
+      "name": "fore_r",
+      "item_model": "hobbang:boss/prism_colossus/fore_r",
+      "parent": "arm_r",
+      "pivot_blocks": [
+        -1.7812,
+        4.306521739130435,
+        -0.1562
+      ],
+      "translation": [
+        -1.7812,
+        4.306521739130435,
+        -0.1562
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "voxel",
+      "cuboids": 281,
+      "cuboids_voxel": 281,
+      "cuboids_obb": 0,
+      "faces": 1119,
+      "texture_px": 512,
+      "voxels": 5649
+    },
+    {
       "name": "arm_r",
       "item_model": "hobbang:boss/prism_colossus/arm_r",
-      "parent": "torso",
+      "parent": "chest",
       "pivot_blocks": [
         -1.9782608695652175,
         5.326086956521739,
@@ -25,17 +97,65 @@
       "scale": 3.2,
       "spin_axis": null,
       "mode": "voxel",
-      "cuboids": 958,
-      "cuboids_voxel": 958,
+      "cuboids": 286,
+      "cuboids_voxel": 286,
       "cuboids_obb": 0,
-      "faces": 3772,
-      "texture_px": 1024,
-      "voxels": 22302
+      "faces": 1096,
+      "texture_px": 512,
+      "voxels": 6825
+    },
+    {
+      "name": "fist_l",
+      "item_model": "hobbang:boss/prism_colossus/fist_l",
+      "parent": "fore_l",
+      "pivot_blocks": [
+        2.0938,
+        3.3021739130434784,
+        0.2188
+      ],
+      "translation": [
+        2.0938,
+        3.3021739130434784,
+        0.2188
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "voxel",
+      "cuboids": 464,
+      "cuboids_voxel": 464,
+      "cuboids_obb": 0,
+      "faces": 1796,
+      "texture_px": 512,
+      "voxels": 10445
+    },
+    {
+      "name": "fore_l",
+      "item_model": "hobbang:boss/prism_colossus/fore_l",
+      "parent": "arm_l",
+      "pivot_blocks": [
+        1.7188,
+        4.306521739130435,
+        -0.1562
+      ],
+      "translation": [
+        1.7188,
+        4.306521739130435,
+        -0.1562
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "voxel",
+      "cuboids": 277,
+      "cuboids_voxel": 277,
+      "cuboids_obb": 0,
+      "faces": 1049,
+      "texture_px": 512,
+      "voxels": 5673
     },
     {
       "name": "arm_l",
       "item_model": "hobbang:boss/prism_colossus/arm_l",
-      "parent": "torso",
+      "parent": "chest",
       "pivot_blocks": [
         1.9782608695652175,
         5.326086956521739,
@@ -49,36 +169,36 @@
       "scale": 3.2,
       "spin_axis": null,
       "mode": "voxel",
-      "cuboids": 955,
-      "cuboids_voxel": 955,
+      "cuboids": 275,
+      "cuboids_voxel": 275,
       "cuboids_obb": 0,
-      "faces": 3708,
-      "texture_px": 1024,
-      "voxels": 22620
+      "faces": 1053,
+      "texture_px": 512,
+      "voxels": 7044
     },
     {
-      "name": "head",
-      "item_model": "hobbang:boss/prism_colossus/head",
-      "parent": "torso",
+      "name": "shin_r",
+      "item_model": "hobbang:boss/prism_colossus/shin_r",
+      "parent": "leg_r",
       "pivot_blocks": [
-        0.0,
-        5.782608695652174,
-        0.0
+        -0.9062,
+        1.4000000000000001,
+        -0.3542
       ],
       "translation": [
-        0.0,
-        5.782608695652174,
-        0.0
+        -0.9062,
+        1.4000000000000001,
+        -0.3542
       ],
       "scale": 3.2,
       "spin_axis": null,
-      "mode": "voxel",
-      "cuboids": 282,
-      "cuboids_voxel": 282,
-      "cuboids_obb": 0,
-      "faces": 1189,
-      "texture_px": 512,
-      "voxels": 5693
+      "mode": "mixed",
+      "cuboids": 40,
+      "cuboids_voxel": 8,
+      "cuboids_obb": 32,
+      "faces": 135,
+      "texture_px": 256,
+      "voxels": 521
     },
     {
       "name": "leg_r",
@@ -97,12 +217,36 @@
       "scale": 3.2,
       "spin_axis": null,
       "mode": "mixed",
-      "cuboids": 104,
-      "cuboids_voxel": 62,
-      "cuboids_obb": 42,
-      "faces": 386,
+      "cuboids": 79,
+      "cuboids_voxel": 72,
+      "cuboids_obb": 7,
+      "faces": 336,
       "texture_px": 256,
-      "voxels": 1375
+      "voxels": 1604
+    },
+    {
+      "name": "shin_l",
+      "item_model": "hobbang:boss/prism_colossus/shin_l",
+      "parent": "leg_l",
+      "pivot_blocks": [
+        0.8958,
+        1.4000000000000001,
+        -0.3542
+      ],
+      "translation": [
+        0.8958,
+        1.4000000000000001,
+        -0.3542
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "mixed",
+      "cuboids": 39,
+      "cuboids_voxel": 11,
+      "cuboids_obb": 28,
+      "faces": 134,
+      "texture_px": 256,
+      "voxels": 522
     },
     {
       "name": "leg_l",
@@ -121,12 +265,36 @@
       "scale": 3.2,
       "spin_axis": null,
       "mode": "mixed",
-      "cuboids": 112,
-      "cuboids_voxel": 63,
-      "cuboids_obb": 49,
-      "faces": 393,
+      "cuboids": 116,
+      "cuboids_voxel": 66,
+      "cuboids_obb": 50,
+      "faces": 426,
       "texture_px": 256,
-      "voxels": 1373
+      "voxels": 1600
+    },
+    {
+      "name": "chest",
+      "item_model": "hobbang:boss/prism_colossus/chest",
+      "parent": "torso",
+      "pivot_blocks": [
+        0.0,
+        4.093478260869565,
+        0.0
+      ],
+      "translation": [
+        0.0,
+        4.093478260869565,
+        0.0
+      ],
+      "scale": 3.2,
+      "spin_axis": null,
+      "mode": "mixed",
+      "cuboids": 436,
+      "cuboids_voxel": 330,
+      "cuboids_obb": 106,
+      "faces": 1699,
+      "texture_px": 512,
+      "voxels": 12069
     },
     {
       "name": "torso",
@@ -145,13 +313,13 @@
       "scale": 3.2,
       "spin_axis": null,
       "mode": "mixed",
-      "cuboids": 366,
-      "cuboids_voxel": 251,
-      "cuboids_obb": 115,
-      "faces": 1397,
-      "texture_px": 512,
-      "voxels": 10181
+      "cuboids": 59,
+      "cuboids_voxel": 25,
+      "cuboids_obb": 34,
+      "faces": 226,
+      "texture_px": 256,
+      "voxels": 1519
     }
   ],
-  "total_cuboids": 2777
+  "total_cuboids": 3108
 }

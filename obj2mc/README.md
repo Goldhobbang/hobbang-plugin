@@ -182,3 +182,10 @@ Per-part `mode` (`voxel` default | `obb` | `mixed` + `obb_regions`) fits a few s
 rendered comparisons: `docs/CONVERSION-1.5.0.md`. `units_per_block` pins the model scale so Java offsets and
 weapon display transforms stay valid. After converting weapons run `weapons/rebuild_hands.py` (not `make_weapons.py`).
 Mesh paths in old configs are resolved by file name under `work/models/` (unzip `models-3d/*.zip` there).
+
+## v1.5.0 update: rigs
+
+Joint subdivision (`joint_cap`, `cap_with`, null pivot coordinates, `sector` regions, `gen_humanoid_rigs.py`), the offline pose checker
+`pose.py`, and the hand-designed box wyvern (`make_wyvern.py`, `wyvern_compare.py`, `wyvern_palette.py`) are described in
+`docs/RIG-1.5.0.md`. `configs/tempest_wyvern.json` (Meshy voxel wyvern) is kept for reference only; the pack now uses the box model.
+Cuboid counts in `docs/CONVERSION-1.5.0.md` are pre-rig; the current ones are in `docs/RIG-1.5.0.md`.

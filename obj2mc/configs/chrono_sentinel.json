@@ -56,6 +56,40 @@
    ]
   },
   {
+   "name": "blade_r",
+   "parent": "arm_r",
+   "pivot": [
+    null,
+    1.43,
+    null
+   ],
+   "joint_cap": 0.084,
+   "mode": "mixed",
+   "obb_regions": [
+    {
+     "max": [
+      null,
+      1.2,
+      null
+     ]
+    }
+   ],
+   "regions": [
+    {
+     "max": [
+      -0.62,
+      1.43,
+      null
+     ],
+     "min": [
+      null,
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
    "name": "arm_r",
    "parent": "body",
    "pivot": [
@@ -79,12 +113,37 @@
      ]
     }
    ],
+   "joint_cap": 0.108
+  },
+  {
+   "name": "blade_l",
+   "parent": "arm_l",
+   "pivot": [
+    null,
+    1.43,
+    null
+   ],
+   "joint_cap": 0.084,
    "mode": "mixed",
    "obb_regions": [
     {
      "max": [
       null,
       1.2,
+      null
+     ]
+    }
+   ],
+   "regions": [
+    {
+     "min": [
+      0.62,
+      null,
+      null
+     ],
+     "max": [
+      null,
+      1.43,
       null
      ]
     }
@@ -107,12 +166,22 @@
      ]
     }
    ],
-   "mode": "mixed",
-   "obb_regions": [
+   "joint_cap": 0.108
+  },
+  {
+   "name": "pendulum",
+   "parent": "body",
+   "pivot": [
+    0,
+    1.23,
+    null
+   ],
+   "joint_cap": 0.09,
+   "regions": [
     {
      "max": [
       null,
-      1.2,
+      1.23,
       null
      ]
     }

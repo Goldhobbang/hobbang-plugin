@@ -14,6 +14,10 @@ for path in sorted(glob.glob(os.path.join(man_dir, 'boss__*.json'))):
         lines.append('\t\tput("%s", "%s", %s, %s, %s, %s, %s, %s, %s, %d, "%s");' % (
             att['boss'] if att else boss, att['part'] if att else p['name'], f(px), f(py), f(pz), f(m['item_display_scale']),
             f(ax[0]), f(ax[1]), f(ax[2]), p['cuboids'], 'boss/%s/%s' % (boss, p['name'])))
+    for p in m['parts']:
+        if 'local_offset' in p and not att:
+            o, r = p['local_offset'], p['rest_rot']
+            lines.append('\t\trig("%s", "%s", %s, %s, %s, %s, %s, %s);' % (boss, p['name'], f(o[0]), f(o[1]), f(o[2]), f(r[0]), f(r[1]), f(r[2])))
     if not att:
         lines.append('\t\tHEIGHT.put("%s", %s);' % (boss, f(m.get('height_blocks', 0))))
 src = '''package com.hobbang.enhance.boss;
@@ -30,6 +34,7 @@ public final class BossModels {
 
 	private static final Map<String, Spec> SPECS = new HashMap<>();
 	private static final Map<String, Float> HEIGHT = new HashMap<>();
+	private static final Map<String, Vector3f[]> RIG = new HashMap<>();
 
 	private BossModels() {}
 
@@ -41,6 +46,15 @@ public final class BossModels {
 		Spec s = SPECS.get(boss + "/" + part);
 		if (s == null) throw new IllegalArgumentException("no boss model " + boss + "/" + part);
 		return s;
+	}
+
+	private static void rig(String b, String p, float ox, float oy, float oz, float rx, float ry, float rz) {
+		RIG.put(b + "/" + p, new Vector3f[]{new Vector3f(ox, oy, oz), new Vector3f(rx, ry, rz)});
+	}
+
+	/** v1.5.0 박스 리그 관절: {부모 피벗 기준 오프셋(부모 좌표계), rest 회전(도, X→Y→Z 순)}. 복셀 모델 파츠는 null */
+	public static Vector3f[] rig(String boss, String part) {
+		return RIG.get(boss + "/" + part);
 	}
 
 	static Iterable<Spec> all() {
