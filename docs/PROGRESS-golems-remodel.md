@@ -158,3 +158,14 @@ python -B obj2mc/make_zip.py resourcepack/hobbang-pack work/v3/hobbang-pack-gole
 콜로서스의 결정은 축 하나로 회전 가능한 쐐기형이며 원본의 다각형 단면보다 넓고 평평합니다. 센티넬의 모래시계는 판에 그린 픽셀 아트이고, 다이얼·링·칼날의 외곽은 가까이 보면 1텍셀 단위로 꺾입니다. 기존 `ring`의 Y축 애니메이션을 사용해 기울어진 두 링이 함께 선회합니다. 검증 범위는 정적 팩, 빌드, 오프라인 렌더까지입니다.
 
 GOLEMS_REMODEL_V3_DONE
+
+## v3b
+
+- 구현 커밋 **f841b7e**. 콜로서스는 194개 요소를 유지하면서 불규칙한 돌판, 면을 잇는 자수정 균열, 넓은 결정면을 적용했습니다. 가슴 코어는 원본 정면 렌더에서 잰 폭 약 1블록에 맞췄습니다.
+- 센티넬은 몸통 두께를 0.81 → 1.21블록으로 늘리고 팔을 굵게 했습니다. 몸통과 어깨에 톱니 8개를 달고 황동판에 리벳, 이음선, 마모와 청록 도관을 추가했습니다. 366 → 470개 요소입니다.
+- v3와 대조해 두 보스의 파츠 이름, 부모, 피벗, 회전축 및 기타 리그 메타데이터가 일치함을 확인했습니다. 팩 검증은 아이템 80개, 요소 1,208개, 회전 요소 636개, 오류·경고 0건입니다. Java 21에서 Gradle 9.8.2 오프라인 clean jar 빌드가 성공했습니다. 기존 Paper API 경고 6건과 Gradle deprecation 경고가 남았습니다.
+- 비교는 원본 메시·v3·v3b를 동일한 정면, 3/4, 측면, 후면 3/4에서 렌더링했습니다. 지정된 vanilla_style_ref_*.png는 찾지 못해 원본 메시의 렌더와 요청에 적힌 픽셀 규칙을 사용했습니다.
+- 콜로서스 [비교](img/golems-remodel-v3b/prism_colossus_compare.jpg) · [텍스처 3배](img/golems-remodel-v3b/prism_colossus_textures.png)
+- 센티넬 [비교](img/golems-remodel-v3b/chrono_sentinel_compare.jpg) · [텍스처 3배](img/golems-remodel-v3b/chrono_sentinel_textures.png)
+
+GOLEMS_REMODEL_V3B_DONE
