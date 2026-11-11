@@ -156,3 +156,5 @@ python -B obj2mc/make_zip.py resourcepack/hobbang-pack work/v3/hobbang-pack-gole
 ### 원본과의 차이
 
 콜로서스의 결정은 축 하나로 회전 가능한 쐐기형이며 원본의 다각형 단면보다 넓고 평평합니다. 센티넬의 모래시계는 판에 그린 픽셀 아트이고, 다이얼·링·칼날의 외곽은 가까이 보면 1텍셀 단위로 꺾입니다. 기존 `ring`의 Y축 애니메이션을 사용해 기울어진 두 링이 함께 선회합니다. 검증 범위는 정적 팩, 빌드, 오프라인 렌더까지입니다.
+
+GOLEMS_REMODEL_V3_DONE
