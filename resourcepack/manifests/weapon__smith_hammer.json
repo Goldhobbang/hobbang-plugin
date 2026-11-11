@@ -2,11 +2,11 @@
   "id": "hobbang:weapon/smith_hammer",
   "height_blocks": 2.0,
   "resolution": 16,
-  "texels_per_voxel": 2,
+  "texels_per_voxel": 1,
   "model_units_per_block": 16.0,
   "item_display_scale": 1.0,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "note": "hand-designed Blockbench-style cuboid model (1.5.2); 16px/block noise-free pixel textures from original mesh palette.",
   "parts": [
     {
       "name": "held",
@@ -24,11 +24,11 @@
       ],
       "scale": 1.0,
       "spin_axis": null,
-      "mode": "obb",
+      "mode": "box",
       "cuboids": 13,
-      "cuboids_voxel": 0,
-      "cuboids_obb": 13,
-      "faces": 42,
+      "cuboids_voxel": 13,
+      "cuboids_obb": 0,
+      "faces": 78,
       "texture_px": 128,
       "voxels": 0
     }

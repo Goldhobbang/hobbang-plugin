@@ -10,15 +10,14 @@ import numpy as np
 from PIL import Image
 import icons
 
-PACK = '/workspace/mc/resourcepack/hobbang-pack'
+HERE = os.path.dirname(os.path.abspath(__file__))
+PACK = os.path.normpath(os.path.join(HERE, '..', 'resourcepack', 'hobbang-pack'))
 A = PACK + '/assets'
 CLIENT = '/home/box/.gradle/caches/fabric-loom/1.21.11/minecraft-client.jar'
 # id -> vanilla item_model the plugin puts on it (HItem.model); v1.4.0: stormcaller = battleaxe (netherite_axe), chrono_dagger = scythe (netherite_hoe)
 WEAPONS = {'smith_hammer': 'mace', 'crystal_greatsword': 'diamond_sword', 'stormcaller': 'netherite_axe', 'chrono_dagger': 'netherite_hoe'}
 OLD_WRAPPED = ['trident', 'golden_sword']   # wrapped by v1.4.0 drafts; no longer used -> removed so vanilla is untouched
 FLAT = ['gui', 'ground', 'fixed', 'on_shelf']
-
-HERE = os.path.dirname(os.path.abspath(__file__))
 # weapons with a 3D in-hand model built by obj2mc (configs/weapon_<id>.json -> models/item/weapon/<id>/held.json)
 MODEL3D = {'smith_hammer': 'hammer_display.json', 'stormcaller': 'stormcaller_display.json', 'crystal_greatsword': 'crystal_greatsword_display.json', 'chrono_dagger': 'chrono_dagger_display.json'}
 

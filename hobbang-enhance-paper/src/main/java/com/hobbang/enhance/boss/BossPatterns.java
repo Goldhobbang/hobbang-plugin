@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import static com.hobbang.enhance.boss.BossMotion.Move.*;
+
 /**
  * v1.2.0 보스 신규 패턴 공용 부품. 전부 Fx(비영구 디스플레이 + 수명) 위에서 돌아가므로 보스가 죽거나 언로드되면 같이 사라진다.
  * 모든 공격은 예고(텔레그래프)가 먼저 나오고, 피해는 예고가 끝난 뒤에만 들어간다.
@@ -36,6 +38,10 @@ public final class BossPatterns {
 
 	private static void warn(Boss b, String msg) {
 		BU.say(b.mob, Component.text("⚠ " + msg, NamedTextColor.GOLD));
+	}
+
+	private static void pose(Boss boss, BossMotion.Move move, int hit, int live, int recovery) {
+		if (boss instanceof DisplayBoss display) display.cue(move, hit, live, recovery);
 	}
 
 	private static double ground(World w, Vector at) {
@@ -53,6 +59,7 @@ public final class BossPatterns {
 
 	// ───────── 1. 충격파 고리: 퍼져 나가는 고리. 점프로 피한다 ─────────
 	public static void shockRing(Boss b, Vector center0, double maxR, double speed, double dmg, int warnTicks, int from, int to) {
+		pose(b, SWEEP, warnTicks, 5, 10);
 		World w = b.mob.getWorld();
 		Vector c = center0.clone();
 		c.setY(ground(w, c));
@@ -87,6 +94,11 @@ public final class BossPatterns {
 
 	// ───────── 2. 광선: 예고선 → 발사 (디스플레이 빔 + END_ROD) ─────────
 	public static void beam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb) {
+		pose(b, CAST, warn - 1, fire, 11);
+		spawnBeam(b, origin, dir0, len, warn, fire, dmg, look, rgb);
+	}
+
+	private static void spawnBeam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb) {
 		World w = b.mob.getWorld();
 		Vector dir = dir0.clone().normalize();
 		Particle.DustOptions dust = BU.dust(rgb, 0.9F);
@@ -126,12 +138,13 @@ public final class BossPatterns {
 
 	/** 지면을 따라 보스 중심에서 n방향으로 뻗는 광선 (십자/엑스) */
 	public static void groundBeams(Boss b, Vector center, int n, double angle0, double len, int warn, int fire, double dmg, Material look, int rgb) {
+		pose(b, CAST, warn - 1, fire, 11);
 		World w = b.mob.getWorld();
 		Vector c = center.clone();
 		c.setY(ground(w, c) + 0.6);
 		for (int i = 0; i < n; i++) {
 			double a = angle0 + Math.PI * 2 * i / n;
-			beam(b, () -> c, new Vector(Math.cos(a), 0, Math.sin(a)), len, warn, fire, dmg, look, rgb);
+			spawnBeam(b, () -> c, new Vector(Math.cos(a), 0, Math.sin(a)), len, warn, fire, dmg, look, rgb);
 		}
 	}
 
@@ -171,11 +184,14 @@ public final class BossPatterns {
 
 	/** 지금 플레이어가 서 있는 자리마다 운석 (잔상 폭발 등에 재사용) */
 	public static void meteorsOnPlayers(Boss b, double range, double radius, int warn, double dmg, Material rock, boolean fire) {
-		for (Player p : BU.victims(b.mob.getWorld(), b.mob.getBoundingBox().expand(range))) meteor(b, p.getLocation().toVector(), radius, warn, dmg, rock, fire);
+		var targets = BU.victims(b.mob.getWorld(), b.mob.getBoundingBox().expand(range));
+		if (!targets.isEmpty()) pose(b, CAST, warn - 1, 0, 13);
+		for (Player p : targets) meteor(b, p.getLocation().toVector(), radius, warn, dmg, rock, fire);
 	}
 
 	// ───────── 4. 화염 나선: 회전하는 팔. 처음 1초는 예고(피해 없음) ─────────
 	public static void spiral(Boss b, int arms, double radius, int warn, int duration, double dmg, Particle armParticle, int rgb) {
+		pose(b, SWEEP, warn, duration, 12);
 		World w = b.mob.getWorld();
 		Set<UUID> hit = new HashSet<>();
 		Particle.DustOptions d = BU.dust(rgb, 1.2F);
@@ -219,6 +235,7 @@ public final class BossPatterns {
 
 	// ───────── 5. 소용돌이/중력장: 끌어당긴 뒤 폭발. 바깥으로 달리면 피한다 ─────────
 	public static void vortex(Boss b, Vector center0, double radius, int pull, double dmg, int from, int to) {
+		pose(b, CHANNEL, pull - 1, 0, 16);
 		World w = b.mob.getWorld();
 		Vector c = center0.clone();
 		c.setY(ground(w, c) + 0.2);
@@ -253,6 +270,7 @@ public final class BossPatterns {
 
 	// ───────── 페이즈 전환 연출 (피해 없이 밀쳐내기) ─────────
 	public static void phaseBurst(Boss b, int from, int to) {
+		pose(b, PHASE, 8, 7, 17);
 		World w = b.mob.getWorld();
 		Vector c = b.mob.getLocation().toVector();
 		c.setY(ground(w, c));

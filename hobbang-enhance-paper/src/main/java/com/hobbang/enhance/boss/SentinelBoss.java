@@ -1,5 +1,7 @@
 package com.hobbang.enhance.boss;
 
+import static com.hobbang.enhance.boss.BossMotion.Move.*;
+
 import com.hobbang.enhance.item.HItem;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -39,7 +41,6 @@ public class SentinelBoss extends DisplayBoss {
 	private float ringCd = 150, echoCd = 240, bladeCd = 280;
 	private int stopTimer = 0, rewindTimer = 0, stunTimer = 0;
 	private float rewindDamage = 0;
-	private final float spinMul = 1;
 	private static final float REWIND_BREAK = 80;
 
 	private Part core, face, hourHand, minHand, bell, pendRod, pendBob, label;
@@ -50,8 +51,8 @@ public class SentinelBoss extends DisplayBoss {
 	/** v1.5.0: 하부 진자(모래시계)와 팔 칼날을 따로 움직인다 */
 	private Part mPend, mBladeL, mBladeR;
 	private Rigid coreRig;
-	private float ringAngle = 0, clockAngle = 0, deathU = 0, deathSpin = 1;
-	private int castAnim = 0;
+	private float gearAngle, gearSpeed = 1, deathU, tilt;
+	private int gearHoldUntil, lastDeathFrame;
 	private static final float LEGACY = 5.6F / (2.0F / 0.6F);
 
 	public SentinelBoss(Mob mob) {
@@ -116,64 +117,52 @@ public class SentinelBoss extends DisplayBoss {
 
 	@Override
 	protected void poseParts(float t) {
-		float sp = spinMul * (rewindTimer > 0 ? -3.5F : phase >= 3 ? 1.8F : 1.0F);
-		if (stunTimer > 0) sp = 0.1F;
-		if (dying) sp *= deathSpin;
-		if (modelMode) { poseModel(t, sp); return; }
+		float tooth = (float) Math.floor(gearAngle / 12);
+		float gear = (tooth + BossMotion.ease(gearAngle / 12 - tooth)) * 12;
+		if (modelMode) { poseModel(gear); return; }
 		Rigid root = Rigid.yaw(modelYaw());
-		Rigid c = root.at(0, 1.6F + sin(t * 0.06F) * 0.15F, 0);
+		float cycle = (float) Math.toRadians(gear);
+		Rigid c = root.at(0, 1.6F + sin(cycle) * 0.15F, 0);
 		coreRig = c;
-		place(core, c.rotY(t * 1.5F * sp));
+		place(core, c.rotY(gear * 0.5F));
 		place(face, c);
 		Rigid fc = c.at(0, 0, 0.62F);
-		place(hourHand, fc.rotZ(-t * 1.5F * sp));
-		place(minHand, fc.rotZ(-t * 12F * sp));
+		place(hourHand, fc.rotZ(-gear * 0.5F));
+		place(minHand, fc.rotZ(-gear * 4));
 		place(bell, c.at(0, 0.5F, 0));
-		Rigid pend = c.at(0, -0.5F, 0).rotX(sin(t * 0.12F * Math.abs(sp)) * 28);
+		Rigid pend = c.at(0, -0.5F, 0).rotX(sin(cycle * 2) * 28);
 		place(pendRod, pend);
 		place(pendBob, pend);
 		for (int i = 0; i < ringA.length; i++) {
-			float a = t * 3 * sp + i * 360F / ringA.length;
+			float a = gear + i * 360F / ringA.length;
 			place(ringA[i], c.rotY(a).at(0, 0, 1.6F).rotY(90));
 		}
 		for (int i = 0; i < ringB.length; i++) {
-			float a = -t * 4 * sp + i * 360F / ringB.length;
+			float a = -gear * 4 / 3 + i * 360F / ringB.length;
 			place(ringB[i], c.rotX(65).rotZ(20).rotY(a).at(0, 0, 2.0F).rotY(90));
 		}
 		place(label, root.at(0, 3.6F, 0));
 	}
 
-	/** v1.3.0: 모델 포즈 — 부유 흔들림, 톱니 고리는 수직축으로, 시계 코어는 자기 축으로 회전 (역행 중 반대로, 과부하 때 거의 멈춤) */
-	private void poseModel(float t, float sp) {
-		if (dying) sp *= deathSpin;
-		Rigid root = Rigid.yaw(modelYaw());
-		org.joml.Vector3f bp = pv(kind, "body");
-		float bob = dying ? 0 : sin(t * 0.06F) * 0.2F;
-		float tilt = stunTimer > 0 ? 12 : sin(t * 0.045F) * 2.5F;
-		float fade = dying && deathU > 0.92F ? (deathU - 0.92F) / 0.08F : 0;
-		float sc = Math.max(0.05F, 1F - fade);
-		Rigid b = root.at(bp.x, bp.y + bob - fade * 1.2F, bp.z).rotX(tilt);
-		place(mBody, b, sc);
-		ringAngle += 3 * sp * ANIM_INTERVAL;
-		clockAngle += 6 * sp * ANIM_INTERVAL;
-		place(mRing, child(b, "body", "ring").rotY(ringAngle), sc);
-		BossModels.Spec cs = BossModels.get(kind.id, "clock");
-		coreRig = child(b, "body", "clock");
-		place(mClock, coreRig.rotAxis(-clockAngle, cs.spinAxis()), sc);
-		float lift = castAnim > 0 ? -70 * Math.min(1F, castAnim / 6F) : 0;
-		float sway = dying ? 0 : sin(t * 0.05F) * 6;
-		Rigid aL = child(b, "body", "arm_l").rotX(lift + sway).rotZ(castAnim > 0 ? 25 : 4);
-		Rigid aR = child(b, "body", "arm_r").rotX(lift - sway).rotZ(castAnim > 0 ? -25 : -4);
-		place(mArmL, aL, sc);
-		place(mArmR, aR, sc);
-		// 칼날은 팔보다 반 박자 늦게 따라오고, 시전 때 앞으로 꺾인다
-		float bl = dying ? 0 : sin(t * 0.05F - 0.8F) * 5;
-		float bladeCast = castAnim > 0 ? -28 * Math.min(1F, castAnim / 6F) : 0;
-		place(mBladeL, child(aL, "arm_l", "blade_l").rotX(bladeCast + bl), sc);
-		place(mBladeR, child(aR, "arm_r", "blade_r").rotX(bladeCast - bl), sc);
-		// 진자: 톱니 속도에 맞춰 좌우로 흔들린다 (과부하·사망 때 멈춤)
-		place(mPend, child(b, "body", "pendulum").rotZ(sin(clockAngle * 0.035F) * 12 * Math.min(1F, Math.abs(sp))), sc);
-		place(label, root.at(0, 5.7F, 0), sc);
+	private void poseModel(float gear) {
+		aimModel(3.5F, 35, 30, 0.28F);
+		tilt = BossMotion.mix(tilt, stunTimer > 0 ? 12 : sin(Math.toRadians(gear)) * 2.5F, 0.27F);
+		BossMotion.Frame channel = motion(CHANNEL);
+		if (!dying && rewindTimer > 0) {
+			channel = channel.blend(BossMotion.frame(160 - rewindTimer, 160, 0, 12));
+		} else if (!dying && stopTimer > 0) {
+			channel = channel.blend(BossMotion.frame(61 - stopTimer, 61, 0, 12));
+		}
+		coreRig = BossPoses.sentinel(this::placeModel, modelYaw(), gear, tilt, lookYaw, lookPitch, deathU,
+			motion(CAST), motion(CAST, 2), motion(SWEEP), channel, motion(PHASE));
+		place(label, Rigid.yaw(modelYaw()).at(0, 5.7F, 0), Math.max(0.05F, 1 - BossMotion.ease((deathU - 0.92F) / 0.08F)));
+	}
+
+	private void advanceGears() {
+		float desired = rewindTimer > 0 ? -3.5F : phase >= 3 ? 1.8F : 1;
+		if (stunTimer > 0 || tickCount < gearHoldUntil) gearSpeed = 0;
+		else gearSpeed = BossMotion.mix(gearSpeed, desired, 0.17F);
+		gearAngle = (gearAngle + 3 * gearSpeed) % 2160; // common period of all gear ratios
 	}
 
 	/** 패턴 시작점 = 시계 코어 */
@@ -208,6 +197,7 @@ public class SentinelBoss extends DisplayBoss {
 			if (rewindDamage >= REWIND_BREAK) {
 				rewindTimer = 0;
 				stunTimer = 70;
+				cue(CHANNEL, 0, 0, 11);
 				Location l = mob.getLocation();
 				Vector cc = coreAt();
 				BU.sound(l, Sound.BLOCK_ANVIL_BREAK, SoundCategory.HOSTILE, 2F, 0.5F);
@@ -222,7 +212,7 @@ public class SentinelBoss extends DisplayBoss {
 	protected void bossTick(List<Player> near, LivingEntity target) {
 		World w = mob.getWorld();
 		Location here = mob.getLocation();
-		if (castAnim > 0) castAnim--;
+		advanceGears();
 		// 부유 이동
 		if (target != null) {
 			Vector to = target.getLocation().toVector().subtract(here.toVector());
@@ -296,6 +286,8 @@ public class SentinelBoss extends DisplayBoss {
 			BU.sound(here, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.HOSTILE, 3F, 0.5F + stopTimer / 60F);
 		}
 		if (stopTimer == 0) {
+			gearHoldUntil = tickCount + 9;
+			cue(CHANNEL, 0, 8, 12);
 			setLabel(Component.text("정지!", NamedTextColor.AQUA, TextDecoration.BOLD));
 			Fx.later(30, () -> setLabel(Component.empty()));
 			BU.sound(here, Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.HOSTILE, 3F, 0.5F);
@@ -334,6 +326,7 @@ public class SentinelBoss extends DisplayBoss {
 			mob.getWorld().spawnParticle(Particle.REVERSE_PORTAL, cc.getX(), cc.getY(), cc.getZ(), 24, 2.2, 2.2, 2.2, 0.05);
 		}
 		if (rewindTimer == 0) {
+			cue(CHANNEL, 0, 0, 16);
 			heal(maxHealth() * 0.12);
 			BU.sound(here, Sound.ITEM_TOTEM_USE, SoundCategory.HOSTILE, 2F, 0.6F);
 			BU.say(mob, Component.text("✖ 시간 역행 성공... 센티넬의 체력이 회복되었습니다", NamedTextColor.RED));
@@ -350,6 +343,7 @@ public class SentinelBoss extends DisplayBoss {
 		float dir = random.nextBoolean() ? 1 : -1;
 		int hands = dbl ? 2 : 1;
 		final float len = 12;
+		cue(SWEEP, 25, 50, 12);
 		BU.sound(c0, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.HOSTILE, 3F, 0.6F);
 		BU.say(mob, Component.text("⚠ 시계침이 돕니다! 점프하거나 범위 밖으로!", NamedTextColor.YELLOW));
 		Fx.spawn(world, uuid, c, 80, (f, w) -> {
@@ -399,7 +393,7 @@ public class SentinelBoss extends DisplayBoss {
 	private void bolts(int n, Set<UUID> only) {
 		World world = mob.getWorld();
 		Vector c = coreAt();
-		castAnim = 14;
+		cue(CAST, 19, (n - 1) * 2 + 1, 12);
 		double br = 1.2 + mob.getWidth() / 2;
 		BU.sound(mob.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.HOSTILE, 3F, 1.6F);
 		for (int i = 0; i < n; i++) {
@@ -458,7 +452,7 @@ public class SentinelBoss extends DisplayBoss {
 	@Override
 	protected void onDeathStart() {
 		deathU = 0;
-		deathSpin = 1;
+		lastDeathFrame = 0;
 		BU.sound(mob.getLocation(), Sound.BLOCK_BELL_RESONATE, SoundCategory.HOSTILE, 2F, 0.6F);
 	}
 
@@ -467,10 +461,10 @@ public class SentinelBoss extends DisplayBoss {
 		deathU = u;
 		// 0-0.28 톱니·시계가 느려지고 불이 꺼짐, 0.28-0.92 정지 홀드(~5초), 이후 사라짐
 		float slow = u < 0.28F ? 1F - u / 0.28F : 0F;
-		deathSpin = slow * slow;
+		gearAngle = (gearAngle + 3 * gearSpeed * slow * slow * (deathTick - lastDeathFrame)) % 2160;
+		lastDeathFrame = deathTick;
 		applyDeathLights(u);
-		if (modelMode) poseModel(animTick, 1F);
-		else if (u < 0.92F) poseParts(animTick);
+		if (modelMode || u < 0.92F) poseParts(animTick);
 		else super.poseDeath((u - 0.92F) / 0.08F);
 	}
 

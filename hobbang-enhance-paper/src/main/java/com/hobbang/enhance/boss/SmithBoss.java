@@ -1,5 +1,7 @@
 package com.hobbang.enhance.boss;
 
+import static com.hobbang.enhance.boss.BossMotion.Move.*;
+
 import com.hobbang.enhance.Keys;
 import com.hobbang.enhance.item.HItem;
 import net.kyori.adventure.bossbar.BossBar;
@@ -50,10 +52,11 @@ public class SmithBoss extends DisplayBoss {
 	private static final org.bukkit.NamespacedKey EMPTY_MODEL = new org.bukkit.NamespacedKey("hobbang", "empty");
 	private static final org.bukkit.NamespacedKey HELM_ARMOR = com.hobbang.enhance.Keys.k("model_helmet_armor");
 	private static final org.bukkit.NamespacedKey HELM_TOUGH = com.hobbang.enhance.Keys.k("model_helmet_tough");
-	/** 망치 내려찍기: 예고(들어올림) 14틱 → 4틱째 타격 */
+	/** 망치 내려찍기: 14틱 중 남은 4틱에 타격 */
 	private static final int SLAM_TIME = 14, SLAM_HIT = 4;
 	private static final double SLAM_RADIUS = 7.0;
-	private int slamTimer = 0, swingAnim = 0;
+	private int slamTimer;
+	private float walkWeight;
 	private Vector slamAt = null;
 	private Rigid headRig, hammerRig;
 	private double lastX = Double.NaN, lastZ, moved = 0;
@@ -136,61 +139,29 @@ public class SmithBoss extends DisplayBoss {
 		return h;
 	}
 
-	private static float sin(float f) { return (float) Math.sin(f); }
-
-	private static float wrapDeg(float d) {
-		d %= 360F;
-		if (d >= 180F) d -= 360F;
-		if (d < -180F) d += 360F;
-		return d;
-	}
-
 	@Override
 	protected void poseParts(float t) {
 		if (!modelMode || pTorso == null) return;
-		float walk = (float) Math.min(1.0, moved * 6);
-		float sw = sin(t * 0.18F) * 22F * walk;
-		float breathe = sin(t * 0.07F) * 0.06F + Math.abs(sin(t * 0.18F)) * 0.12F * walk;
-		Rigid root = Rigid.yaw(modelYaw());
-		// v1.4.0: 망치는 오른손(arm_r) 피벗에 붙은 별도 파츠 — wrist = 손목 꺾임 (망치만 회전)
-		float lean = 0, armRX = sw * 0.6F, armLX = -sw * 0.6F, armRZ = 0, wrist = 0;
-		if (slamTimer > 0) {
-			if (slamTimer > SLAM_HIT) { float k = Math.min(1F, (SLAM_TIME - slamTimer) / 6F); armRX = -165 * k; lean = -10 * k; armRZ = -10 * k; wrist = -25 * k; }
-			else { armRX = -10; lean = 30; wrist = 30; }
-		} else if (swingAnim > 0) {
-			armRX = -95 + (10 - swingAnim) * 9;
-			wrist = -20 + (10 - swingAnim) * 2;
+		aimModel(7.7F, 48, 26, 0.34F);
+		walkWeight = BossMotion.mix(walkWeight, Math.min(1, (float) moved * 6), 0.35F);
+		BossMotion.Frame strike = slamTimer > 0
+			? BossMotion.frame(SLAM_TIME - slamTimer, SLAM_TIME - SLAM_HIT, 0, SLAM_HIT + 6)
+			: motion(SLAM);
+		BossMotion.Frame follow = slamTimer > 0
+			? BossMotion.frame(SLAM_TIME - slamTimer - 1.5F, SLAM_TIME - SLAM_HIT, 0, SLAM_HIT + 6)
+			: motion(SLAM, 1.5F);
+		BossMotion.Frame cast = motion(CAST).blend(motion(CHANNEL));
+		BossMotion.Frame sweep = motion(SWEEP);
+		if (invulTicks <= 0 && !assembling() && isTargetable(mob.getTarget())) {
+			int rate = phase == 3 ? 2 : 1;
+			cast = cast.blend(BossMotion.forecast(fireCd, rate, 9));
+			if (phase >= 2) cast = cast.blend(BossMotion.forecast(vexCd, rate, 9));
+			if (phase >= 2 && !waveActive) sweep = sweep.blend(BossMotion.forecast(waveCd, rate, 10));
 		}
-		Vector3f tp = pv(kind, "torso");
-		// 골반은 조금만, 상체가 나머지를 숙인다 (상·하체 분리). 걸을 때 상체가 다리 반대로 살짝 돈다.
-		Rigid torso = root.at(tp.x, tp.y + breathe, tp.z).rotX(lean * 0.35F);
-		place(pTorso, torso);
-		Rigid chest = child(torso, "torso", "chest").rotX(lean * 0.65F + sin(t * 0.07F) * 1.2F).rotY(-sw * 0.12F);
-		place(pChest, chest);
-		poseLeg(root, "_l", pLegL, pShinL, pFootL, -sw, 0, 1F);
-		poseLeg(root, "_r", pLegR, pShinR, pFootR, sw, 0, 1F);
-		float headYaw = wrapDeg(mob.getLocation().getYaw() - mob.getBodyYaw());
-		headRig = child(chest, "chest", "head").rotY(-Math.max(-50, Math.min(50, headYaw))).rotX(slamTimer > SLAM_HIT ? -8 : 0);
-		place(pHead, headRig);
-		// 팔: 팔꿈치는 앞으로만 굽는다 (rotX 음수). 내려찍기 예비동작에서 더 접는다.
-		float elbowL = -8 - Math.abs(sw) * 0.35F, elbowR = -10 - Math.abs(sw) * 0.35F;
-		if (slamTimer > SLAM_HIT) elbowR = -40;
-		else if (slamTimer > 0) elbowR = -6;
-		else if (swingAnim > 0) elbowR = -30 + (10 - swingAnim) * 2.5F;
-		Rigid armL = child(chest, "chest", "arm_l").rotX(armLX).rotZ(-4);
-		place(pArmL, armL);
-		Rigid foreL = child(armL, "arm_l", "fore_l").rotX(elbowL);
-		place(pForeL, foreL);
-		place(pHandL, child(foreL, "fore_l", "hand_l").rotX(elbowL * 0.3F));
-		Rigid armR = child(chest, "chest", "arm_r").rotX(armRX).rotZ(armRZ);
-		place(pArmR, armR);
-		Rigid foreR = child(armR, "arm_r", "fore_r").rotX(elbowR);
-		place(pForeR, foreR);
-		Rigid handR = child(foreR, "fore_r", "hand_r").rotX(wrist * 0.35F);
-		place(pHandR, handR);
-		// v1.4.3: 손잡이는 주먹, 머리는 팔과 수직(앞으로) — 플레이어 망치 그립과 같게
-		hammerRig = child(handR, "hand_r", "hammer").rotX(wrist * 0.65F - 90F);
-		place(pHammer, hammerRig);
+		BossPoses.SmithRig rig = BossPoses.smith(this::placeModel, t, modelYaw(), walkWeight, lookYaw, lookPitch,
+			strike, follow, motion(STRIKE), cast, sweep, motion(PHASE));
+		headRig = rig.head();
+		hammerRig = rig.hammer();
 	}
 
 	/** 다리 3관절. swing + = 뒤로. 앞으로 나가는 다리는 무릎을 굽혀 발을 든다. kneel 0..1 = 무릎 꿇기 */
@@ -254,7 +225,6 @@ public class SmithBoss extends DisplayBoss {
 		Location l = mob.getLocation();
 		if (!Double.isNaN(lastX)) moved = Math.hypot(l.getX() - lastX, l.getZ() - lastZ);
 		lastX = l.getX(); lastZ = l.getZ();
-		if (swingAnim > 0) swingAnim--;
 		tickSlam();
 		double hp = health() / maxHealth();
 		if (phase == 1 && hp <= 0.66) enterPhase(2);
@@ -342,6 +312,7 @@ public class SmithBoss extends DisplayBoss {
 			}
 			if (phase == 3) {
 				if (--thunderCd <= 0) {
+					cue(CAST, 19, 0, 10);
 					for (Player p : near) {
 						if (!BU.valid(p)) continue;
 						Location pl = p.getLocation();
@@ -413,6 +384,7 @@ public class SmithBoss extends DisplayBoss {
 			if (slamTimer % 2 == 0) BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.6F), at, SLAM_RADIUS, 44);
 			slamAt = at;
 		} else if (slamTimer == SLAM_HIT) {
+			cue(SLAM, 0, 0, SLAM_HIT + 6);
 			hammerSlam(slamAt != null ? slamAt : at);
 		}
 	}
@@ -436,6 +408,7 @@ public class SmithBoss extends DisplayBoss {
 	}
 
 	private void fireVolley(LivingEntity target) {
+		cue(CAST, 0, 0, 12);
 		World w = mob.getWorld();
 		BU.sound(mob.getLocation(), Sound.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, 1.5F, 0.7F);
 		int n = phase == 3 ? 5 : 3;
@@ -459,6 +432,7 @@ public class SmithBoss extends DisplayBoss {
 	}
 
 	private void startWave() {
+		cue(SWEEP, 0, 6, 12);
 		waveActive = true;
 		waveRadius = 1.0;
 		waveCenter = mob.getLocation().toVector();
@@ -526,6 +500,7 @@ public class SmithBoss extends DisplayBoss {
 	}
 
 	private void summonVex(int n) {
+		cue(CAST, 0, 0, 14);
 		World w = mob.getWorld();
 		long existing = w.getNearbyEntitiesByType(Vex.class, mob.getLocation(), 32 + mob.getWidth() / 2, 32 + mob.getHeight() / 2).size();
 		if (existing >= 6) return;
@@ -560,7 +535,7 @@ public class SmithBoss extends DisplayBoss {
 
 	@Override
 	public void onAttack(EntityDamageByEntityEvent e) {
-		if (e.getDamager() == mob) swingAnim = 10;
+		if (e.getDamager() == mob) cue(STRIKE, 0, 0, 11);
 		if (phase >= 2 && e.getEntity() instanceof LivingEntity le && e.getDamager() == mob) {
 			le.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 100, 0));
 		}

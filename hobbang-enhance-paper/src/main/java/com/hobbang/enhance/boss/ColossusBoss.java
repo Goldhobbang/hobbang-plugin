@@ -1,5 +1,7 @@
 package com.hobbang.enhance.boss;
 
+import static com.hobbang.enhance.boss.BossMotion.Move.*;
+
 import com.hobbang.enhance.Keys;
 import com.hobbang.enhance.item.HItem;
 import net.kyori.adventure.bossbar.BossBar;
@@ -38,7 +40,8 @@ import java.util.UUID;
 /** 프리즘 콜로서스 — 강화석 광맥이 깨어난 거대 수정 골렘 (지상형). 히트박스 = 투명 철 골렘 */
 public class ColossusBoss extends DisplayBoss {
 	private static final int ACT_NONE = 0, ACT_SLAM = 1, ACT_SPIKE = 2, ACT_BEAM = 3, ACT_RAIN = 4;
-	private int action = ACT_NONE, actionTimer = 0;
+	private int action = ACT_NONE, actionTimer, actionLength;
+	private float walkWeight, orbitAngle;
 	private float slamCd = 80, spikeCd = 120, beamCd = 200, rainCd = 160;
 	private int swingAnim = 0, attackCd = 0;
 	private Vector lockDir = new Vector();
@@ -178,60 +181,27 @@ public class ColossusBoss extends DisplayBoss {
 		}
 	}
 
-	/** v1.3.0: 리소스팩 모델 포즈 — 걷기 흔들림 / 숨쉬기 / 행동별 팔 자세(예고 동작) */
 	private void poseModel(float t) {
-		float walk = (float) Math.min(1.0, moved * 8);
-		float sw = sin(t * 0.2F) * 24F * walk;
-		float breathe = sin(t * 0.08F) * 0.06F + Math.abs(sin(t * 0.2F)) * 0.1F * walk;
+		aimModel(6.05F, 48, 30, 0.29F);
+		walkWeight = BossMotion.mix(walkWeight, Math.min(1, (float) moved * 8), 0.33F);
+		float age = actionLength - actionTimer;
+		BossMotion.Frame slam = action == ACT_SLAM ? BossMotion.frame(age, 20, 0, 6) : motion(SWEEP);
+		BossMotion.Frame spike = action == ACT_SPIKE ? BossMotion.frame(age, 20, 0, 4).blend(motion(STRIKE)) : motion(STRIKE);
+		BossMotion.Frame beam = (action == ACT_BEAM && actionTimer > 30 ? BossMotion.frame(age, 30, 0, 1) : BossMotion.Frame.REST)
+			.blend(motion(CAST));
+		BossMotion.Frame rain = motion(CHANNEL);
+		BossMotion.Frame phasePose = motion(PHASE);
+		headRig = BossPoses.colossus(this::placeModel, t, modelYaw(), walkWeight, lookYaw, lookPitch,
+			slam, spike, beam, rain, motion(MELEE), phasePose);
+
 		Rigid root = Rigid.yaw(modelYaw());
-		float lean = 0, armLX = sw * -0.5F, armRX = sw * 0.5F, armLZ = -4, armRZ = 4;
-		if (action == ACT_SLAM) {
-			if (actionTimer > 6) { armLX = armRX = -165; lean = -12; } else { armLX = armRX = -30; lean = 18; }
-		} else if (action == ACT_SPIKE) {
-			armRX = actionTimer > 4 ? -150 : -30; lean = actionTimer > 4 ? -5 : 12;
-		} else if (action == ACT_BEAM) {
-			armLZ = -70; armRZ = 70; armLX = armRX = -20; lean = -6;
-		} else if (action == ACT_RAIN) {
-			armLX = armRX = -175; armLZ = -20; armRZ = 20;
-		}
-		if (swingAnim > 0) armRX = -110 + (10 - swingAnim) * 10;
-		org.joml.Vector3f ll = pv(kind, "leg_l"), lr = pv(kind, "leg_r"), tp = pv(kind, "torso");
-		// 다리: 앞으로 나가는 쪽 무릎이 굽는다 (rotX + = 뒤로)
-		Rigid lgL = root.at(ll.x, ll.y, ll.z).rotX(sw);
-		place(legL, lgL);
-		place(mShinL, child(lgL, "leg_l", "shin_l").rotX(Math.max(0, -sw) * 0.8F + 3));
-		Rigid lgR = root.at(lr.x, lr.y, lr.z).rotX(-sw);
-		place(legR, lgR);
-		place(mShinR, child(lgR, "leg_r", "shin_r").rotX(Math.max(0, sw) * 0.8F + 3));
-		// 골반은 조금, 상체가 나머지를 숙인다
-		Rigid pelvis = root.at(tp.x, tp.y + breathe, tp.z).rotX(lean * 0.4F);
-		place(torso, pelvis);
-		Rigid body = child(pelvis, "torso", "chest").rotX(lean * 0.6F).rotY(sw * 0.1F);
-		place(mChest, body);
-		float headYaw = wrap(mob.getLocation().getYaw() - mob.getBodyYaw());
-		Rigid hd = child(body, "chest", "head").rotY(-Math.max(-60, Math.min(60, headYaw)));
-		headRig = hd.at(0, 0.45F, 0.6F);
-		place(head, hd);
-		// 팔 3마디: 팔꿈치는 앞으로 굽고, 주먹이 조금 더 따라온다. 내려찍기 예비동작에서 크게 접는다.
-		float elbow = -10 - Math.abs(sw) * 0.3F;
-		float elbowL = elbow, elbowR = elbow;
-		if (action == ACT_SLAM) elbowL = elbowR = actionTimer > 6 ? -35 : -8;
-		else if (action == ACT_SPIKE) elbowR = actionTimer > 4 ? -40 : -8;
-		else if (action == ACT_RAIN) elbowL = elbowR = -15;
-		if (swingAnim > 0) elbowR = -35 + (10 - swingAnim) * 3;
-		Rigid aL = child(body, "chest", "arm_l").rotX(armLX).rotZ(-armLZ);
-		place(armL, aL);
-		Rigid fL = child(aL, "arm_l", "fore_l").rotX(elbowL);
-		place(mForeL, fL);
-		place(mFistL, child(fL, "fore_l", "fist_l").rotX(elbowL * 0.4F));
-		Rigid aR = child(body, "chest", "arm_r").rotX(armRX).rotZ(-armRZ);
-		place(armR, aR);
-		Rigid fR = child(aR, "arm_r", "fore_r").rotX(elbowR);
-		place(mForeR, fR);
-		place(mFistR, child(fR, "fore_r", "fist_r").rotX(elbowR * 0.4F));
+		float resonance = Math.max(phasePose.strength(), Math.max(beam.strength(), rain.strength()));
 		float orbScale = phase >= 2 ? 1.0F : 0.0F;
-		for (int i = 0; i < 3; i++) {
-			Rigid o = root.at(0, 4.2F + sin(t * 0.1F + i) * 0.4F, 0).rotY(t * (phase >= 3 ? 9 : 5) + i * 120).at(3.4F, 0, 0).rotX(t * 8).rotZ(t * 5);
+		for (int i = 0; i < orbit.length; i++) {
+			float vibration = sin(t * 0.91F - i * 0.7F) * 0.18F * resonance;
+			Rigid o = root.at(0, 4.2F + sin(t * 0.1F + i) * 0.4F + vibration, 0)
+				.rotY(orbitAngle + i * 120).at(3.4F + vibration + 0.46F * resonance, 0, 0)
+				.rotX(orbitAngle * 2 + i * 30 + 11 * vibration).rotZ(orbitAngle + 12 * vibration);
 			place(orbit[i], o, orbScale);
 		}
 	}
@@ -283,6 +253,7 @@ public class ColossusBoss extends DisplayBoss {
 		if (attackCd <= 0 && reach.overlaps(target.getBoundingBox())) {
 			attackCd = 20;
 			swingAnim = 10;
+			cue(MELEE, 0, 0, 11);
 			boolean ok = BU.hurtable(target);
 			target.damage(16, BU.mob(mob));
 			if (ok) {
@@ -299,6 +270,7 @@ public class ColossusBoss extends DisplayBoss {
 		if (!Double.isNaN(lastX)) moved = Math.hypot(here.getX() - lastX, here.getZ() - lastZ);
 		lastX = here.getX(); lastZ = here.getZ();
 		if (swingAnim > 0) swingAnim--;
+		orbitAngle = (orbitAngle + (phase >= 3 ? 9 : 5)) % 360;
 		chase(target);
 		if (invulTicks > 0) return;
 		float spd = phase >= 3 ? 1.5F : 1.0F;
@@ -355,7 +327,8 @@ public class ColossusBoss extends DisplayBoss {
 
 	private void start(int act, int time) {
 		action = act;
-		actionTimer = time;
+		actionTimer = actionLength = time;
+		if (act == ACT_RAIN) cue(CHANNEL, 38, 0, 14);
 		mob.getPathfinder().stopPathfinding();
 	}
 
@@ -386,6 +359,7 @@ public class ColossusBoss extends DisplayBoss {
 						from.clone().add(lockDir.clone().multiply(16)).add(new Vector(0, 0.15, 0)), 0.6);
 				} else if (actionTimer == 4) {
 					BU.sound(mob.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.HOSTILE, 3F, 0.5F);
+					cue(STRIKE, 1, 12, 12);
 					for (int i = 0; i < 13; i++) {
 						Vector p = from.clone().add(lockDir.clone().multiply(i * 1.25));
 						spike(w, new Vector(p.getX(), BU.groundY(w, p.getX(), c.getY() + 2, p.getZ()), p.getZ()), i, 1.5F, uuid, mob);
@@ -404,6 +378,7 @@ public class ColossusBoss extends DisplayBoss {
 					if (core != null) core.display.setGlowing(true);
 					else if (head != null) { head.display.setGlowColorOverride(org.bukkit.Color.fromRGB(0x80E0FF)); head.display.setGlowing(true); }
 				} else if (actionTimer == 30) {
+					cue(CAST, 0, 30, 12);
 					BU.sound(mob.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.HOSTILE, 3F, 1.6F);
 					beam(w, eye, lockDir.clone(), 22, 30);
 				}
