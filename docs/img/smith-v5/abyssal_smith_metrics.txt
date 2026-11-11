@@ -1,0 +1,21 @@
+silhouette front: IoU 0.705, model area / mesh area 0.811
+silhouette side: IoU 0.739, model area / mesh area 0.873
+silhouette 3/4: IoU 0.831, model area / mesh area 0.989
+  cuboids torso     17  atlas 128px
+  cuboids chest     26  atlas 128px
+  cuboids head      28  atlas 128px
+  cuboids arm_l      8  atlas 128px
+  cuboids fore_l     8  atlas 128px
+  cuboids hand_l    14  atlas 128px
+  cuboids arm_r      8  atlas 128px
+  cuboids fore_r     8  atlas 128px
+  cuboids hand_r    14  atlas 128px
+  cuboids leg_l      5  atlas 128px
+  cuboids shin_l     7  atlas 128px
+  cuboids foot_l    10  atlas 128px
+  cuboids leg_r      5  atlas 128px
+  cuboids shin_r     7  atlas 128px
+  cuboids foot_r    10  atlas 128px
+  cuboids body 175  hammer 30 (atlas 128px)
+mesh  bbox w/h/d 6.03 / 9.00 / 3.00
+model bbox w/h/d 5.73 / 8.76 / 2.69

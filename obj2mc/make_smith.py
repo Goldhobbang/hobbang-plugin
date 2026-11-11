@@ -553,6 +553,34 @@ def define_hammer_boxes(is_weapon=False):
 
 
 # ----------------------------------------------------------------------------- Model & Manifest Emitter
+MAX_ATLAS = 128   # px; a part whose faces need more at 16 px/block gets more 128x128 pages (#t, #t1, ...), never less density
+
+
+def paged_pack(rects, max_size, pad=1):
+    """shelf-pack face rects into one power-of-two atlas if it fits in max_size, else into several max_size pages.
+    returns [(page, x, y)] per rect and the page sizes"""
+    pos, size = shelf_pack(rects, pad=pad)
+    if size <= max_size:
+        return [(0, x, y) for x, y in pos], [size]
+    out = [None] * len(rects)
+    todo = sorted(range(len(rects)), key=lambda i: (-rects[i][1], -rects[i][0]))
+    pages = 0
+    while todo:
+        x = y = shelf = 0
+        left = []
+        for i in todo:
+            w, h = rects[i][0] + 2 * pad, rects[i][1] + 2 * pad
+            if w > max_size or h > max_size:
+                raise ValueError(f'face {rects[i]} larger than a {max_size} px page')
+            if x + w > max_size:
+                x, y, shelf = 0, y + shelf, 0
+            if y + h > max_size:
+                left.append(i); continue
+            out[i] = (pages, x + pad, y + pad)
+            x += w; shelf = max(shelf, h)
+        todo = left; pages += 1
+    return out, [max_size] * pages
+
 def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block, attach=None, credit='make_smith (HobbangEnhance 1.5.2)'):
     S_REF = np.array([-1.0, 1.0, -1.0])
     disp = 16.0 / k_units_per_block
@@ -596,11 +624,12 @@ def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block
                 rects.append((W, H))
                 jobs.append((bi, fn))
 
-        pos, size = shelf_pack(rects, pad=1)
-        atlas = np.zeros((size, size, 4), np.uint8)
+        pos, sizes = paged_pack(rects, MAX_ATLAS, pad=1)
+        atlases = [np.zeros((sz, sz, 4), np.uint8) for sz in sizes]
         elements = [None] * len(p['boxes'])
-        for (bi, fn), (W, H), (px, py) in zip(jobs, rects, pos):
+        for (bi, fn), (W, H), (pg, px, py) in zip(jobs, rects, pos):
             b = p['boxes'][bi]
+            atlas, size = atlases[pg], sizes[pg]
             atlas[py:py + H, px:px + W, :3] = paint_face(b['kind'], fn, W, H, b['color']).astype(np.uint8)
             atlas[py:py + H, px:px + W, 3] = 255
             atlas[py - 1, px:px + W] = atlas[py, px:px + W]
@@ -619,6 +648,8 @@ def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block
                         'axis': ax,
                         'origin': [round(float(x), 4) for x in (b['_from'] + b['_to']) / 2.0],
                     }
+                if b.get('light'):
+                    el['light_emission'] = int(b['light'])   # 1.21.2+ element field: minimum light level (glow parts)
                 el['faces'] = {}
                 elements[bi] = el
             elements[bi]['faces'][fn] = {
@@ -628,14 +659,17 @@ def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block
                     round((px + W) * 16.0 / size, 5),
                     round((py + H) * 16.0 / size, 5),
                 ],
-                'texture': '#t',
+                'texture': '#t' if pg == 0 else f'#t{pg}',
             }
 
         tref = f'{NS}:item/{model_id}/{pname}'
+        texrefs = {'t': tref, 'particle': tref}
+        for pg in range(1, len(sizes)):
+            texrefs[f't{pg}'] = f'{tref}_{pg}'
         model_json = {
             'credit': credit,
-            'texture_size': [size, size],
-            'textures': {'t': tref, 'particle': tref},
+            'texture_size': [sizes[0], sizes[0]],
+            'textures': texrefs,
             'elements': elements,
             'display': {'fixed': {'rotation': [0, 0, 0], 'translation': [0, 0, 0], 'scale': [1, 1, 1]}},
         }
@@ -643,17 +677,19 @@ def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block
             os.makedirs(os.path.join(pack, 'assets', NS, *sub.split('/'), *model_id.split('/')), exist_ok=True)
         with open(os.path.join(pack, 'assets', NS, 'models', 'item', *model_id.split('/'), f'{pname}.json'), 'w') as fh:
             json.dump(model_json, fh, separators=(',', ':'))
-        Image.fromarray(atlas).save(
-            os.path.join(pack, 'assets', NS, 'textures', 'item', *model_id.split('/'), f'{pname}.png'),
-            optimize=True,
-        )
+        for pg, atlas in enumerate(atlases):
+            Image.fromarray(atlas).save(
+                os.path.join(pack, 'assets', NS, 'textures', 'item', *model_id.split('/'), f'{pname}{"" if pg == 0 else f"_{pg}"}.png'),
+                optimize=True,
+            )
         with open(os.path.join(pack, 'assets', NS, 'items', *model_id.split('/'), f'{pname}.json'), 'w') as fh:
             json.dump({'model': {'type': 'minecraft:model', 'model': f'{NS}:item/{model_id}/{pname}'}}, fh, indent=2)
 
         nc = len(elements)
         n_rot = sum(1 for b in p['boxes'] if b['rot'])
         total_cuboids += nc
-        total_tex_px += size * size
+        total_tex_px += sum(sz * sz for sz in sizes)
+        size = max(sizes)
         man['parts'].append({
             'name': pname,
             'item_model': f'{NS}:{model_id}/{pname}',
@@ -668,6 +704,7 @@ def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block
             'cuboids_obb': n_rot,
             'faces': nc * 6,
             'texture_px': size,
+            'texture_pages': len(sizes),
             'voxels': 0,
         })
 
