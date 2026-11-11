@@ -107,8 +107,16 @@ public abstract class DisplayBoss extends Boss {
 		if (m != null && m.equalsIgnoreCase("on")) return true;
 		if (m != null && m.equalsIgnoreCase("off")) return false;
 		String rp = org.bukkit.Bukkit.getResourcePack();
-		return rp != null && !rp.isBlank();
+		boolean pack = rp != null && !rp.isBlank();
+		if (!pack && !autoFallbackLogged) {
+			autoFallbackLogged = true;
+			com.hobbang.enhance.HobbangPlugin.get().getLogger().info("bossModels=auto: server.properties resource-pack is empty, "
+				+ "bosses use the legacy block models. Set bossModels: on when testing with a locally applied pack.");
+		}
+		return pack;
 	}
+
+	private static boolean autoFallbackLogged;
 
 	/** 예전 블록 모델의 배율 (보스 크기 / v1.2.0 크기) */
 	protected abstract float legacyScale();
@@ -268,11 +276,18 @@ public abstract class DisplayBoss extends Boss {
 	}
 
 	private void discardParts() {
-		for (Part p : parts) { Fx.forget(p.display); p.display.remove(); Fx.LIVE--; }
+		// Snapshot and clear first: removing a display fires EntityRemoveFromWorldEvent, which must never see (or re-enter on)
+		// a half-discarded part list. Already-removed displays are skipped so a second call is a no-op.
+		List<Part> old = new ArrayList<>(parts);
 		parts.clear();
 		modelParts.clear();
+		for (Part p : old) {
+			Fx.forget(p.display);
+			Fx.LIVE--;
+			if (p.display.isValid()) p.display.remove();
+		}
 		for (Entity e : new ArrayList<>(mob.getPassengers())) {
-			if (e.getScoreboardTags().contains(Fx.PART_TAG)) e.remove();
+			if (e.isValid() && e.getScoreboardTags().contains(Fx.PART_TAG)) e.remove();
 		}
 	}
 
@@ -302,10 +317,18 @@ public abstract class DisplayBoss extends Boss {
 
 	@Override
 	public void unload() {
-		super.unload();
-		cancelAssemble(false);
-		discardParts();
+		if (unloading) return;      // idempotent: part removal events fired from here must not unload again
+		unloading = true;
+		try {
+			super.unload();
+			cancelAssemble(false);
+			discardParts();
+		} finally {
+			unloading = false;
+		}
 	}
+
+	private boolean unloading;
 
 	// ───────── 틱 ─────────
 	@Override

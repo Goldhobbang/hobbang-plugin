@@ -246,7 +246,12 @@ public final class BossManager implements Listener {
 			DYING.add(b);
 			return; // 사망 연출 동안 파츠를 유지한다
 		}
-		if (b != null) b.unload();
+		if (b == null) return;     // a boss's own part displays are not in BOSSES: their removal never unloads anything
+		// Entities cannot be removed from inside the removal callback of another entity ("prevented from being removed"),
+		// and removing the parts here re-entered this handler. Unload on the next tick; parts that left with the chunk are
+		// already invalid by then and tagged leftovers are cleared when the boss re-attaches.
+		if (HobbangPlugin.get().isEnabled()) Bukkit.getScheduler().runTask(HobbangPlugin.get(), b::unload);
+		else b.unload();
 	}
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
