@@ -6,7 +6,7 @@
   "model_units_per_block": 5.0,
   "item_display_scale": 3.2,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "make_golems_v3.py, 16 texels per block, v1 rig.",
+  "note": "make_golems_v3.py, 16 texels per block, v3b textures and rig.",
   "parts": [
     {
       "name": "torso",

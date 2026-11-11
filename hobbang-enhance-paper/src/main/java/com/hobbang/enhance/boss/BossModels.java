@@ -60,14 +60,14 @@ public final class BossModels {
 		put("abyssal_smith", "shin_r", -1.1389F, 1.5500F, -0.0833F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 5, "boss/abyssal_smith/shin_r");
 		put("abyssal_smith", "foot_r", -1.3056F, 0.6500F, 0.2500F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 5, "boss/abyssal_smith/foot_r");
 		HEIGHT.put("abyssal_smith", 9.0000F);
-		put("chrono_sentinel", "body", 0.0000F, 2.5000F, 0.0000F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 126, "boss/chrono_sentinel/body");
+		put("chrono_sentinel", "body", 0.0000F, 2.5000F, 0.0000F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 178, "boss/chrono_sentinel/body");
 		put("chrono_sentinel", "gear_l", 0.7800F, 3.4000F, 0.3000F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 15, "boss/chrono_sentinel/gear_l");
 		put("chrono_sentinel", "gear_r", -0.7800F, 3.4000F, 0.3000F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 15, "boss/chrono_sentinel/gear_r");
 		put("chrono_sentinel", "ring", 0.0041F, 4.2407F, 0.1224F, 2.2857F, 0.0041F, 0.9326F, 0.3608F, 84, "boss/chrono_sentinel/ring");
 		put("chrono_sentinel", "clock", 0.0013F, 3.1295F, 0.5763F, 2.2857F, -0.0033F, -0.0311F, 0.9995F, 4, "boss/chrono_sentinel/clock");
-		put("chrono_sentinel", "arm_l", 0.9821F, 3.6607F, 0.0000F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 16, "boss/chrono_sentinel/arm_l");
+		put("chrono_sentinel", "arm_l", 0.9821F, 3.6607F, 0.0000F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 42, "boss/chrono_sentinel/arm_l");
 		put("chrono_sentinel", "blade_l", 1.7708F, 2.5536F, 0.1875F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 30, "boss/chrono_sentinel/blade_l");
-		put("chrono_sentinel", "arm_r", -0.9821F, 3.6607F, 0.0000F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 16, "boss/chrono_sentinel/arm_r");
+		put("chrono_sentinel", "arm_r", -0.9821F, 3.6607F, 0.0000F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 42, "boss/chrono_sentinel/arm_r");
 		put("chrono_sentinel", "blade_r", -1.7708F, 2.5536F, 0.1875F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 30, "boss/chrono_sentinel/blade_r");
 		put("chrono_sentinel", "pendulum", 0.0000F, 2.1964F, 0.2292F, 2.2857F, 0.0000F, 1.0000F, 0.0000F, 30, "boss/chrono_sentinel/pendulum");
 		HEIGHT.put("chrono_sentinel", 5.0000F);

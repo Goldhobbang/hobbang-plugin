@@ -1,7 +1,7 @@
-"""Render three matched views and nearest-neighbor texture sheets for golems v3.
+"""Render matched views and nearest-neighbor texture sheets for the golem rigs.
 
 Unpack the original archives into work/models (obj2mc.load_mesh's fallback).
-Use the v1 resourcepack directory from commit 5b14879 for the middle row.
+Use --previous to select the archived resourcepack directory for the middle row.
 """
 import argparse
 import json
@@ -27,7 +27,7 @@ def pack_model(folder, boss):
     return manifest, pack_tris(pack, manifest)[:3]
 
 
-def comparison(boss, old, current, out):
+def comparison(boss, old, current, out, previous_label, current_label, rear):
     config_path = ROOT / 'obj2mc' / 'configs' / f'{boss}.json'
     config = json.loads(config_path.read_text(encoding='utf-8'))
     vertices, indices, uvs, texture = load_mesh(config, config_path.parent)
@@ -38,17 +38,18 @@ def comparison(boss, old, current, out):
     height = config['height_blocks']
     center = np.array([0, height / 2, 0])
     extent = height * 1.24
+    angles = (*VIEWS, (145, 14, 'Rear 3/4')) if rear else VIEWS
     views = []
     for title, (tris, uv, tex), pixel in (
         (f'Original mesh ({len(indices):,} triangles)', (vertices[indices], mesh_uv, texture), False),
-        (f'v1 ({old_manifest["total_cuboids"]:,} cuboids)', old_model, True),
-        (f'v3 ({manifest["total_cuboids"]:,} cuboids)', model, True),
+        (f'{previous_label} ({old_manifest["total_cuboids"]:,} cuboids)', old_model, True),
+        (f'{current_label} ({manifest["total_cuboids"]:,} cuboids)', model, True),
     ):
-        for yaw, pitch, view in VIEWS:
+        for yaw, pitch, view in angles:
             image, _ = render(tris, uv, tex, yaw, pitch, SIZE, center, extent, nearest=pixel)
             views.append(label(image, f'{title} | {view}'))
     path = out / f'{boss}_compare.jpg'
-    grid(views, len(VIEWS)).save(path, quality=94, subsampling=0)
+    grid(views, len(angles)).save(path, quality=94, subsampling=0)
     print(path)
     return manifest
 
@@ -85,14 +86,21 @@ def texture_sheet(boss, manifest, current, out):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('bosses', nargs='*', choices=BOSSES)
-    parser.add_argument('--v1', type=Path, default=ROOT / 'work' / 'v1' / 'resourcepack')
+    parser.add_argument('bosses', nargs='*', metavar='BOSS')
+    parser.add_argument('--previous', '--v1', type=Path,
+                        default=ROOT / 'work' / 'v1' / 'resourcepack')
+    parser.add_argument('--previous-label', default='v1')
+    parser.add_argument('--current-label', default='v3')
+    parser.add_argument('--rear', action='store_true')
     parser.add_argument('--out', type=Path, default=ROOT / 'docs' / 'img' / 'golems-remodel-v3')
     args = parser.parse_args()
+    for boss in args.bosses:
+        if boss not in BOSSES:
+            parser.error(f'unknown boss: {boss}')
     args.out.mkdir(parents=True, exist_ok=True)
     current = ROOT / 'resourcepack'
     for boss in args.bosses or BOSSES:
-        manifest = comparison(boss, args.v1, current, args.out)
+        manifest = comparison(boss, args.previous, current, args.out, args.previous_label, args.current_label, args.rear)
         texture_sheet(boss, manifest, current, args.out)
 
 

@@ -6,7 +6,7 @@
   "model_units_per_block": 7.0,
   "item_display_scale": 2.2857142857142856,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "make_golems_v3.py, 16 texels per block, v1 rig.",
+  "note": "make_golems_v3.py, 16 texels per block, v3b textures and rig.",
   "parts": [
     {
       "name": "body",
@@ -25,10 +25,10 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 126,
-      "cuboids_voxel": 98,
-      "cuboids_obb": 28,
-      "faces": 756,
+      "cuboids": 178,
+      "cuboids_voxel": 134,
+      "cuboids_obb": 44,
+      "faces": 1068,
       "texture_px": 256,
       "voxels": 0
     },
@@ -153,10 +153,10 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 16,
-      "cuboids_voxel": 9,
-      "cuboids_obb": 7,
-      "faces": 96,
+      "cuboids": 42,
+      "cuboids_voxel": 27,
+      "cuboids_obb": 15,
+      "faces": 252,
       "texture_px": 64,
       "voxels": 0
     },
@@ -201,10 +201,10 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 16,
-      "cuboids_voxel": 9,
-      "cuboids_obb": 7,
-      "faces": 96,
+      "cuboids": 42,
+      "cuboids_voxel": 27,
+      "cuboids_obb": 15,
+      "faces": 252,
       "texture_px": 64,
       "voxels": 0
     },
@@ -257,5 +257,5 @@
       "voxels": 0
     }
   ],
-  "total_cuboids": 366
+  "total_cuboids": 470
 }

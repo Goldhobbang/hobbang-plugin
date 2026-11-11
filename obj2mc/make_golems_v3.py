@@ -92,7 +92,7 @@ class Rig:
                 elements.append({**element, 'faces': mapped})
             stem = f'{model}/{name}'
             texture = f'{ns}:item/{stem}'
-            payload = {'credit': 'HobbangEnhance golems v3', 'texture_size': [edge, edge],
+            payload = {'credit': 'HobbangEnhance golems v3b', 'texture_size': [edge, edge],
                        'textures': {'t': texture, 'particle': texture}, 'elements': elements,
                        'display': {'fixed': {'rotation': [0, 0, 0], 'translation': [0, 0, 0],
                                              'scale': [1, 1, 1]}}}
@@ -113,90 +113,109 @@ class Rig:
                         faces=sum(len(e['faces']) for e in elements), texture_px=edge, voxels=0)
             print(f'  {name:<10} {n:>3} elements  {edge}x{edge}')
         total = sum(p['cuboids'] for p in self.parts.values())
-        self.manifest.update(total_cuboids=total, note='make_golems_v3.py, 16 texels per block, v1 rig.')
+        self.manifest.update(total_cuboids=total, note='make_golems_v3.py, 16 texels per block, v3b textures and rig.')
         self.manifest_path.write_text(json.dumps(self.manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
         print(f'{model}: {total} elements, {len(self.parts)} parts')
 
 
-def rock_course(w, y, index, phase):
-    """A closed, stepped ledge. The last sample meets the first at the wrap seam."""
-    heights = (0, -1, -1, 1, 1, 0, 2, 2, 0, -1, -1, 0)
-    return [(x, y + heights[(x * len(heights) // max(1, w - 1) + phase + 3 * index) % len(heights)])
-            for x in range(w)]
+# Six irregular plates share joints on a 32-pixel layout. The two joints
+# at each vertical edge keep their height when a face is mirrored or resized.
+ROCK_PLATES = (
+    ((0, 0), (14, 0), (12, 6), (10, 13), (4, 11), (0, 10)),
+    ((14, 0), (31, 0), (31, 10), (27, 10), (22, 7), (17, 8), (12, 6)),
+    ((0, 10), (4, 11), (10, 13), (12, 19), (8, 24), (3, 23), (0, 24)),
+    ((10, 13), (12, 6), (17, 8), (22, 7), (26, 13), (23, 19),
+     (24, 24), (18, 26), (8, 24), (12, 19)),
+    ((22, 7), (27, 10), (31, 10), (31, 24), (27, 24), (24, 24), (23, 19), (26, 13)),
+    ((0, 24), (3, 23), (8, 24), (18, 26), (24, 24), (27, 24), (31, 24), (31, 31), (0, 31)),
+)
+ROCK_JOINTS = (
+    ((0, 10), (4, 11), (10, 13), (12, 6), (17, 8), (22, 7), (27, 10), (31, 10)),
+    ((14, 0), (12, 6)),
+    ((0, 24), (3, 23), (8, 24), (12, 19), (10, 13)),
+    ((22, 7), (26, 13), (23, 19), (24, 24)),
+    ((8, 24), (18, 26), (24, 24), (31, 24)),
+)
 
 
-def rock_surface(w, h, phase, seams=()):
-    img = canvas((w, h), STONE[2])
+def rock_surface(size, face, phase, entrances=(False, False), core=False):
+    w, h = size
+    light = {'up': 1, 'north': 0, 'west': 0, 'south': -1, 'east': -1, 'down': -2}[face]
+    img = canvas(size, STONE[3 + light])
     d = ImageDraw.Draw(img)
-    courses = max(1, round(h / 9))
-    breaks = [[(x, -1) for x in range(w)]]
-    breaks += [rock_course(w, round(h * i / courses), i, phase) for i in range(1, courses)]
-    breaks += [[(x, h) for x in range(w)]]
-    widths = (12, 8, 17, 10, 14, 9, 16)
-    for row, (top, bottom) in enumerate(zip(breaks, breaks[1:])):
-        x = -(phase * 3 + row * 5) % 12 - 12
-        column = 0
-        while x < w:
-            step = widths[(row * 2 + column + phase) % len(widths)]
-            left = max(0, x)
-            right = min(w - 1, x + step - 1)
-            if right >= left:
-                upper = top[left:right + 1]
-                lower = bottom[left:right + 1]
-                shade = (3, 2, 4, 3, 2)[(column + 2 * row + phase) % 5]
-                d.polygon(upper + lower[::-1], fill=STONE[shade])
-                d.line([(u, v - 1) for u, v in lower], fill=STONE[shade - 1])
-                d.line([(u, v - 2) for u, v in lower[1:-1]], fill=STONE[shade - 1])
-                d.line([(u, v + 1) for u, v in upper[1:-1]], fill=STONE[min(6, shade + 2)])
-                d.line([(u, v + 2) for u, v in upper[2:-2]], fill=STONE[shade + 1])
-                # Cleaved corners and a short shaded edge, instead of uniform rectangular bricks.
-                if 0 < left < right:
-                    a, b = top[left][1], bottom[left][1]
-                    lean = -2 if (column + row) % 2 else 2
-                    d.line([(left + lean, a), (left + lean, a + 2), (left, a + 3),
-                            (left, b - 2), (left - lean, b)], fill=STONE[0])
-                    d.line([(left + 1, a + 4), (left + 1, b - 2)], fill=STONE[shade + 1])
-                if right - left >= 8 and (column + row) % 3 != 1:
-                    u = left + 3
-                    v = (top[u][1] + bottom[u][1]) // 2
-                    d.line([(u, v), (u + 3, v), (u + 4, v - 1), (u + 6, v - 1)],
-                           fill=STONE[shade + 1])
-            x += step
-            column += 1
-    for seam in breaks[1:-1]:
-        d.line(seam, fill=STONE[0])
-    for index, start, length in seams:
-        course = breaks[min(index, courses - 1)] if courses > 1 else rock_course(w, h // 2, index, phase)
-        # Draw into the same side strip on both sides of the model edge.
-        line = [(x, course[x % w][1]) for x in range(start, start + length)]
-        for shift in (-w, 0, w):
-            pts = [(x + shift, y) for x, y in line]
-            glow(d, pts, (CR[0], CR[4], CR[7]))
-            if len(pts) > 8:
-                j = len(pts) // 2
-                u, v = pts[j]
-                d.line([(u, v), (u + 2, v + 2), (u + 2, v + 5), (u + 4, v + 7)], fill=CR[2], width=2)
-                d.line([(u, v), (u + 2, v + 2), (u + 2, v + 5)], fill=CR[5])
-                d.line(pts[j - 1:j + 2], fill=CR[9])
+
+    def pixels(points):
+        result = []
+        for x, y in points:
+            inside = min(x, 31 - x) / 15.5
+            offset_x, offset_y = ((0, 0), (-5, 3), (4, -3), (2, 4), (-3, -4))[phase % 5]
+            u = x + inside * offset_x
+            v = y + inside * min(y, 31 - y) / 15.5 * offset_y
+            if phase % 2:
+                u = 31 - u
+            result.append((round(u * (w - 1) / 31), round(v * (h - 1) / 31)))
+        return result
+
+    if min(w, h) < 5:
+        d.line([(0, 0), (w - 1, 0)], fill=STONE[4 + light])
+        return img
+
+    for i, plate in enumerate(ROCK_PLATES):
+        shade = 3 + light + (0, 1, 0, 1, 0, 1)[(i + phase) % 6]
+        d.polygon(pixels(plate), fill=STONE[shade])
+    for points in (
+        ((2, 3), (8, 3), (10, 2), (9, 5), (5, 6), (2, 5)),
+        ((18, 12), (21, 11), (24, 14), (22, 16), (17, 16), (14, 18), (15, 14)),
+        ((25, 19), (27, 15), (30, 14), (30, 18), (27, 21)),
+        ((10, 27), (16, 28), (19, 29), (17, 30), (7, 30), (6, 28)),
+    ):
+        d.polygon(pixels(points), fill=STONE[4 + light])
+
+    joints = [pixels(points) for points in ROCK_JOINTS]
+    for joint in joints:
+        d.line([(x, y - 1) for x, y in joint], fill=STONE[2 + light])
+        d.line([(x, y + 1) for x, y in joint], fill=STONE[5 + light])
+        d.line(joint, fill=STONE[0])
+    d.line([(0, 0), (w - 1, 0)], fill=STONE[5 + light])
+
+    enter, leave = entrances[::-1] if phase % 2 else entrances
+    if enter or leave or core:
+        # Extend the two outside endpoints before cropping each face. The halo
+        # meets the same pixels on its neighboring face, including east/north.
+        main = joints[0]
+        a, b = main[0], main[-1]
+        if enter:
+            main = [(a[0] + (-2 if a[0] == 0 else 2), a[1]), *main]
+        else:
+            main = main[2:]
+        if leave:
+            main = [*main, (b[0] + (-2 if b[0] == 0 else 2), b[1])]
+        else:
+            main = main[:-2]
+        branches = [pixels(((22, 7), (26, 13), (23, 19), (24, 24))),
+                    pixels(((10, 13), (12, 19), (8, 24), (5, 24)))]
+        if core:
+            branches.extend(pixels(points) for points in (
+                ((10, 13), (12, 19), (16, 19), (18, 24), (18, 26), (16, 29), (16, 31)),
+                ((23, 19), (19, 17), (17, 18), (15, 15), (12, 6), (14, 0)),
+                ((18, 26), (24, 24), (27, 24)),
+            ))
+        for branch in branches:
+            glow(d, branch, (CR[0], CR[3], CR[7]))
+        glow(d, main, (CR[0], CR[4], CR[9]))
+        for point in pixels(((12, 6), (22, 7))):
+            d.point(point, fill=CR[10])
     return img
 
 
-def stone_faces(size, phase, lit=False, motif=None):
-    faces = face_sizes(size)
-    w, h = faces['north']
-    z, _ = faces['west']
-    circumference = 2 * (w + z)
-    seams = [(1, w - max(5, w // 2), max(9, w // 2 + z // 2)),
-             (2, 2 * w + z - 3, max(9, z // 2 + 4))] if lit else []
-    strip = rock_surface(circumference, h, phase, seams)
-    result = {}
-    start = 0
-    for face in SIDES:
-        width = faces[face][0]
-        result[face] = strip.crop((start, 0, start + width, h))
-        start += width
-    result['up'] = rock_surface(w, z, phase + 2)
-    result['down'] = rock_surface(w, z, phase + 4)
+def stone_faces(size, phase, lit=False, motif=None, core=False):
+    dims = face_sizes(size)
+    joins = (False, lit, lit and phase % 2 == 0, lit and phase % 2 != 0)
+    result = {face: rock_surface(dims[face], face, phase + i,
+                                 (joins[i], joins[(i + 1) % len(SIDES)]), core and i == 0)
+              for i, face in enumerate(SIDES)}
+    for face in ('up', 'down'):
+        result[face] = rock_surface(dims[face], face, phase + 2)
     if motif:
         motif(result['north'])
     return result
@@ -243,30 +262,38 @@ def core_faces(size):
 
 
 def crystal_faces(size, axis, sign, start, end, facet):
-    out = {}
-    for index, (face, (w, h)) in enumerate(face_sizes(size).items()):
+    faces = {}
+    for face, (w, h) in face_sizes(size).items():
         vertices = np.array(FACE_VERTS[face]) * MODEL_SIGN
-        along_u = (vertices[3, axis] - vertices[0, axis]) * sign
-        along_v = (vertices[1, axis] - vertices[0, axis]) * sign
-        if along_u:
-            t = np.broadcast_to(np.linspace(start, end, w)[None, ::int(along_u)], (h, w))
-            cross = np.broadcast_to(np.linspace(0, 1, h)[:, None], (h, w))
-        elif along_v:
-            t = np.broadcast_to(np.linspace(start, end, h)[::int(along_v), None], (h, w))
-            cross = np.broadcast_to(np.linspace(0, 1, w)[None, :], (h, w))
-        else:
-            t = np.full((h, w), end if vertices[0, axis] * sign == max(0, MODEL_SIGN[axis] * sign) else start)
-            cross = np.broadcast_to(np.linspace(0, 1, w)[None, :], (h, w))
-        shade = np.full((h, w), (4, 2, 3, 5, 3, 4)[(index + facet) % 6])
-        shade += np.where(cross < .23, 1, 0)
-        shade -= np.where(cross > .78, 1, 0)
-        shade += ((t > .15 + cross * .19) & (t < .51 + cross * .19))
-        shade += (t > .74).astype(int) + (t > .9).astype(int)
-        # A narrow glint and a broad darker facet that run the length of each prism.
-        shade += ((cross >= .22) & (cross < .35) & (t > .32) & (t < .79)) * 2
-        shade -= ((cross > .48) & (cross < .75) & (t > .38 + cross * .35)) * 2
-        out[face] = Image.fromarray(np.asarray(CR, dtype=np.uint8)[shade.clip(1, 9)])
-    return out
+        u = int((vertices[3, axis] - vertices[0, axis]) * sign)
+        v = int((vertices[1, axis] - vertices[0, axis]) * sign)
+        shade = {'up': 5, 'north': 4, 'west': 5, 'south': 3, 'east': 2, 'down': 2}[face]
+        if facet % 3 == 1 and face in SIDES:
+            shade += 1
+        if not (u or v):
+            tile = canvas((w, h), CR[shade])
+            d = ImageDraw.Draw(tile)
+            d.polygon([(0, 0), (w - 1, 0), (0, h - 1)], fill=CR[shade + 1])
+            d.line([(0, 0), (w - 1, 0)], fill=CR[shade + 2])
+            faces[face] = tile
+            continue
+
+        length, width = (w, h) if u else (h, w)
+        along = np.linspace(start, end, length)
+        across = np.linspace(0, 1, width)
+        # One broad diagonal facet across the whole shard. Sample it in shared
+        # length coordinates so the shaft sections retain the same facet.
+        ridge = .38 + .51 * across[:, None]
+        levels = shade + 2 * (along > ridge)
+        levels[0, :] = shade + 3
+        if width > 2:
+            levels[-1, :] = shade - 1
+        if u < 0 or v < 0:
+            levels = levels[:, ::-1]
+        if v:
+            levels = levels.T
+        faces[face] = Image.fromarray(np.asarray(CR, dtype=np.uint8)[levels])
+    return faces
 
 
 def shard(rig, part, root, axis, angle, length, width, facet):
@@ -312,17 +339,17 @@ def shard(rig, part, root, axis, angle, length, width, facet):
 
 
 def colossus(rig):
-    def rock(part, center, size, phase, lit=False, motif=None, rotation=None):
-        rig.box(part, center, size, stone_faces(size, phase, lit, motif), rotation)
+    def rock(part, center, size, phase, lit=False, motif=None, rotation=None, core=False):
+        rig.box(part, center, size, stone_faces(size, phase, lit, motif, core), rotation)
 
     rock('torso', (0, 2.61, -.17), (1.42, .92, 1.13), 2, True)
     rock('torso', (0, 2.22, .04), (.81, .72, .89), 4)
-    rock('chest', (0, 4.27, -.18), (2.07, 1.72, 1.52), 3, True)
+    rock('chest', (0, 4.27, -.18), (2.07, 1.72, 1.52), 3, True, core=True)
     rock('chest', (0, 5.16, -.22), (2.30, .50, 1.50), 1)
     rock('chest', (0, 3.31, -.10), (1.51, .64, 1.16), 5, True)
-    for depth, edge in ((.56, .87), (.71, .69), (.83, .44)):
+    for depth, edge in ((.56, .93), (.71, .74), (.83, .60)):
         size = (edge, edge, .22)
-        faces = stone_faces(size, 3, True) if edge > .8 else core_faces(size)
+        faces = stone_faces(size, 3, True, core=True) if edge > .8 else core_faces(size)
         rig.box('chest', (0, 4.45, depth), size, faces, ('z', 45))
     rock('head', (0, 5.74, .11), (1.12, .87, .92), 5, False, face_of_colossus)
     rock('head', (0, 5.43, .29), (.79, .39, .73), 2)
@@ -388,20 +415,26 @@ def brass_tile(size, face, motif=None):
     d.line([(0, h - 1), (0, 0), (w - 1, 0)], fill=BR[7 if lit else 6])
     d.line([(1, h - 1), (w - 1, h - 1), (w - 1, 1)], fill=BR[2])
     if w >= 6 and h >= 6:
-        # Pressed frame, patina in the recess, and 2-pixel rivet heads.
         x, y = w - 3, h - 3
-        d.polygon([(3, 2), (x - 1, 2), (x, 3), (x, y - 1), (x - 1, y),
-                   (3, y), (2, y - 1), (2, 3)], fill=BR[3])
-        d.polygon([(4, 3), (x - 1, 3), (x - 1, y - 1), (3, y - 1), (3, 4)],
-                  fill=PATINA[1] if motif == 'strut' else BR[5])
-        d.line([(3, y), (x - 1, y)], fill=BR[6])
+        panel = [(3, 2), (x, 2), (x, y - 1), (x - 1, y), (2, y), (2, 3)]
+        d.polygon(panel, fill=BR[5 if lit else 4], outline=BR[2])
         if w >= 9 and h >= 9:
+            d.line([(3, 3), (x - 1, 3)], fill=BR[7 if lit else 6])
+            d.line([(3, y + 1), (x, y + 1)], fill=BR[6])
             for cx, cy in ((2, 2), (x, 2), (2, y), (x, y)):
-                d.point((cx + 1, cy), fill=BR[2])
-                d.point((cx, cy), fill=GOLD[1])
+                d.line([(cx, cy + 1), (cx + 1, cy + 1)], fill=BR[2])
+                d.point((cx, cy), fill=GOLD[1 if lit else 0])
             if w >= 13 and h >= 10:
-                d.line([(4, 4), (w - 6, 4), (w - 5, 5)], fill=BR[6])
-                d.line([(4, y - 2), (w - 5, y - 2)], fill=BR[4])
+                # Short clusters of exposed metal where the panel lip wears.
+                d.line([(4, 0), (7, 0), (8, 1), (10, 1)], fill=GOLD[0])
+                d.line([(w - 5, y), (w - 4, y), (w - 3, y - 1)], fill=BR[7])
+                d.line([(3, h // 2), (w - 4, h // 2)], fill=BR[3])
+                d.line([(4, h // 2 + 1), (w - 5, h // 2 + 1)], fill=BR[6])
+    if motif == 'conduit' and w >= 9 and h >= 9:
+        x, y = w // 3, h // 2
+        path = [(x, 4), (x, y - 2), (x + 2, y), (w - 5, y), (w - 5, h - 5)]
+        glow(d, path, (BR[3], TEAL_DIM[0], TEAL[0]))
+        d.line([(x + 2, y), (min(x + 5, w - 5), y)], fill=TEAL[1])
     if motif == 'lens' and w >= 7 and h >= 7:
         x, y = w // 2, h // 2
         d.polygon([(x, y - 3), (x + 3, y), (x, y + 3), (x - 3, y)], fill=DARK[2])
@@ -614,8 +647,8 @@ def sentinel(rig):
                 hourglass(faces[face])
         rig.box(part, center, size, faces, rotation)
 
-    metal('body', (0, 3.20, -.16), (1.39, 1.29, .81))
-    metal('body', (0, 3.70, -.14), (2.08, .29, .71), 'strut')
+    metal('body', (0, 3.20, -.34), (1.39, 1.29, 1.21), 'conduit')
+    metal('body', (0, 3.70, -.14), (2.08, .29, .91), 'strut')
     metal('body', (0, 4.10, -.09), (.61, .57, .62), 'lens')
     metal('body', (0, 2.45, -.08), (.87, .46, .63), 'strut')
     cx, cy, _ = rig.parts['clock']['pivot_blocks']
@@ -625,12 +658,17 @@ def sentinel(rig):
         gear, arm, blade = (f'{p}_{q}' for p in ('gear', 'arm', 'blade'))
         cog(rig, gear, rig.parts[gear]['pivot_blocks'], .28, .16)
         cog(rig, 'body', (side * .67, 2.60, .22), .22, .13)
-        cog(rig, 'body', (side * .62, 3.37, -.56), .31, .15)
+        cog(rig, 'body', (side * .62, 3.37, -.98), .31, .15)
         cog(rig, 'body', (side * .97, 4.43, -.11), .13, .10)
-        metal(arm, (side * 1.10, 3.52, -.05), (.52, .59, .55), 'strut', ('z', side * 22.5))
-        metal(arm, (side * 1.34, 3.12, .02), (.30, .78, .42), 'strut', ('z', side * 22.5))
-        metal(arm, (side * 1.62, 2.78, .11), (.29, .59, .41), 'strut', ('z', side * 45))
-        cog(rig, arm, (side * 1.16, 3.51, .24), .24, .14)
+        metal(arm, (side * 1.10, 3.52, -.05), (.67, .59, .71), 'strut', ('z', side * 22.5))
+        metal(arm, (side * 1.34, 3.12, .02), (.42, .78, .56), 'strut', ('z', side * 22.5))
+        metal(arm, (side * 1.62, 2.78, .11), (.38, .59, .51), 'strut', ('z', side * 45))
+        cog(rig, arm, (side * 1.16, 3.51, .35), .24, .14)
+        # Four new gears on each side, mounted to the existing body and arm parts.
+        cog(rig, 'body', (side * .43, 3.76, -.97), .20, .12)
+        cog(rig, 'body', (side * .59, 2.84, -.97), .24, .13)
+        cog(rig, arm, (side * 1.15, 3.66, -.43), .26, .14)
+        cog(rig, arm, (side * 1.37, 3.27, -.27), .15, .10)
         hinge = rig.parts[blade]['pivot_blocks']
         leaf(rig, blade, hinge, side)
         cog(rig, blade, (hinge[0], hinge[1] - .09, hinge[2] + .17), .21, .14)
