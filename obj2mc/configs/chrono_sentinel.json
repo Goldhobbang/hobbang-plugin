@@ -14,7 +14,11 @@
   {
    "name": "ring",
    "parent": "body",
-   "pivot": "centroid",
+   "pivot": [
+    0.002296,
+    2.374792,
+    0.068544
+   ],
    "spin": true,
    "note": "tilted gear halo - spin about spin_axis",
    "regions": [
@@ -30,12 +34,21 @@
       null
      ]
     }
+   ],
+   "spin_axis": [
+    0.0041,
+    0.9326,
+    0.3608
    ]
   },
   {
    "name": "clock",
    "parent": "body",
-   "pivot": "centroid",
+   "pivot": [
+    0.000728,
+    1.75252,
+    0.322728
+   ],
    "spin": true,
    "note": "clock face disc - spin about spin_axis (~Z)",
    "regions": [
@@ -53,15 +66,20 @@
       0.2
      ]
     }
+   ],
+   "spin_axis": [
+    -0.0033,
+    -0.0311,
+    0.9995
    ]
   },
   {
    "name": "blade_r",
    "parent": "arm_r",
    "pivot": [
-    null,
+    -0.991648,
     1.43,
-    null
+    0.105
    ],
    "joint_cap": 0.084,
    "mode": "mixed",
@@ -119,9 +137,9 @@
    "name": "blade_l",
    "parent": "arm_l",
    "pivot": [
-    null,
+    0.991648,
     1.43,
-    null
+    0.105
    ],
    "joint_cap": 0.084,
    "mode": "mixed",
@@ -172,9 +190,9 @@
    "name": "pendulum",
    "parent": "body",
    "pivot": [
-    0,
+    0.0,
     1.23,
-    null
+    0.128352
    ],
    "joint_cap": 0.09,
    "regions": [
@@ -204,5 +222,6 @@
  "obb_fill": 0.78,
  "obb_resolution": 36.0,
  "obb_min_dim": 4,
- "units_per_block": 7.0
+ "units_per_block": 7.0,
+ "island_max_voxels": 150
 }
