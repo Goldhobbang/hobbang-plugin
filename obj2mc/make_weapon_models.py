@@ -5,26 +5,20 @@ for HobbangEnhance boss weapons (weapons-detail remodeling):
   - weapon/chrono_dagger      (<= 350 cuboids, height 2.5, k=11.75, pivot [0.54, 0.55, 0.0])
 (weapon/smith_hammer is untouched.)
 
-All cuboids strictly obey Minecraft's single-axis rotation limit (±45 deg in 22.5 deg steps)
-and -16..32 coordinate bounds. Small/rotated cuboids use clean directional face shading
-(no 1px border stripes that alias under rotation), while main unrotated surfaces use crisp
-multi-tone pixel art from the extracted original palettes, packed into <= 256x256 atlases.
+Cuboid geometry keeps Minecraft's single-axis rotations and -16..32 bounds.
+Faces are painted from the original palettes at a 16 texel/block baseline.
+Narrow engraved faces use additional samples to preserve legible pixel clusters.
+The 1.5.2 hand models keep their own geometry, display settings and atlases.
 """
 import json
 import math
 import os
-import shutil
+from pathlib import Path
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
+from obb import rot
 from obj2mc import FACE_NORMAL, FACE_VERTS, shelf_pack
-from make_smith import (
-    HERE, NS, PPU, new_part_table, add_part, add_box,
-    paint_bevel_plate, draw_pixel_line, lerp_rgb,
-)
-
-
-def shade(rgb, mul):
-    return np.clip(np.round(np.array(rgb, float) * mul), 0, 255).astype(np.uint8)
+from make_smith import HERE, NS, PPU, new_part_table, add_part, add_box
 
 
 # ----------------------------------------------------------------------------- Extracted Original Palettes (models-3d/)
@@ -71,172 +65,417 @@ CHRONO_TEAL  = ( 68, 147, 138)  # #44938a oxidized chrono-teal rune channel
 CHRONO_GLOW  = (106, 196, 184)  # #6ac4b8 bright chrono-teal highlight
 
 
-# ----------------------------------------------------------------------------- Weapon Face Pixel-Art Painter
-def paint_solid_directional(fn, W, H, color):
-    """Alias-free directional face shading for small or rotated cuboids (zero 1px border stripes!)."""
-    f_mul = {'up': 1.16, 'north': 1.03, 'south': 0.97, 'east': 0.88, 'west': 0.88, 'down': 0.74}[fn]
-    c = shade(color, f_mul)
-    img = np.empty((H, W, 3), dtype=np.uint8)
-    img[:, :] = c
-    return img
+FRONT_BACK = ('north', 'south')
+WALLS = (*FRONT_BACK, 'east', 'west')
+CRYSTAL = (CRYS_VOID, CRYS_DEEP, CRYS_BASE, CRYS_MID, CRYS_BRIGHT, CRYS_GLOW, CRYS_WHITE)
+STEEL = (STORM_VOID, DRAGON_DARK, DRAGON_STEEL, DRAGON_RIM, DRAGON_HI)
+STORM_GOLD = (BRONZE_MUTE, BRONZE_M_HI, GOLD_AMBER, GOLD_EDGE, GOLD_BRIGHT, GOLD_WHITE)
+BRASS = (BRASS_VOID, BRASS_DARK, BRASS_BASE, BRASS_MID, BRASS_GOLD, BRASS_HI, BRASS_BRIGHT)
+OBSIDIAN = (OBS_DARK, OBS_BASE, OBS_GOLD, OBS_GOLD_HI)
+FACE_LIGHT = {'up': 1, 'north': 0, 'south': 0, 'west': 0, 'east': -1, 'down': -2}
+PROJECTION_PPU = 3 * PPU
 
 
-def paint_weapon_face(kind, fn, W, H, color):
-    W = max(1, int(W))
-    H = max(1, int(H))
+def stepped_path(draw, points, colors, widths=(5, 3, 1)):
+    for width, color in zip(widths, colors):
+        draw.line(points, fill=color, width=width)
 
-    # --- 1. CRYSTAL GREATSWORD ---
-    if kind == 'crys_blade_main':
-        # High-res unrotated blade face (12 x 96 px): deep royal violet (#6900fa, #9100ff) with
-        # repeating V-chevron crystal facets (#bb33ff, #df71ff) & glowing pink-white center spine (#ffd3ff)!
-        if fn in ('north', 'south'):
-            img = np.full((H, W, 3), CRYS_BASE, dtype=np.uint8)
-            cx = W // 2
-            for y in range(H):
-                for x in range(W):
-                    dx = abs(x - cx)
-                    # Chevron wave period = 8 px along blade
-                    v_phase = (y + dx * 2) % 8
-                    if dx == 0:
-                        img[y, x] = CRYS_WHITE if (y % 4 != 0) else CRYS_GLOW
-                    elif dx == 1:
-                        img[y, x] = CRYS_GLOW if v_phase in (0, 1, 2) else CRYS_MID
-                    elif v_phase in (0, 1):
-                        img[y, x] = CRYS_DEEP
-                    elif v_phase in (2, 3):
-                        img[y, x] = CRYS_BRIGHT if dx <= 3 else CRYS_MID
-                    elif v_phase == 4:
-                        img[y, x] = CRYS_GLOW if dx >= W // 2 - 1 else CRYS_MID
-                    else:
-                        img[y, x] = CRYS_BASE
-            return np.clip(img, 0, 255)
-        return paint_solid_directional(fn, W, H, color)
 
-    if kind == 'crys_grip':
-        # Unrotated dark obsidian grip with clean diagonal bronze-gold wrap bands
-        if fn in ('north', 'south', 'east', 'west') and H >= 6:
-            img = np.full((H, W, 3), OBS_DARK, dtype=np.uint8)
-            for y in range(H):
-                for x in range(W):
-                    if ((y + x) % 5) == 0:
-                        img[y, x] = OBS_GOLD_HI
-                    elif ((y + x) % 5) == 1:
-                        img[y, x] = OBS_GOLD
-            return np.clip(img, 0, 255)
-        return paint_solid_directional(fn, W, H, color)
+class FaceArt:
+    """A common pixel drawing sampled by neighboring cuboids in world X/Y."""
+    def __init__(self, bounds, background):
+        self.x, self.top, width, height = bounds
+        self.image = Image.new('RGB', (width, height), background)
+        self.draw = ImageDraw.Draw(self.image)
 
-    # --- 2. STORMCALLER ---
+    def points(self, coords):
+        return [(round((x - self.x) * PROJECTION_PPU), round((self.top - y) * PROJECTION_PPU))
+                for x, y in coords]
+
+    def sample(self, box, face, width, height):
+        corners = (np.array(FACE_VERTS[face]) - .5) * box['s'] * [-1, 1, -1]
+        if box['rot']:
+            axis, angle = box['rot']
+            corners = corners @ rot('xyz'.index(axis), angle).T
+        corners += box['c']
+        u = ((np.arange(width) + .5) / width)[None, :, None]
+        v = ((np.arange(height) + .5) / height)[:, None, None]
+        xy = corners[0] + u * (corners[3] - corners[0]) + v * (corners[1] - corners[0])
+        x = np.rint((xy[..., 0] - self.x) * PROJECTION_PPU).astype(int)
+        y = np.rint((self.top - xy[..., 1]) * PROJECTION_PPU).astype(int)
+        art = np.asarray(self.image)
+        return Image.fromarray(art[y.clip(0, art.shape[0] - 1), x.clip(0, art.shape[1] - 1)])
+
+
+def storm_web():
+    art = FaceArt((-.90, 2.24, 88, 64), STORM_DARK)
+    facets = (
+        (((.35, 2.08), (.57, 2.11), (.62, 1.93), (.51, 1.98), (.42, 1.90)), STORM_IRON),
+        (((.42, 1.89), (.55, 1.85), (.68, 1.76), (.59, 1.66), (.41, 1.76)), STORM_VOID),
+        (((.35, 1.61), (.58, 1.61), (.72, 1.55), (.65, 1.43), (.47, 1.53)), STORM_IRON),
+        (((.30, 1.42), (.49, 1.44), (.63, 1.28), (.46, 1.31), (.35, 1.16)), STORM_VOID),
+    )
+    branches = (
+        ((.43, 1.98), (.47, 1.95), (.51, 1.96), (.55, 1.90), (.64, 1.89)),
+        ((.49, 1.80), (.54, 1.82), (.57, 1.76), (.64, 1.77), (.71, 1.69)),
+        ((.48, 1.64), (.54, 1.63), (.58, 1.57), (.65, 1.57), (.71, 1.50)),
+        ((.45, 1.49), (.49, 1.43), (.54, 1.44), (.60, 1.36)),
+        ((.44, 1.34), (.48, 1.34), (.50, 1.29), (.53, 1.29)),
+    )
+    main = ((.47, 2.13), (.45, 2.04), (.43, 1.98), (.45, 1.91), (.43, 1.86), (.49, 1.80),
+            (.46, 1.74), (.48, 1.64), (.43, 1.59), (.45, 1.49), (.40, 1.45),
+            (.44, 1.34), (.39, 1.30), (.40, 1.22), (.35, 1.16), (.35, 1.10), (.29, 1.03))
+    for sign in (-1, 1):
+        def points(path):
+            return art.points([(sign * x, y) for x, y in path])
+
+        for polygon, color in facets:
+            art.draw.polygon(points(polygon), fill=color)
+        for branch in branches:
+            stepped_path(art.draw, points(branch), (STORM_VOID, GOLD_AMBER, GOLD_BRIGHT))
+        stepped_path(art.draw, points(main), (STORM_VOID, GOLD_AMBER, GOLD_WHITE))
+    return art
+
+
+def chrono_art(hand):
+    bounds = (-1.02, 2.55, 100, 68)
+    fuller = FaceArt(bounds, BRASS_DARK)
+    runes = FaceArt(bounds, BRASS_VOID)
+    inner = ((.47, 2.127), (.35, 2.14), (.27, 2.12), (.18, 2.15), (.09, 2.14),
+             (.01, 2.10), (-.08, 2.115), (-.15, 2.075), (-.23, 2.08), (-.32, 2.01),
+             (-.38, 2.00), (-.47, 1.95), (-.54, 1.94), (-.63, 1.86), (-.68, 1.85),
+             (-.74, 1.77), (-.80, 1.71), (-.85, 1.61), (-.88, 1.57), (-.91, 1.46))
+    if hand:
+        inner = ((.45, 2.12), (.32, 2.10), (.25, 2.12), (.16, 2.085), (.08, 2.09),
+                 (.00, 2.045), (-.08, 2.045), (-.16, 1.97), (-.26, 1.91),
+                 (-.36, 1.89), (-.47, 1.77), (-.53, 1.74), (-.62, 1.64),
+                 (-.69, 1.55), (-.75, 1.48), (-.83, 1.49), (-.88, 1.44))
+    forks = (
+        ((.27, 2.12), (.24, 2.17), (.18, 2.18)),
+        ((-.15, 2.075), (-.20, 2.035), (-.25, 2.04)),
+        ((-.47, 1.95), (-.53, 1.995), (-.59, 1.96)),
+        ((-.74, 1.77), (-.76, 1.81), (-.80, 1.79)),
+    ) if not hand else (
+        ((.25, 2.12), (.20, 2.16), (.16, 2.16)),
+        ((.00, 2.045), (-.04, 2.01), (-.09, 2.01)),
+        ((-.26, 1.91), (-.31, 1.95), (-.36, 1.95)),
+        ((-.53, 1.74), (-.58, 1.76), (-.61, 1.71)),
+        ((-.75, 1.48), (-.77, 1.55), (-.81, 1.56)),
+    )
+    for path in forks:
+        stepped_path(fuller.draw, fuller.points(path), (BRASS_VOID, BRASS_MID, BRASS_HI), (4, 2, 1))
+    stepped_path(fuller.draw, fuller.points(inner), (BRASS_VOID, BRASS_HI, BRASS_BRIGHT))
+
+    glyphs = (
+        (((-1, -2), (1, 0), (-1, 2)), ((0, 0), (-2, 0))),
+        (((-1, 2), (-1, -2), (1, 0), (-1, 0)),),
+        (((0, -2), (1, 0), (0, 2), (-1, 0), (0, -2)),),
+        (((-1, -2), (-1, 2)), ((-1, 0), (1, -2)), ((-1, 1), (1, 1))),
+    )
+    placements = ((.37, 2.29), (.24, 2.27), (.11, 2.25), (-.02, 2.23),
+                  (-.15, 2.20), (-.27, 2.15), (-.39, 2.10), (-.51, 2.04),
+                  (-.62, 1.98), (-.71, 1.91), (-.79, 1.82))
+    if hand:
+        placements = ((.37, 2.22), (.24, 2.21), (.11, 2.20), (-.02, 2.16),
+                      (-.15, 2.11), (-.27, 2.04), (-.39, 1.98), (-.50, 1.88),
+                      (-.60, 1.79), (-.70, 1.64), (-.78, 1.55))
+    for i, (x, y) in enumerate(runes.points(placements)):
+        for stroke in glyphs[i % len(glyphs)]:
+            runes.draw.line([(x + dx, y + dy) for dx, dy in stroke], fill=CHRONO_TEAL)
+        runes.draw.point((x, y), fill=CHRONO_GLOW)
+    return fuller, runes
+
+
+def beveled(size, face, palette, index):
+    level = min(len(palette) - 1, max(0, index + FACE_LIGHT[face]))
+    tile = Image.new('RGB', size, palette[level])
+    w, h = size
+    d = ImageDraw.Draw(tile)
+    if w >= 2 or h >= 2:
+        d.line((0, 0, w - 1, 0) if w >= 2 else (0, 0, 0, 0),
+               fill=palette[min(len(palette) - 1, level + 1)])
+    if w >= 3 and h >= 3:
+        d.line((1, h - 1, w - 1, h - 1), fill=palette[max(0, level - 1)])
+    return tile, d
+
+
+def crystal_face(size, face, kind, color):
+    w, h = size
+    level = CRYSTAL.index(color)
+    if kind in ('crys_blade_main', 'crys_energy') and face in FRONT_BACK:
+        tile = Image.new('RGB', size, CRYS_BASE)
+        d = ImageDraw.Draw(tile)
+        cx = w // 2
+        if kind == 'crys_energy':
+            d.rectangle((0, 0, w - 1, h - 1), fill=CRYS_MID)
+            for a, b in ((0, .19), (.27, .54), (.61, .85), (.90, 1)):
+                d.line((cx, round(a * (h - 1)), cx, round(b * (h - 1))), fill=CRYS_GLOW)
+            for y in (.09, .44, .73, .97):
+                d.point((cx, round(y * (h - 1))), fill=CRYS_WHITE)
+            return tile
+        for points, fill in (
+            (((0, 0), (cx, 0), (cx, h - 1), (0, h - 1)), CRYS_DEEP),
+            (((0, h // 4), (cx, 0), (cx, h // 2)), CRYS_MID),
+            (((cx, h // 4), (w - 1, 0), (w - 1, h // 2), (cx, 2 * h // 3)), CRYS_BRIGHT),
+            (((0, 2 * h // 3), (cx, h // 2), (cx, h - 1)), CRYS_MID),
+            (((cx, h - 1), (w - 1, h // 2), (w - 1, h - 1)), CRYS_MID),
+        ):
+            d.polygon(points, fill=fill)
+        d.line((0, h // 5, 0, h // 2), fill=CRYS_BRIGHT)
+        d.line((w - 1, h // 2, w - 1, h - 1), fill=CRYS_GLOW)
+        d.line((cx, 0, cx, h - 1), fill=CRYS_GLOW)
+        return tile
+    level = min(level, len(CRYSTAL) - 2)
+    tile, d = beveled(size, face, CRYSTAL, level)
+    if w >= 2 and h >= 2:
+        light = min(len(CRYSTAL) - 1, max(1, level + FACE_LIGHT[face] + 1))
+        d.polygon(((0, 0), (w - 1, 0), (0, h - 1)), fill=CRYSTAL[light])
+        if w >= 3 and h >= 3:
+            d.line((0, 0, 0, h - 2), fill=CRYSTAL[min(light + 1, len(CRYSTAL) - 1)])
+    return tile
+
+
+def grip(size, face, palette, period):
+    tile, d = beveled(size, face, palette, 1)
+    w, h = size
+    if face in WALLS:
+        offset = WALLS.index(face)
+        for y in range(-period + offset, h, period):
+            d.line((0, y + 1, w - 1, y - 1), fill=palette[0], width=2)
+            d.line((0, y, w - 1, y - 2), fill=palette[2])
+            d.point((0, y), fill=palette[3])
+    return tile
+
+
+def clock_face(size, small):
+    w, h = size
+    tile = Image.new('RGB', size, BRASS_DARK)
+    d = ImageDraw.Draw(tile)
+    d.ellipse((0, 0, w - 1, h - 1), fill=BRASS_GOLD)
+    d.arc((0, 0, w - 1, h - 1), 185, 310, fill=BRASS_BRIGHT)
+    d.ellipse((1, 1, w - 2, h - 2), fill=DIAL_RIM)
+    d.ellipse((2, 2, w - 3, h - 3), fill=DIAL_IVORY)
+    cx, cy = w // 2, h // 2
+    if not small:
+        digits = {
+            '1': ('010', '110', '010', '010', '111'),
+            '2': ('110', '001', '010', '100', '111'),
+            '3': ('110', '001', '010', '001', '110'),
+            '6': ('011', '100', '110', '101', '010'),
+            '9': ('010', '101', '011', '001', '110'),
+        }
+        for glyph, x, y in (('1', 6, 2), ('2', 10, 2), ('3', 15, 8), ('6', 9, 13), ('9', 2, 8)):
+            for row, pixels in enumerate(digits[glyph]):
+                for col, mark in enumerate(pixels):
+                    if mark == '1':
+                        d.point((x + col, y + row), fill=DIAL_HAND)
+        d.point(((5, 4), (14, 4), (16, 6), (16, 14), (14, 16), (5, 16), (3, 14), (3, 6)),
+                fill=DIAL_HAND)
+    d.line((cx - (2 if small else 3), cy - 3, cx, cy), fill=DIAL_HAND)
+    d.line((cx, cy, cx + (1 if small else 4), cy - (2 if small else 3)), fill=DIAL_HAND)
+    d.point((cx, cy), fill=CHRONO_TEAL)
+    return tile
+
+
+def paint_weapon_face(box, face, projections):
+    kind, color = box['kind'], tuple(box['color'])
+    vertices = np.asarray(FACE_VERTS[face]) * box['s']
+    w = np.linalg.norm(vertices[3] - vertices[0])
+    h = np.linalg.norm(vertices[1] - vertices[0])
+    size = (max(1, round(w * PPU)), max(1, round(h * PPU)))
+    if face in FRONT_BACK and kind in projections:
+        # Narrow surfaces need enough samples to resolve the shared line art.
+        width, height = (max(1, math.ceil(n * PROJECTION_PPU)) for n in (w, h))
+        return projections[kind].sample(box, face, width, height)
     if kind == 'storm_haft':
-        # High-res unrotated haft face (8 x 48 px): pitch-black shaft with 5 crisp diagonal golden spiral bands!
-        if fn in ('north', 'south', 'east', 'west') and H >= 8:
-            img = np.full((H, W, 3), STORM_VOID, dtype=np.uint8)
-            for y in range(H):
-                for x in range(W):
-                    p = (y + x * 2) % 9
-                    if p == 0:
-                        img[y, x] = GOLD_WHITE if (x == W // 2) else GOLD_BRIGHT
-                    elif p == 1:
-                        img[y, x] = GOLD_EDGE
-                    elif p in (2, 8):
-                        img[y, x] = DRAGON_DARK
-                    elif p == 5 and (x % 2 == 0):
-                        img[y, x] = STORM_DARK
-                    else:
-                        img[y, x] = STORM_VOID
-            return np.clip(img, 0, 255)
-        return paint_solid_directional(fn, W, H, color)
-
-    # --- 3. CHRONO DAGGER / SCYTHE ---
-    if kind == 'chrono_dial':
-        # High-res 16x16 unrotated Roman clock dial face at (+0.61, 2.13)
-        if fn in ('north', 'south') and W >= 10 and H >= 10:
-            img = np.full((H, W, 3), BRASS_GOLD, dtype=np.uint8)
-            cx, cy = (W - 1) / 2.0, (H - 1) / 2.0
-            r_outer = min(W, H) * 0.48
-            r_ivory = min(W, H) * 0.39
-            for y in range(H):
-                for x in range(W):
-                    d = math.hypot(x - cx, y - cy)
-                    if d <= r_ivory:
-                        img[y, x] = DIAL_IVORY if d <= r_ivory - 0.8 else DIAL_RIM
-                    elif d <= r_outer:
-                        img[y, x] = BRASS_HI if (x + y) % 2 == 0 else BRASS_GOLD
-                    else:
-                        img[y, x] = BRASS_BASE
-            icx, icy = int(round(cx)), int(round(cy))
-            # 12 cardinal & diagonal hour tick marks around the rim
-            for tx, ty in ((icx, 2), (icx, H - 3), (2, icy), (W - 3, icy),
-                           (3, 3), (W - 4, 3), (3, H - 4), (W - 4, H - 4)):
-                if 0 <= tx < W and 0 <= ty < H:
-                    img[ty, tx] = DIAL_HAND
-            # Crisp 10:10 V-shaped dark clock hands matching chrono_dagger_ortho_grid.png
-            draw_pixel_line(img, icx, icy, max(2, icx - 4), max(2, icy - 4), DIAL_HAND)
-            draw_pixel_line(img, icx, icy, min(W - 3, icx + 4), max(2, icy - 4), DIAL_HAND)
-            img[icy, icx] = CHRONO_TEAL
-            return np.clip(img, 0, 255)
-        return paint_solid_directional(fn, W, H, color)
-
-    if kind == 'chrono_subdial':
-        # High-res 10x10 golden lattice subdial at (+0.73, 2.34) and pommel center
-        if fn in ('north', 'south') and W >= 6 and H >= 6:
-            img = np.full((H, W, 3), BRASS_VOID, dtype=np.uint8)
-            cx, cy = W // 2, H // 2
-            for y in range(H):
-                for x in range(W):
-                    d = abs(x - cx) + abs(y - cy)
-                    if d == 0:
-                        img[y, x] = DIAL_IVORY
-                    elif d == 1 or x == cx or y == cy:
-                        img[y, x] = BRASS_BRIGHT
-                    elif d <= W // 2:
-                        img[y, x] = BRASS_GOLD if (x + y) % 2 == 0 else BRASS_VOID
-                    else:
-                        img[y, x] = BRASS_MID
-            return np.clip(img, 0, 255)
-        return paint_solid_directional(fn, W, H, color)
-
-    if kind == 'chrono_shaft':
-        # Unrotated antique-bronze staff with subtle golden & chrono-teal vertical patina
-        if fn in ('north', 'south', 'east', 'west') and H >= 8:
-            img = np.full((H, W, 3), BRASS_DARK, dtype=np.uint8)
-            cx = W // 2
-            for y in range(H):
-                m = y % 6
-                if m == 0:
-                    img[y, :] = BRASS_MID
-                    img[y, cx] = BRASS_HI
-                elif m in (2, 3):
-                    img[y, :] = BRASS_VOID
-                    img[y, cx] = CHRONO_TEAL
-                else:
-                    img[y, :] = BRASS_DARK
-                    img[y, cx] = BRASS_GOLD
-            return np.clip(img, 0, 255)
-        return paint_solid_directional(fn, W, H, color)
-
-    # All other cuboids (especially rotated or small detail cuboids) use clean alias-free directional shading!
-    return paint_solid_directional(fn, W, H, color)
+        return grip((3, size[1]), face, (STORM_VOID, DRAGON_DARK, BRONZE_M_HI, GOLD_EDGE), 3) if face in WALLS else beveled(size, face, STEEL, 1)[0]
+    if kind == 'crys_grip':
+        return grip((3, max(4, size[1])), face, OBSIDIAN, 2) if face in WALLS else beveled(size, face, OBSIDIAN, 1)[0]
+    if kind == 'crys_guard':
+        return beveled(size, face, OBSIDIAN, OBSIDIAN.index(color))[0]
+    if kind.startswith('crys_'):
+        if face in FRONT_BACK:
+            size = {'crys_blade_main': (7, size[1]), 'crys_energy': (3, size[1])}.get(
+                kind, (max(3, size[0]), max(3, size[1])) if kind == 'crys_heart'
+                else (max(2, size[0]), max(2, size[1])))
+        return crystal_face(size, face, kind, color)
+    if kind == 'storm_eye' and face in FRONT_BACK:
+        tile = Image.new('RGB', (3, 2), GOLD_AMBER)
+        tile.putpixel((1, 0), GOLD_WHITE)
+        tile.putpixel((2 if face == 'north' else 0, 0), GOLD_BRIGHT)
+        return tile
+    if kind in ('storm_dragon', 'storm_bone', 'storm_horn', 'storm_snout'):
+        steel = STEEL if color in STEEL else STORM_GOLD
+        level = steel.index(color) if color in steel else 1
+        if kind == 'storm_dragon' and face in FRONT_BACK and max(w, h) >= .095:
+            size = max(4, size[0]), max(3, size[1])
+            a, b = size
+            dark, mid, rim = (steel[min(len(steel) - 1, max(0, level + offset))] for offset in (-1, 0, 1))
+            tile = Image.new('RGB', size, dark)
+            d = ImageDraw.Draw(tile)
+            d.polygon(((0, 0), (a - 1, 0), (a - 2, 1), (a // 2, b - 1), (1, b - 2)), fill=mid)
+            d.line((0, 0, a - 2, 0), fill=rim)
+            if b >= 4:
+                d.point((0, b - 2), fill=rim)
+                d.point((a - 1, b - 1), fill=mid)
+            return tile
+        if face in FRONT_BACK and kind in ('storm_horn', 'storm_snout', 'storm_bone'):
+            size = max(2, size[0]), max(2, size[1])
+        if kind in ('storm_horn', 'storm_snout'):
+            level = min(level, len(steel) - 2)
+        return beveled(size, face, steel, level)[0]
+    if kind == 'storm_blade_web':
+        return beveled(size, face, (STORM_VOID, STORM_DARK, STORM_IRON), 1)[0]
+    if kind.startswith('storm_'):
+        index = STORM_GOLD.index(color) if color in STORM_GOLD else 0
+        if kind in ('storm_edge', 'storm_feather', 'storm_vein') and face in FRONT_BACK:
+            tile, d = beveled((max(2, size[0]), max(2, size[1])), face, STORM_GOLD, max(0, index - 2))
+            x, y = tile.size
+            d.line((0, 0, x - 1, 0), fill=STORM_GOLD[min(index, 4)])
+            d.point((0, 0), fill=STORM_GOLD[min(index + 1, 5)])
+            return tile
+        return beveled(size, face, STORM_GOLD, index)[0]
+    if kind in ('chrono_dial', 'chrono_subdial') and face in FRONT_BACK:
+        small = kind == 'chrono_subdial'
+        return clock_face((8, 8) if small else (20, 20), small)
+    if kind == 'chrono_shaft' and face in WALLS:
+        tile, d = beveled((3, size[1]), face, BRASS, 2)
+        for y in range(3, size[1] - 1, 5):
+            d.line((0, y, 2, y), fill=BRASS_VOID)
+            d.line((0, y + 1, 2, y + 1), fill=BRASS_GOLD)
+            d.point((1, y + 2), fill=CHRONO_TEAL)
+        return tile
+    if color in (CHRONO_TEAL, CHRONO_GLOW):
+        return beveled(size, face, (BRASS_VOID, CHRONO_TEAL, CHRONO_GLOW), 1)[0]
+    index = BRASS.index(color) if color in BRASS else 2
+    if face in FRONT_BACK and kind in ('chrono_gear', 'chrono_spine', 'chrono_blade_edge'):
+        minimum = 3 if kind != 'chrono_blade_edge' and min(w, h) >= .075 else 2
+        size = max(minimum, size[0]), max(minimum, size[1])
+        tile, d = beveled(size, face, BRASS, min(index, 5))
+        w, h = size
+        if w >= 3 and h >= 3:
+            d.line((0, h - 1, w - 1, h - 1), fill=BRASS_DARK)
+            d.point((w - 2, 1), fill=BRASS_HI if index < 4 else BRASS_BRIGHT)
+            if w >= 4:
+                d.point((1, h - 2), fill=BRASS_HI)
+            if h >= 4:
+                d.line((1, h - 2, w - 1, h - 2), fill=BRASS_BASE)
+        return tile
+    return beveled(size, face, BRASS, index)[0]
 
 
-# ----------------------------------------------------------------------------- Deduplicated Atlas Emitter (<= 256x256)
-CUSTOM_RECT_SIZE = {
-    'crys_blade_main':  (12, 96),
-    'crys_grip':        ( 6, 20),
-    'storm_haft':       ( 8, 48),
-    'chrono_dial':      (16, 16),
-    'chrono_subdial':   (10, 10),
-    'chrono_shaft':     ( 6, 64),
-}
+def paint_atlas(boxes, projections):
+    tiles = {}
+    face_keys = []
+    for box in boxes:
+        faces = {}
+        for face in FACE_NORMAL:
+            tile = paint_weapon_face(box, face, projections)
+            key = (tile.size, tile.tobytes())
+            tiles.setdefault(key, tile)
+            faces[face] = key
+        face_keys.append(faces)
+    positions, edge = shelf_pack([tile.size for tile in tiles.values()], pad=1)
+    if edge > 256:
+        raise ValueError(f'Weapon texture atlas exceeds 256 pixels: {edge}')
+    atlas = Image.new('RGBA', (edge, edge))
+    uvs = {}
+    for (key, tile), (x, y) in zip(tiles.items(), positions):
+        w, h = tile.size
+        padded = Image.fromarray(np.pad(np.asarray(tile), ((1, 1), (1, 1), (0, 0)), mode='edge'))
+        atlas.paste(padded, (x - 1, y - 1))
+        uvs[key] = [round(n * 16 / edge, 5) for n in (x, y, x + w, y + h)]
+    faces = [{face: {'texture': '#t', 'uv': uvs[key]} for face, key in entry.items()} for entry in face_keys]
+    return atlas, faces
+
+
+# Element groups from the checked-in 1.5.2 hand models. Their existing
+# geometry differs from the detailed held models and has its own atlas.
+def hand_materials(weapon):
+    if weapon == 'stormcaller':
+        return [
+            ('storm_dragon', DRAGON_DARK), ('storm_dragon', DRAGON_STEEL),
+            ('storm_core', GOLD_BRIGHT), ('storm_bone', BRONZE_MUTE),
+            ('storm_haft', STORM_VOID), *[('storm_bone', BRONZE_MUTE)] * 2,
+            ('storm_edge', GOLD_EDGE), ('storm_dragon', DRAGON_STEEL),
+            ('storm_vein', GOLD_WHITE), *[('storm_dragon', DRAGON_STEEL)] * 2,
+            ('storm_snout', DRAGON_RIM), ('storm_snout', DRAGON_DARK),
+            ('storm_eye', GOLD_WHITE), ('storm_horn', DRAGON_HI),
+            ('storm_horn', DRAGON_STEEL), ('storm_horn', DRAGON_RIM),
+        ] + [
+            *[('storm_bone', DRAGON_STEEL)] * 2, ('storm_edge', GOLD_BRIGHT),
+            *[('storm_bone', DRAGON_STEEL)] * 2, *[('storm_blade_web', STORM_VOID)] * 4,
+            *[('storm_vein', GOLD_BRIGHT)] * 3, *[('storm_feather', GOLD_BRIGHT)] * 6,
+        ] * 2
+    if weapon == 'crystal_greatsword':
+        return [
+            ('crys_shard', CRYS_WHITE), *[('crys_shard', CRYS_BRIGHT)] * 3,
+            ('crys_blade_main', CRYS_BASE), ('crys_energy', CRYS_GLOW),
+            *[('crys_shard', CRYS_BRIGHT)] * 2, *[('crys_shard', CRYS_MID)] * 4,
+            *[('crys_shard', CRYS_BASE)] * 2,
+            ('crys_guard', OBS_BASE), ('crys_guard', OBS_GOLD), ('crys_heart', CRYS_GLOW),
+            *[('crys_guard', OBS_GOLD), ('crys_shard', CRYS_GLOW),
+              ('crys_shard', CRYS_BRIGHT), ('crys_shard', CRYS_MID)] * 2,
+            ('crys_grip', OBS_DARK), ('crys_guard', OBS_GOLD), ('crys_shard', CRYS_BRIGHT),
+            ('crys_heart', CRYS_GLOW),
+        ]
+    return [
+        ('chrono_blade_edge', BRASS_GOLD), ('chrono_gear', BRASS_MID),
+        ('chrono_subdial', DIAL_IVORY), ('chrono_gear', BRASS_GOLD),
+        ('chrono_shaft', BRASS_DARK), *[('chrono_gear', BRASS_GOLD)] * 5,
+        ('chrono_spine', BRASS_MID), ('chrono_gear', BRASS_MID), ('chrono_gear', BRASS_GOLD),
+        ('chrono_dial', DIAL_IVORY), ('chrono_gear', BRASS_GOLD), ('chrono_subdial', DIAL_IVORY),
+        ('chrono_gear', BRASS_MID), ('chrono_gear', BRASS_BASE),
+        *[('chrono_blade_edge', BRASS_HI)] * 3, ('chrono_gear', BRASS_MID), ('chrono_gear', BRASS_BASE),
+        *[('chrono_spine', BRASS_BASE)] * 4, ('chrono_blade_edge', BRASS_GOLD),
+        *[('chrono_blade_edge', BRASS_HI)] * 4,
+        *[('chrono_runes', BRASS_VOID)] * 7, *[('chrono_fuller', BRASS_DARK)] * 7,
+    ]
+
+
+def repaint_hand(pack, model_id, manifest, projections):
+    weapon = model_id.rsplit('/', 1)[-1]
+    assets = Path(pack) / 'assets' / NS
+    path = assets / 'models' / 'item' / f'{model_id}_hand.json'
+    model = json.loads(path.read_bytes())
+    pivot = np.asarray(manifest['parts'][0]['pivot_blocks'])
+    scale = manifest['model_units_per_block']
+    boxes = []
+    for element, (kind, color) in zip(model['elements'], hand_materials(weapon), strict=True):
+        start, end = (np.asarray(element[key]) for key in ('from', 'to'))
+        center = pivot + ((start + end) / 2 - 8) * [-1, 1, -1] / scale
+        rotation = element.get('rotation')
+        axis = rotation['axis'] if rotation else None
+        turn = (axis, rotation['angle'] if axis == 'y' else -rotation['angle']) if rotation else None
+        boxes.append({'c': center, 's': (end - start) / scale, 'rot': turn, 'kind': kind, 'color': color})
+    atlas, faces = paint_atlas(boxes, projections)
+    for element, mapped in zip(model['elements'], faces, strict=True):
+        element['faces'] = mapped
+    model['credit'] = 'make_weapon_models (weapons-detail-v2)'
+    model['texture_size'] = list(atlas.size)
+    model['textures']['t'] = f'{NS}:item/{model_id}/hand'
+    atlas.save(assets / 'textures' / 'item' / model_id / 'hand.png', optimize=True)
+    path.write_text(json.dumps(model, separators=(',', ':')) + '\n', encoding='utf-8', newline='\n')
+    print(f'  hand: {len(boxes)} existing cuboids, atlas {atlas.width}x{atlas.height}')
+
+
+def weapon_projections(model_id, hand=False):
+    if model_id.endswith('/stormcaller'):
+        return {'storm_blade_web': storm_web()}
+    if model_id.endswith('/chrono_dagger'):
+        fuller, runes = chrono_art(hand)
+        return {'chrono_fuller': fuller, 'chrono_runes': runes}
+    return {}
+
+
 
 
 def emit_weapon_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block,
-                          credit='make_weapon_models (weapons-detail)'):
-    """Emits a weapon model set while deduplicating identical (kind, fn, W, H, color) face patches
-    so that models with 200-480 cuboids pack cleanly into a <= 256x256 texture atlas."""
+                          credit='make_weapon_models (weapons-detail-v2)'):
+    """Emit the detailed model with its repainted faces."""
     S_REF = np.array([-1.0, 1.0, -1.0])
     disp = 16.0 / k_units_per_block
-    for sub in ('models/item', 'textures/item', 'items'):
-        shutil.rmtree(os.path.join(pack, 'assets', NS, *sub.split('/'), *model_id.split('/')), ignore_errors=True)
+    projections = weapon_projections(model_id)
 
     man = {
         'id': f'{NS}:{model_id}',
@@ -246,79 +485,33 @@ def emit_weapon_model_set(pack, model_id, parts_table, height_blocks, k_units_pe
         'model_units_per_block': k_units_per_block,
         'item_display_scale': disp,
         'front': '+Z (boss local, yaw 0 = south)',
-        'note': 'hand-designed high-detail Blockbench cuboid model (weapons-detail); noise-free pixel textures from original mesh palette.',
+        'note': 'Hand-designed weapons-detail geometry with v2 pixel textures from the original palette.',
         'parts': [],
     }
 
     total_cuboids = 0
-    total_tex_px = 0
-
     for pname, p in parts_table.items():
         piv = np.array(p['pivot'], float)
-        unique_keys = {}
-        unique_rects = []
-        face_to_uid = []
-
-        for bi, b in enumerate(p['boxes']):
-            c = np.array(b['c'], float)
-            s = np.array(b['s'], float)
-            cm = 8.0 + k_units_per_block * S_REF * (c - piv)
-            sm = k_units_per_block * s
-            b['_from'] = np.clip(cm - sm / 2.0, -16.0, 32.0)
-            b['_to'] = np.clip(cm + sm / 2.0, -16.0, 32.0)
-            for fn in FACE_NORMAL:
-                if b['kind'] in CUSTOM_RECT_SIZE and fn in ('north', 'south', 'east', 'west'):
-                    W, H = CUSTOM_RECT_SIZE[b['kind']]
-                else:
-                    W, H = 2, 2
-                key = (b['kind'], fn, W, H, tuple(int(x) for x in b['color']))
-                uid = unique_keys.get(key)
-                if uid is None:
-                    uid = len(unique_rects)
-                    unique_keys[key] = uid
-                    unique_rects.append((W, H, key))
-                face_to_uid.append((bi, fn, uid))
-
-        pos, size = shelf_pack([(w, h) for (w, h, _) in unique_rects], pad=1)
-        assert size <= 256, f'{model_id} atlas size {size} exceeds 256x256 limit!'
-        atlas = np.zeros((size, size, 4), np.uint8)
-
-        for uid, ((W, H, (kind, fn, _, _, col_tup)), (px, py)) in enumerate(zip(unique_rects, pos)):
-            atlas[py:py + H, px:px + W, :3] = paint_weapon_face(kind, fn, W, H, col_tup).astype(np.uint8)
-            atlas[py:py + H, px:px + W, 3] = 255
-            atlas[py - 1, px:px + W] = atlas[py, px:px + W]
-            atlas[py + H, px:px + W] = atlas[py + H - 1, px:px + W]
-            atlas[py - 1:py + H + 1, px - 1] = atlas[py - 1:py + H + 1, px]
-            atlas[py - 1:py + H + 1, px + W] = atlas[py - 1:py + H + 1, px + W - 1]
-
-        elements = [None] * len(p['boxes'])
-        for bi, fn, uid in face_to_uid:
-            b = p['boxes'][bi]
-            W, H, _ = unique_rects[uid]
-            px, py = pos[uid]
-            if elements[bi] is None:
-                el = {
-                    'from': [round(float(x), 4) for x in b['_from']],
-                    'to': [round(float(x), 4) for x in b['_to']],
+        boxes = p['boxes']
+        atlas, faces = paint_atlas(boxes, projections)
+        size = atlas.width
+        elements = []
+        for box, mapped in zip(boxes, faces, strict=True):
+            center = 8.0 + k_units_per_block * S_REF * (np.asarray(box['c']) - piv)
+            half = k_units_per_block * np.asarray(box['s']) / 2.0
+            start = np.clip(center - half, -16.0, 32.0)
+            end = np.clip(center + half, -16.0, 32.0)
+            element = {'from': [round(float(x), 4) for x in start],
+                       'to': [round(float(x), 4) for x in end]}
+            if box['rot']:
+                axis, angle = box['rot']
+                element['rotation'] = {
+                    'angle': float(angle if axis == 'y' else -angle),
+                    'axis': axis,
+                    'origin': [round(float(x), 4) for x in (start + end) / 2.0],
                 }
-                if b['rot']:
-                    ax, deg = b['rot']
-                    el['rotation'] = {
-                        'angle': float(deg if ax == 'y' else -deg),
-                        'axis': ax,
-                        'origin': [round(float(x), 4) for x in (b['_from'] + b['_to']) / 2.0],
-                    }
-                el['faces'] = {}
-                elements[bi] = el
-            elements[bi]['faces'][fn] = {
-                'uv': [
-                    round(px * 16.0 / size, 5),
-                    round(py * 16.0 / size, 5),
-                    round((px + W) * 16.0 / size, 5),
-                    round((py + H) * 16.0 / size, 5),
-                ],
-                'texture': '#t',
-            }
+            element['faces'] = mapped
+            elements.append(element)
 
         tref = f'{NS}:item/{model_id}/{pname}'
         model_json = {
@@ -332,7 +525,7 @@ def emit_weapon_model_set(pack, model_id, parts_table, height_blocks, k_units_pe
             os.makedirs(os.path.join(pack, 'assets', NS, *sub.split('/'), *model_id.split('/')), exist_ok=True)
         with open(os.path.join(pack, 'assets', NS, 'models', 'item', *model_id.split('/'), f'{pname}.json'), 'w') as fh:
             json.dump(model_json, fh, separators=(',', ':'))
-        Image.fromarray(atlas).save(
+        atlas.save(
             os.path.join(pack, 'assets', NS, 'textures', 'item', *model_id.split('/'), f'{pname}.png'),
             optimize=True,
         )
@@ -342,7 +535,6 @@ def emit_weapon_model_set(pack, model_id, parts_table, height_blocks, k_units_pe
         nc = len(elements)
         n_rot = sum(1 for b in p['boxes'] if b['rot'])
         total_cuboids += nc
-        total_tex_px += size * size
         man['parts'].append({
             'name': pname,
             'item_model': f'{NS}:{model_id}/{pname}',
@@ -363,9 +555,10 @@ def emit_weapon_model_set(pack, model_id, parts_table, height_blocks, k_units_pe
     man['total_cuboids'] = total_cuboids
     man_dir = os.path.join(os.path.dirname(pack.rstrip('/\\')), 'manifests')
     os.makedirs(man_dir, exist_ok=True)
-    with open(os.path.join(man_dir, model_id.replace('/', '__') + '.json'), 'w') as fh:
-        json.dump(man, fh, indent=2)
-    print(f'[{model_id}] {len(man["parts"])} parts, {total_cuboids} cuboids ({len(unique_rects)} unique faces), atlas {size}x{size}, {k_units_per_block} u/block')
+    manifest_path = Path(man_dir) / (model_id.replace('/', '__') + '.json')
+    manifest_path.write_text(json.dumps(man, indent=2) + '\n', encoding='utf-8', newline='\n')
+    print(f'[{model_id}] {len(man["parts"])} parts, {total_cuboids} cuboids, atlas {size}x{size}, {k_units_per_block} u/block')
+    repaint_hand(pack, model_id, man, weapon_projections(model_id, hand=True))
     return man
 
 
@@ -416,7 +609,7 @@ def define_stormcaller():
     add_box(P, 'held', ( 0.000, 0.438, 0.0), (0.022, 0.070, 0.150), GOLD_BRIGHT,  None, 'storm_core')
 
     # --- B. Pitch-Black Haft + 3D Coiled Dragon Tail & Diagonal Golden Spiral (y = 0.47..1.18) ---
-    # High-res unrotated haft core (painted with 5 crisp diagonal gold-on-black spiral bands!)
+    # Haft core with a spiral wrap painted across the four side faces.
     add_box(P, 'held', ( 0.000, 0.825, 0.0), (0.068, 0.720, 0.068), STORM_VOID,   None, 'storm_haft')
     # Subtle 3D relief ribs along the haft (alternating gunmetal tail-scale rings & thin golden spiral nodes)
     for idx, sy in enumerate(np.linspace(0.52, 1.10, 11)):
@@ -488,13 +681,13 @@ def define_stormcaller():
     add_box(P, 'held', (-0.035, 1.895, 0.0), (0.115, 0.065, 0.208), DRAGON_STEEL, ('z',  22.5), 'storm_dragon')
     add_box(P, 'held', (-0.015, 1.882, 0.0), (0.085, 0.038, 0.218), DRAGON_RIM,   ('z',  22.5), 'storm_dragon')
     # Upper snout bridge & nasal horn (sloping down-left to x = -0.248, y = 1.86..1.94)
-    add_box(P, 'held', (-0.132, 1.912, 0.0), (0.125, 0.058, 0.156), DRAGON_STEEL, ('z',  22.5), 'storm_dragon')
-    add_box(P, 'held', (-0.192, 1.892, 0.0), (0.098, 0.048, 0.132), DRAGON_RIM,   ('z',  22.5), 'storm_dragon')
-    add_box(P, 'held', (-0.228, 1.876, 0.0), (0.044, 0.040, 0.108), DRAGON_STEEL, None,         'storm_dragon')
-    add_box(P, 'held', (-0.212, 1.908, 0.0), (0.032, 0.030, 0.118), DRAGON_HI,    ('z', -22.5), 'storm_dragon')
+    add_box(P, 'held', (-0.132, 1.912, 0.0), (0.125, 0.058, 0.156), DRAGON_STEEL, ('z',  22.5), 'storm_snout')
+    add_box(P, 'held', (-0.192, 1.892, 0.0), (0.098, 0.048, 0.132), DRAGON_RIM,   ('z',  22.5), 'storm_snout')
+    add_box(P, 'held', (-0.228, 1.876, 0.0), (0.044, 0.040, 0.108), DRAGON_STEEL, None,         'storm_snout')
+    add_box(P, 'held', (-0.212, 1.908, 0.0), (0.032, 0.030, 0.118), DRAGON_HI,    ('z', -22.5), 'storm_snout')
     # Fierce angled steel brow ridge & recessed blazing golden dragon eye at (-0.105, 1.908)
     add_box(P, 'held', (-0.102, 1.938, 0.0), (0.108, 0.030, 0.202), DRAGON_HI,    ('z',  22.5), 'storm_dragon')
-    add_box(P, 'held', (-0.106, 1.908, 0.0), (0.046, 0.022, 0.196), GOLD_WHITE,   ('z',  22.5), 'storm_core')
+    add_box(P, 'held', (-0.106, 1.908, 0.0), (0.046, 0.022, 0.196), GOLD_WHITE,   ('z',  22.5), 'storm_eye')
     # Upper jaw glowing golden palate & sharp downward upper fangs (x = -0.22..-0.09, y = 1.83..1.87)
     add_box(P, 'held', (-0.162, 1.860, 0.0), (0.120, 0.022, 0.122), GOLD_BRIGHT,  None,         'storm_edge')
     for tx, ty, th in ((-0.218, 1.840, 0.026), (-0.188, 1.842, 0.024), (-0.158, 1.844, 0.022), (-0.128, 1.846, 0.022)):
@@ -506,22 +699,22 @@ def define_stormcaller():
     for tx, ty in ((-0.168, 1.788), (-0.138, 1.800), (-0.108, 1.812)):
         add_box(P, 'held', (tx, ty, 0.0), (0.014, 0.022, 0.108), GOLD_WHITE, ('z', 22.5), 'storm_core')
     # Two multi-segment swept-back gunmetal-steel crown horns (y = 1.95..2.11)
-    add_box(P, 'held', (-0.025, 1.982, 0.0), (0.090, 0.036, 0.142), DRAGON_RIM,   ('z', -22.5), 'storm_dragon')
-    add_box(P, 'held', ( 0.022, 2.022, 0.0), (0.070, 0.030, 0.118), DRAGON_HI,    ('z', -22.5), 'storm_dragon')
-    add_box(P, 'held', ( 0.048, 2.058, 0.0), (0.030, 0.042, 0.092), DRAGON_HI,    None,         'storm_dragon')
-    add_box(P, 'held', ( 0.045, 1.962, 0.0), (0.105, 0.040, 0.146), DRAGON_STEEL, ('z', -22.5), 'storm_dragon')
-    add_box(P, 'held', ( 0.105, 2.002, 0.0), (0.090, 0.034, 0.122), DRAGON_RIM,   ('z', -22.5), 'storm_dragon')
-    add_box(P, 'held', ( 0.145, 2.046, 0.0), (0.038, 0.058, 0.096), DRAGON_HI,    ('z', -22.5), 'storm_dragon')
-    add_box(P, 'held', ( 0.158, 2.086, 0.0), (0.022, 0.042, 0.076), DRAGON_HI,    None,         'storm_dragon')
+    add_box(P, 'held', (-0.025, 1.982, 0.0), (0.090, 0.036, 0.142), DRAGON_RIM,   ('z', -22.5), 'storm_horn')
+    add_box(P, 'held', ( 0.022, 2.022, 0.0), (0.070, 0.030, 0.118), DRAGON_HI,    ('z', -22.5), 'storm_horn')
+    add_box(P, 'held', ( 0.048, 2.058, 0.0), (0.030, 0.042, 0.092), DRAGON_HI,    None,         'storm_horn')
+    add_box(P, 'held', ( 0.045, 1.962, 0.0), (0.105, 0.040, 0.146), DRAGON_STEEL, ('z', -22.5), 'storm_horn')
+    add_box(P, 'held', ( 0.105, 2.002, 0.0), (0.090, 0.034, 0.122), DRAGON_RIM,   ('z', -22.5), 'storm_horn')
+    add_box(P, 'held', ( 0.145, 2.046, 0.0), (0.038, 0.058, 0.096), DRAGON_HI,    ('z', -22.5), 'storm_horn')
+    add_box(P, 'held', ( 0.158, 2.086, 0.0), (0.022, 0.042, 0.076), DRAGON_HI,    None,         'storm_horn')
 
     # --- E. Spread Dragon Wings (Symmetric ±X: Gunmetal Bones, Black Membrane, Thin Veins, Serrated Golden Blade) ---
     for sx in (1, -1):
         # 1. Inner Wing Bone Arch (Wing Arm + Upper Wrist/Thumb Bone + Valley Spurs + Lower Inner Arch)
-        add_box(P, 'held', (sx * 0.185, 1.545, 0.0), (0.145, 0.080, 0.126), DRAGON_DARK,  ('z', -sx * 22.5), 'storm_dragon')
-        add_box(P, 'held', (sx * 0.285, 1.605, 0.0), (0.125, 0.086, 0.130), DRAGON_STEEL, ('z', -sx * 22.5), 'storm_dragon')
-        add_box(P, 'held', (sx * 0.215, 1.635, 0.0), (0.050, 0.060, 0.132), DRAGON_RIM,   None,              'storm_dragon')
-        add_box(P, 'held', (sx * 0.295, 1.725, 0.0), (0.062, 0.060, 0.134), DRAGON_RIM,   ('z',  sx * 22.5), 'storm_dragon')
-        add_box(P, 'held', (sx * 0.305, 2.025, 0.0), (0.066, 0.088, 0.134), DRAGON_RIM,   None,              'storm_dragon')
+        add_box(P, 'held', (sx * 0.185, 1.545, 0.0), (0.145, 0.080, 0.126), DRAGON_DARK,  ('z', -sx * 22.5), 'storm_bone')
+        add_box(P, 'held', (sx * 0.285, 1.605, 0.0), (0.125, 0.086, 0.130), DRAGON_STEEL, ('z', -sx * 22.5), 'storm_bone')
+        add_box(P, 'held', (sx * 0.215, 1.635, 0.0), (0.050, 0.060, 0.132), DRAGON_RIM,   None,              'storm_bone')
+        add_box(P, 'held', (sx * 0.295, 1.725, 0.0), (0.062, 0.060, 0.134), DRAGON_RIM,   ('z',  sx * 22.5), 'storm_bone')
+        add_box(P, 'held', (sx * 0.305, 2.025, 0.0), (0.066, 0.088, 0.134), DRAGON_RIM,   None,              'storm_bone')
         for bx, by, bw, bh, brot, bcol in (
             (0.355, 1.710, 0.084, 0.145,   0.0, DRAGON_STEEL),
             (0.365, 1.830, 0.082, 0.145,   0.0, DRAGON_DARK),
@@ -529,10 +722,10 @@ def define_stormcaller():
             (0.378, 2.060, 0.086, 0.135, -22.5, DRAGON_RIM),
             (0.415, 2.130, 0.074, 0.085, -22.5, DRAGON_STEEL),
         ):
-            add_box(P, 'held', (sx * bx, by, 0.0), (bw, bh, 0.128), bcol, ('z', sx * brot) if brot else None, 'storm_dragon')
+            add_box(P, 'held', (sx * bx, by, 0.0), (bw, bh, 0.128), bcol, ('z', sx * brot) if brot else None, 'storm_bone')
         # Sharp golden apex wing-claw horn at top of wing (|x| = 0.44..0.47, y = 2.14..2.20)
         add_box(P, 'held', (sx * 0.448, 2.168, 0.0), (0.034, 0.056, 0.096), GOLD_BRIGHT, None, 'storm_edge')
-        add_box(P, 'held', (sx * 0.456, 2.188, 0.0), (0.020, 0.032, 0.076), GOLD_WHITE,  None, 'storm_core')
+        add_box(P, 'held', (sx * 0.456, 2.188, 0.0), (0.020, 0.032, 0.076), GOLD_WHITE,  None, 'storm_vein')
 
         # Lower inner wing bone arch framing the concave under-wing cutout (|x|=0.22..0.34, y=1.01..1.50)
         for bx, by, bw, bh, brot, bcol in (
@@ -542,8 +735,8 @@ def define_stormcaller():
             (0.308, 1.175, 0.070, 0.120, -22.5, DRAGON_RIM),
             (0.262, 1.085, 0.064, 0.110, -22.5, DRAGON_STEEL),
         ):
-            add_box(P, 'held', (sx * bx, by, 0.0), (bw, bh, 0.120), bcol, ('z', sx * brot) if brot else None, 'storm_dragon')
-        add_box(P, 'held', (sx * 0.238, 1.425, 0.0), (0.044, 0.060, 0.124), DRAGON_RIM, None, 'storm_dragon')
+            add_box(P, 'held', (sx * bx, by, 0.0), (bw, bh, 0.120), bcol, ('z', sx * brot) if brot else None, 'storm_bone')
+        add_box(P, 'held', (sx * 0.238, 1.425, 0.0), (0.044, 0.060, 0.124), DRAGON_RIM, None, 'storm_bone')
 
         # 2. Four Radiating 3D Gunmetal-Obsidian Finger Bones across the Wing Interior (dz = 0.108)
         finger_bones = [
@@ -553,7 +746,7 @@ def define_stormcaller():
             (0.425, 1.315, 0.135, 0.046, 45.0, DRAGON_STEEL), (0.485, 1.215, 0.115, 0.042, 45.0, DRAGON_DARK),
         ]
         for fx, fy, fw, fh, frot, fcol in finger_bones:
-            add_box(P, 'held', (sx * fx, fy, 0.0), (fw, fh, 0.108), fcol, ('z', sx * frot), 'storm_dragon')
+            add_box(P, 'held', (sx * fx, fy, 0.0), (fw, fh, 0.108), fcol, ('z', sx * frot), 'storm_bone')
 
         # 3. Recessed Pitch-Black Wing Membrane Panels (distinct Z per panel 0.052/0.056)
         web_panels = [
@@ -648,7 +841,7 @@ def define_stormcaller():
             (0.395, 1.195, 0.014, 0.085,  22.5, GOLD_BRIGHT, 0.116),
         ]
         for vx, vy, vw, vh, vrot, vcol, vdz in wing_veins:
-            add_box(P, 'held', (sx * vx, vy, 0.0), (vw, vh, vdz), vcol, ('z', sx * vrot) if vrot else None, 'storm_core')
+            add_box(P, 'held', (sx * vx, vy, 0.0), (vw, vh, vdz), vcol, ('z', sx * vrot) if vrot else None, 'storm_vein')
 
     return P
 
@@ -657,7 +850,7 @@ def define_stormcaller():
 def define_crystal_greatsword():
     """height = 2.3, k = 13.0, pivot = [0.0, 0.52, 0.0].
     High-detail Amethyst Crystal Greatsword (faithful to weapon_crystal-greatsword.zip):
-      - Unrotated high-res central blade core (dz = 0.052) painted with V-chevron crystal facets & glowing spine
+      - Unrotated high-res central blade core (dz = 0.052) painted with broad crystal facets and a glowing spine
       - Irregularly protruding jagged crystal serration teeth along both edges (y = 0.14..1.70, dz = 0.040 / 0.032)
         using alias-free directional face shading
       - Ornate dark-obsidian & antique-bronze crossguard with central diamond heart crystal & 4 pairs of winged
@@ -682,10 +875,10 @@ def define_crystal_greatsword():
         add_box(P, 'held', (sx * 0.018, 0.095, 0.0), (0.022, 0.088, 0.032), CRYS_WHITE,  ('z', -sx * 22.5), 'crys_shard')
         add_box(P, 'held', (sx * 0.030, 0.205, 0.0), (0.028, 0.120, 0.036), CRYS_BRIGHT, ('z', -sx * 22.5), 'crys_shard')
 
-    # --- B. Continuous Faceted Royal-Violet Blade Core (dz = 0.052, with high-res 12x96 chevron crystal texture!) ---
+    # --- B. Continuous Faceted Royal-Violet Blade Core (dz = 0.052, with broad facets) ---
     add_box(P, 'held', (0.000, 1.010, 0.0), (0.104, 1.410, 0.052), CRYS_BASE,   None, 'crys_blade_main')
     # Raised central specular crystal ridge (dz = 0.062)
-    add_box(P, 'held', (0.000, 0.960, 0.0), (0.020, 1.520, 0.062), CRYS_GLOW,   None, 'crys_shard')
+    add_box(P, 'held', (0.000, 0.960, 0.0), (0.020, 1.520, 0.062), CRYS_GLOW,   None, 'crys_energy')
 
     # --- C. Irregular, Organically Jagged Crystal Serration Teeth along Both Blade Edges (y = 0.16..1.70) ---
     serration_clusters = [
@@ -778,7 +971,7 @@ def define_chrono_dagger():
     High-detail Chrono Scythe (faithful to weapon_chrono-scythe.zip):
       - High-contrast dark-umber (#341d00) & oxidized chrono-teal (#44938a) recessed blade channels
         with prominent Z thickness so they never get occluded by adjacent gold ribs
-      - High-res 16x16 pixel-art Roman clock dial at (+0.61, 2.13) with crisp 10:10 hands & teal center pin,
+      - Pixel-art clock dial at (+0.61, 2.13) with crisp 10:10 hands & teal center pin,
         surrounded by a 12-tooth sunburst bezel, upper-right secondary lattice dial, upper-left hollow
         cogwheel ring, and right-side open crescent gear wheel
       - Smooth, straight slender antique-bronze & chrono-teal staff between 6 ornate multi-tiered node collars,
@@ -822,7 +1015,7 @@ def define_chrono_dagger():
     add_box(P, 'held', (cx_m, cy_m, 0.0), (0.198, 0.198, 0.116), BRASS_BASE,   None,        'chrono_gear')
     add_box(P, 'held', (cx_m, cy_m, 0.0), (0.198, 0.198, 0.120), BRASS_GOLD,   ('z', 45.0), 'chrono_gear')
     add_box(P, 'held', (cx_m, cy_m, 0.0), (0.190, 0.190, 0.124), BRASS_HI,     ('z', 22.5), 'chrono_gear')
-    # High-res 16x16 cream-ivory Roman clock dial face at dz = 0.138 (with 10:10 V-hands & teal center pin!)
+    # Ivory clock dial with cardinal numerals, two hands, and a teal center pin.
     add_box(P, 'held', (cx_m, cy_m, 0.0), (0.148, 0.148, 0.138), DIAL_IVORY,   None,        'chrono_dial')
     # 12 Sunburst gear teeth radiating around main clock bezel
     for ang_deg, r_rot in ((0, 0.0), (30, -22.5), (60, -45.0), (90, 0.0), (120, 45.0), (150, 22.5),
@@ -924,10 +1117,10 @@ def define_chrono_dagger():
         if idx <= 17:
             y_ru = yt - span * 0.42
             h_ru = max(0.036, span * 0.30)
-            add_box(P, 'held', (bx, y_ru, 0.0), (w_seg, h_ru, 0.090), BRASS_VOID, rot_b, 'chrono_spine')
+            add_box(P, 'held', (bx, y_ru, 0.0), (w_seg, h_ru, 0.090), BRASS_VOID, rot_b, 'chrono_runes')
             # Alternating golden time-rune glyph & oxidized chrono-teal glow inlay inside the dark channel (dz = 0.096)
             col_inlay = BRASS_BRIGHT if (idx % 2 == 0) else CHRONO_TEAL
-            add_box(P, 'held', (bx, y_ru, 0.0), (0.026, h_ru * 0.55, 0.096), col_inlay, rot_b, 'chrono_blade_edge')
+            add_box(P, 'held', (bx, y_ru, 0.0), (0.026, h_ru * 0.55, 0.096), col_inlay, rot_b, 'chrono_runes')
             # Crisp golden lower border rib of rune channel (dz = 0.100)
             add_box(P, 'held', (bx, yt - span * 0.58, 0.0), (w_seg, 0.016, 0.100), BRASS_GOLD, rot_b, 'chrono_blade_edge')
 
@@ -935,9 +1128,9 @@ def define_chrono_dagger():
         if idx <= 18:
             y_wb = yb + span * 0.25
             h_wb = max(0.034, span * 0.28)
-            add_box(P, 'held', (bx, y_wb, 0.0), (w_seg, h_wb, 0.086), BRASS_VOID, rot_b, 'chrono_spine')
+            add_box(P, 'held', (bx, y_wb, 0.0), (w_seg, h_wb, 0.086), BRASS_VOID, rot_b, 'chrono_fuller')
             if idx % 2 == 1:
-                add_box(P, 'held', (bx, y_wb + h_wb * 0.22, 0.0), (0.044, 0.016, 0.092), CHRONO_TEAL, rot_b, 'chrono_teal_inlay')
+                add_box(P, 'held', (bx, y_wb + h_wb * 0.22, 0.0), (0.044, 0.016, 0.092), CHRONO_TEAL, rot_b, 'chrono_fuller')
 
         # 4. Lower Burnished-Gold Crescent Cutting Edge (bottom 13% of blade height, dz = 0.094)
         y_ed = yb + span * 0.07

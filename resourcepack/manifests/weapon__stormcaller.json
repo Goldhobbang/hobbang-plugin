@@ -6,7 +6,7 @@
   "model_units_per_block": 14.5,
   "item_display_scale": 1.103448275862069,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "hand-designed high-detail Blockbench cuboid model (weapons-detail); noise-free pixel textures from original mesh palette.",
+  "note": "Hand-designed weapons-detail geometry with v2 pixel textures from the original palette.",
   "parts": [
     {
       "name": "held",
