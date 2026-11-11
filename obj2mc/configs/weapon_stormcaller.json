@@ -22,7 +22,40 @@
    ],
    "regions": [
     {}
+   ],
+   "mode": "mixed",
+   "obb_regions": [
+    {
+     "min": [
+      0.28,
+      null,
+      null
+     ]
+    },
+    {
+     "max": [
+      -0.28,
+      null,
+      null
+     ]
+    },
+    {
+     "min": [
+      -0.15,
+      0.45,
+      null
+     ],
+     "max": [
+      0.15,
+      1.35,
+      null
+     ]
+    }
    ]
   }
- ]
+ ],
+ "obb_fill": 0.7,
+ "obb_resolution": 24,
+ "obb_min_dim": 5,
+ "units_per_block": 14.5
 }

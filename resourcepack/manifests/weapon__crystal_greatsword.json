@@ -24,11 +24,14 @@
       ],
       "scale": 1.2307692307692308,
       "spin_axis": null,
-      "cuboids": 49,
-      "faces": 226,
-      "texture_px": 256,
-      "voxels": 892
+      "mode": "obb",
+      "cuboids": 30,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 30,
+      "faces": 127,
+      "texture_px": 128,
+      "voxels": 0
     }
   ],
-  "total_cuboids": 49
+  "total_cuboids": 30
 }

@@ -174,3 +174,11 @@ resource-pack-prompt={"text":"홉방 보스 모델 리소스팩","color":"gold"}
 - Pipeline order: obj2mc (all boss + weapon configs) -> make_java_rig.py -> weapons/make_weapons.py -> validate_pack.py -> make_zip.py.
 - To add a 3D model for crystal_greatsword or chrono_dagger (now the Chrono Scythe): copy `configs/weapon_stormcaller.json`, set id `weapon/<id>`, obj/texture/height,
   run obj2mc, add `'<id>': '<id>_display.json'` to `MODEL3D` in make_weapons.py and tune the display file in-game (F3+T).
+
+## v1.5.0 update: OBB mode (tilted cuboids)
+
+Per-part `mode` (`voxel` default | `obb` | `mixed` + `obb_regions`) fits a few single-axis-rotated cuboids
+(`obb.py`, rotation 0/±22.5/±45) instead of axis-aligned voxel boxes. Details, parameters, before/after table and
+rendered comparisons: `docs/CONVERSION-1.5.0.md`. `units_per_block` pins the model scale so Java offsets and
+weapon display transforms stay valid. After converting weapons run `weapons/rebuild_hands.py` (not `make_weapons.py`).
+Mesh paths in old configs are resolved by file name under `work/models/` (unzip `models-3d/*.zip` there).

@@ -24,7 +24,10 @@
       ],
       "scale": 3.2,
       "spin_axis": null,
+      "mode": "voxel",
       "cuboids": 958,
+      "cuboids_voxel": 958,
+      "cuboids_obb": 0,
       "faces": 3772,
       "texture_px": 1024,
       "voxels": 22302
@@ -45,7 +48,10 @@
       ],
       "scale": 3.2,
       "spin_axis": null,
+      "mode": "voxel",
       "cuboids": 955,
+      "cuboids_voxel": 955,
+      "cuboids_obb": 0,
       "faces": 3708,
       "texture_px": 1024,
       "voxels": 22620
@@ -66,7 +72,10 @@
       ],
       "scale": 3.2,
       "spin_axis": null,
+      "mode": "voxel",
       "cuboids": 282,
+      "cuboids_voxel": 282,
+      "cuboids_obb": 0,
       "faces": 1189,
       "texture_px": 512,
       "voxels": 5693
@@ -87,10 +96,13 @@
       ],
       "scale": 3.2,
       "spin_axis": null,
-      "cuboids": 337,
-      "faces": 1262,
-      "texture_px": 512,
-      "voxels": 15877
+      "mode": "mixed",
+      "cuboids": 104,
+      "cuboids_voxel": 62,
+      "cuboids_obb": 42,
+      "faces": 386,
+      "texture_px": 256,
+      "voxels": 1375
     },
     {
       "name": "leg_l",
@@ -108,10 +120,13 @@
       ],
       "scale": 3.2,
       "spin_axis": null,
-      "cuboids": 321,
-      "faces": 1213,
-      "texture_px": 512,
-      "voxels": 15860
+      "mode": "mixed",
+      "cuboids": 112,
+      "cuboids_voxel": 63,
+      "cuboids_obb": 49,
+      "faces": 393,
+      "texture_px": 256,
+      "voxels": 1373
     },
     {
       "name": "torso",
@@ -129,11 +144,14 @@
       ],
       "scale": 3.2,
       "spin_axis": null,
-      "cuboids": 896,
-      "faces": 3490,
-      "texture_px": 1024,
-      "voxels": 41624
+      "mode": "mixed",
+      "cuboids": 366,
+      "cuboids_voxel": 251,
+      "cuboids_obb": 115,
+      "faces": 1397,
+      "texture_px": 512,
+      "voxels": 10181
     }
   ],
-  "total_cuboids": 3749
+  "total_cuboids": 2777
 }

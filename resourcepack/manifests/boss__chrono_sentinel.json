@@ -28,7 +28,10 @@
         0.9326,
         0.3608
       ],
+      "mode": "voxel",
       "cuboids": 538,
+      "cuboids_voxel": 538,
+      "cuboids_obb": 0,
       "faces": 2409,
       "texture_px": 512,
       "voxels": 7120
@@ -53,7 +56,10 @@
         -0.0311,
         0.9995
       ],
+      "mode": "voxel",
       "cuboids": 73,
+      "cuboids_voxel": 73,
+      "cuboids_obb": 0,
       "faces": 318,
       "texture_px": 256,
       "voxels": 4985
@@ -74,10 +80,13 @@
       ],
       "scale": 2.2857142857142856,
       "spin_axis": null,
-      "cuboids": 865,
-      "faces": 3496,
+      "mode": "mixed",
+      "cuboids": 580,
+      "cuboids_voxel": 403,
+      "cuboids_obb": 177,
+      "faces": 2188,
       "texture_px": 512,
-      "voxels": 12105
+      "voxels": 6146
     },
     {
       "name": "arm_l",
@@ -95,10 +104,13 @@
       ],
       "scale": 2.2857142857142856,
       "spin_axis": null,
-      "cuboids": 861,
-      "faces": 3351,
+      "mode": "mixed",
+      "cuboids": 576,
+      "cuboids_voxel": 412,
+      "cuboids_obb": 164,
+      "faces": 2143,
       "texture_px": 512,
-      "voxels": 12156
+      "voxels": 6104
     },
     {
       "name": "body",
@@ -116,11 +128,14 @@
       ],
       "scale": 2.2857142857142856,
       "spin_axis": null,
+      "mode": "voxel",
       "cuboids": 1561,
+      "cuboids_voxel": 1561,
+      "cuboids_obb": 0,
       "faces": 6343,
       "texture_px": 1024,
       "voxels": 33829
     }
   ],
-  "total_cuboids": 3898
+  "total_cuboids": 3328
 }

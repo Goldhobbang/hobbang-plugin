@@ -1,7 +1,7 @@
 {
   "id": "hobbang:boss/tempest_wyvern",
   "height_blocks": 6.0,
-  "resolution": 15,
+  "resolution": 16,
   "texels_per_voxel": 2,
   "model_units_per_block": 6.75,
   "item_display_scale": 2.3703703703703702,
@@ -24,10 +24,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 43,
-      "faces": 195,
-      "texture_px": 128,
-      "voxels": 757
+      "mode": "voxel",
+      "cuboids": 50,
+      "cuboids_voxel": 50,
+      "cuboids_obb": 0,
+      "faces": 220,
+      "texture_px": 256,
+      "voxels": 827
     },
     {
       "name": "foot_fr",
@@ -45,10 +48,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 40,
-      "faces": 179,
-      "texture_px": 128,
-      "voxels": 735
+      "mode": "voxel",
+      "cuboids": 49,
+      "cuboids_voxel": 49,
+      "cuboids_obb": 0,
+      "faces": 218,
+      "texture_px": 256,
+      "voxels": 813
     },
     {
       "name": "foot_hl",
@@ -66,10 +72,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 48,
-      "faces": 207,
+      "mode": "voxel",
+      "cuboids": 42,
+      "cuboids_voxel": 42,
+      "cuboids_obb": 0,
+      "faces": 181,
       "texture_px": 128,
-      "voxels": 501
+      "voxels": 520
     },
     {
       "name": "foot_hr",
@@ -87,10 +96,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 55,
-      "faces": 232,
-      "texture_px": 128,
-      "voxels": 675
+      "mode": "voxel",
+      "cuboids": 62,
+      "cuboids_voxel": 62,
+      "cuboids_obb": 0,
+      "faces": 259,
+      "texture_px": 256,
+      "voxels": 762
     },
     {
       "name": "shin_fl",
@@ -108,10 +120,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 46,
-      "faces": 204,
-      "texture_px": 128,
-      "voxels": 576
+      "mode": "voxel",
+      "cuboids": 58,
+      "cuboids_voxel": 58,
+      "cuboids_obb": 0,
+      "faces": 257,
+      "texture_px": 256,
+      "voxels": 771
     },
     {
       "name": "shin_fr",
@@ -129,10 +144,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 39,
-      "faces": 172,
-      "texture_px": 128,
-      "voxels": 578
+      "mode": "voxel",
+      "cuboids": 52,
+      "cuboids_voxel": 52,
+      "cuboids_obb": 0,
+      "faces": 230,
+      "texture_px": 256,
+      "voxels": 809
     },
     {
       "name": "shin_hl",
@@ -150,10 +168,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 41,
-      "faces": 178,
+      "mode": "voxel",
+      "cuboids": 54,
+      "cuboids_voxel": 54,
+      "cuboids_obb": 0,
+      "faces": 234,
       "texture_px": 128,
-      "voxels": 458
+      "voxels": 610
     },
     {
       "name": "shin_hr",
@@ -171,10 +192,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 38,
-      "faces": 160,
+      "mode": "voxel",
+      "cuboids": 51,
+      "cuboids_voxel": 51,
+      "cuboids_obb": 0,
+      "faces": 207,
       "texture_px": 128,
-      "voxels": 527
+      "voxels": 705
     },
     {
       "name": "thigh_fl",
@@ -192,10 +216,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 84,
-      "faces": 363,
+      "mode": "voxel",
+      "cuboids": 102,
+      "cuboids_voxel": 102,
+      "cuboids_obb": 0,
+      "faces": 418,
       "texture_px": 256,
-      "voxels": 878
+      "voxels": 1226
     },
     {
       "name": "thigh_fr",
@@ -213,10 +240,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 57,
-      "faces": 243,
-      "texture_px": 128,
-      "voxels": 785
+      "mode": "voxel",
+      "cuboids": 69,
+      "cuboids_voxel": 69,
+      "cuboids_obb": 0,
+      "faces": 289,
+      "texture_px": 256,
+      "voxels": 990
     },
     {
       "name": "thigh_hl",
@@ -234,10 +264,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 134,
-      "faces": 614,
+      "mode": "voxel",
+      "cuboids": 109,
+      "cuboids_voxel": 109,
+      "cuboids_obb": 0,
+      "faces": 450,
       "texture_px": 256,
-      "voxels": 736
+      "voxels": 1420
     },
     {
       "name": "thigh_hr",
@@ -255,10 +288,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 28,
-      "faces": 122,
+      "mode": "voxel",
+      "cuboids": 32,
+      "cuboids_voxel": 32,
+      "cuboids_obb": 0,
+      "faces": 136,
       "texture_px": 128,
-      "voxels": 545
+      "voxels": 679
     },
     {
       "name": "head",
@@ -276,10 +312,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 521,
-      "faces": 2291,
+      "mode": "voxel",
+      "cuboids": 490,
+      "cuboids_voxel": 490,
+      "cuboids_obb": 0,
+      "faces": 2129,
       "texture_px": 512,
-      "voxels": 3540
+      "voxels": 5166
     },
     {
       "name": "neck_2",
@@ -297,10 +336,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 225,
-      "faces": 965,
+      "mode": "voxel",
+      "cuboids": 207,
+      "cuboids_voxel": 207,
+      "cuboids_obb": 0,
+      "faces": 900,
       "texture_px": 256,
-      "voxels": 1909
+      "voxels": 2931
     },
     {
       "name": "neck_1",
@@ -318,10 +360,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 89,
-      "faces": 409,
+      "mode": "voxel",
+      "cuboids": 103,
+      "cuboids_voxel": 103,
+      "cuboids_obb": 0,
+      "faces": 471,
       "texture_px": 256,
-      "voxels": 649
+      "voxels": 861
     },
     {
       "name": "wing_l",
@@ -339,10 +384,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 373,
-      "faces": 1675,
+      "mode": "voxel",
+      "cuboids": 404,
+      "cuboids_voxel": 404,
+      "cuboids_obb": 0,
+      "faces": 1784,
       "texture_px": 512,
-      "voxels": 3722
+      "voxels": 4298
     },
     {
       "name": "wing_r",
@@ -360,10 +408,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 352,
-      "faces": 1608,
+      "mode": "voxel",
+      "cuboids": 410,
+      "cuboids_voxel": 410,
+      "cuboids_obb": 0,
+      "faces": 1841,
       "texture_px": 512,
-      "voxels": 3207
+      "voxels": 3733
     },
     {
       "name": "tail_4",
@@ -381,10 +432,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 211,
-      "faces": 933,
+      "mode": "voxel",
+      "cuboids": 226,
+      "cuboids_voxel": 226,
+      "cuboids_obb": 0,
+      "faces": 992,
       "texture_px": 256,
-      "voxels": 1747
+      "voxels": 2074
     },
     {
       "name": "tail_3",
@@ -402,10 +456,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 94,
-      "faces": 409,
-      "texture_px": 256,
-      "voxels": 590
+      "mode": "voxel",
+      "cuboids": 83,
+      "cuboids_voxel": 83,
+      "cuboids_obb": 0,
+      "faces": 349,
+      "texture_px": 128,
+      "voxels": 808
     },
     {
       "name": "tail_2",
@@ -423,10 +480,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 123,
-      "faces": 546,
+      "mode": "voxel",
+      "cuboids": 102,
+      "cuboids_voxel": 102,
+      "cuboids_obb": 0,
+      "faces": 446,
       "texture_px": 256,
-      "voxels": 695
+      "voxels": 859
     },
     {
       "name": "tail_1",
@@ -444,10 +504,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 155,
-      "faces": 718,
+      "mode": "voxel",
+      "cuboids": 122,
+      "cuboids_voxel": 122,
+      "cuboids_obb": 0,
+      "faces": 547,
       "texture_px": 256,
-      "voxels": 870
+      "voxels": 1077
     },
     {
       "name": "hips",
@@ -465,10 +528,13 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 132,
-      "faces": 577,
+      "mode": "voxel",
+      "cuboids": 114,
+      "cuboids_voxel": 114,
+      "cuboids_obb": 0,
+      "faces": 480,
       "texture_px": 256,
-      "voxels": 1084
+      "voxels": 1844
     },
     {
       "name": "body",
@@ -486,11 +552,14 @@
       ],
       "scale": 2.3703703703703702,
       "spin_axis": null,
-      "cuboids": 883,
-      "faces": 3885,
+      "mode": "voxel",
+      "cuboids": 740,
+      "cuboids_voxel": 740,
+      "cuboids_obb": 0,
+      "faces": 3008,
       "texture_px": 512,
-      "voxels": 7306
+      "voxels": 15182
     }
   ],
-  "total_cuboids": 3811
+  "total_cuboids": 3731
 }

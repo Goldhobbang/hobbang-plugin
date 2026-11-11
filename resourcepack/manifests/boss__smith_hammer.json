@@ -24,13 +24,16 @@
       ],
       "scale": 2.0,
       "spin_axis": null,
-      "cuboids": 259,
-      "faces": 997,
-      "texture_px": 512,
-      "voxels": 4241
+      "mode": "obb",
+      "cuboids": 76,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 76,
+      "faces": 287,
+      "texture_px": 256,
+      "voxels": 0
     }
   ],
-  "total_cuboids": 259,
+  "total_cuboids": 76,
   "attach": {
     "boss": "abyssal_smith",
     "part": "hammer",

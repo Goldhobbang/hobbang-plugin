@@ -24,7 +24,10 @@
       ],
       "scale": 3.764705882352941,
       "spin_axis": null,
+      "mode": "voxel",
       "cuboids": 180,
+      "cuboids_voxel": 180,
+      "cuboids_obb": 0,
       "faces": 726,
       "texture_px": 256,
       "voxels": 4595
@@ -45,10 +48,13 @@
       ],
       "scale": 3.764705882352941,
       "spin_axis": null,
-      "cuboids": 427,
-      "faces": 1732,
+      "mode": "mixed",
+      "cuboids": 298,
+      "cuboids_voxel": 201,
+      "cuboids_obb": 97,
+      "faces": 1127,
       "texture_px": 512,
-      "voxels": 7670
+      "voxels": 2652
     },
     {
       "name": "arm_l",
@@ -66,10 +72,13 @@
       ],
       "scale": 3.764705882352941,
       "spin_axis": null,
-      "cuboids": 445,
-      "faces": 1771,
-      "texture_px": 512,
-      "voxels": 7544
+      "mode": "obb",
+      "cuboids": 158,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 158,
+      "faces": 512,
+      "texture_px": 256,
+      "voxels": 0
     },
     {
       "name": "leg_r",
@@ -87,10 +96,13 @@
       ],
       "scale": 3.764705882352941,
       "spin_axis": null,
-      "cuboids": 304,
-      "faces": 1149,
-      "texture_px": 512,
-      "voxels": 10991
+      "mode": "obb",
+      "cuboids": 32,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 32,
+      "faces": 108,
+      "texture_px": 256,
+      "voxels": 0
     },
     {
       "name": "leg_l",
@@ -108,10 +120,13 @@
       ],
       "scale": 3.764705882352941,
       "spin_axis": null,
-      "cuboids": 305,
-      "faces": 1162,
-      "texture_px": 512,
-      "voxels": 11000
+      "mode": "obb",
+      "cuboids": 24,
+      "cuboids_voxel": 0,
+      "cuboids_obb": 24,
+      "faces": 88,
+      "texture_px": 256,
+      "voxels": 0
     },
     {
       "name": "torso",
@@ -129,11 +144,14 @@
       ],
       "scale": 3.764705882352941,
       "spin_axis": null,
-      "cuboids": 1083,
-      "faces": 4211,
+      "mode": "mixed",
+      "cuboids": 796,
+      "cuboids_voxel": 723,
+      "cuboids_obb": 73,
+      "faces": 3045,
       "texture_px": 1024,
-      "voxels": 39735
+      "voxels": 22977
     }
   ],
-  "total_cuboids": 2744
+  "total_cuboids": 1488
 }

@@ -24,7 +24,7 @@ CLIENT_NAMES = set(zipfile.ZipFile(client).namelist()) if os.path.exists(client)
 CONTEXTS = {'none', 'thirdperson_lefthand', 'thirdperson_righthand', 'firstperson_lefthand', 'firstperson_righthand', 'head', 'gui', 'ground', 'fixed', 'on_shelf'}
 def model_ref(mref, rel):
     mid = mref if ':' in mref else 'minecraft:' + mref
-    vanilla = mid.startswith('minecraft:') and ('assets/minecraft/models/' + mid.split(':', 1)[1] + '.json') in CLIENT_NAMES
+    vanilla = mid.startswith('minecraft:') and (not CLIENT_NAMES or ('assets/minecraft/models/' + mid.split(':', 1)[1] + '.json') in CLIENT_NAMES)
     if not vanilla and not os.path.exists(res(mref, 'models', '.json')): err.append(f'{rel}: missing model {mref}')
 def walk(m, rel):
     """1.21.4+ item model tree: model / select / condition / special / composite / range_dispatch"""
@@ -67,6 +67,11 @@ for root, _, files in os.walk(os.path.join(pack, 'assets')):
                 for c in el['from'] + el['to']:
                     if not (-16 <= c <= 32): err.append(f'{rel} el{i}: coord {c} out of -16..32')
                 if any(a > b for a, b in zip(el['from'], el['to'])): err.append(f'{rel} el{i}: from>to')
+                if 'rotation' in el:   # vanilla limit: one axis, -45..45 in 22.5 steps
+                    r_ = el['rotation']
+                    if r_.get('axis') not in ('x', 'y', 'z') or r_.get('angle') not in (-45, -22.5, 0, 22.5, 45) or len(r_.get('origin', [])) != 3:
+                        err.append(f'{rel} el{i}: bad rotation {r_}')
+                    n_rot = globals().setdefault('N_ROT', [0]); n_rot[0] += 1
                 for fn_, fd in el['faces'].items():
                     if fn_ not in FACES: err.append(f'{rel} el{i}: face {fn_}')
                     if not fd['texture'].startswith('#') or fd['texture'][1:] not in j['textures']: err.append(f'{rel} el{i}: tex ref {fd["texture"]}')
@@ -81,6 +86,7 @@ for root, _, files in os.walk(os.path.join(pack, 'assets')):
             else:
                 im = Image.open(png)
                 if im.height % im.width: err.append(f'{rel}: animated strip height {im.height} not a multiple of width {im.width}')
+print(f'rotated elements {globals().get("N_ROT", [0])[0]}')
 print(f'items {n_items}, elements {n_el}, errors {len(err)}, warnings {len(warn)}')
 for e in err[:40]: print('ERROR', e)
 for w in warn[:20]: print('WARN', w)

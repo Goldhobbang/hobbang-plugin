@@ -32,7 +32,8 @@
    ],
    "regions": [
     {}
-   ]
+   ],
+   "mode": "obb"
   }
  ],
  "attach": {
@@ -43,5 +44,9 @@
    3.5,
    0.45
   ]
- }
+ },
+ "units_per_block": 8.0,
+ "obb_resolution": 12,
+ "obb_fill": 0.7,
+ "obb_min_dim": 5
 }

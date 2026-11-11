@@ -96,7 +96,35 @@
       null
      ]
     }
-   ]
+   ],
+   "mode": "mixed",
+   "obb_regions": [
+    {
+     "max": [
+      null,
+      null,
+      0.05
+     ]
+    },
+    {
+     "min": [
+      null,
+      1.6,
+      null
+     ]
+    },
+    {
+     "max": [
+      null,
+      0.8,
+      null
+     ]
+    }
+   ],
+   "obb": {
+    "fill": 0.88,
+    "min_dim": 3
+   }
   },
   {
    "name": "leg_l",
@@ -119,7 +147,35 @@
       null
      ]
     }
-   ]
+   ],
+   "mode": "mixed",
+   "obb_regions": [
+    {
+     "max": [
+      null,
+      null,
+      0.05
+     ]
+    },
+    {
+     "min": [
+      null,
+      1.6,
+      null
+     ]
+    },
+    {
+     "max": [
+      null,
+      0.8,
+      null
+     ]
+    }
+   ],
+   "obb": {
+    "fill": 0.88,
+    "min_dim": 3
+   }
   },
   {
    "name": "torso",
@@ -131,8 +187,38 @@
    ],
    "regions": [
     {}
-   ]
+   ],
+   "mode": "mixed",
+   "obb_regions": [
+    {
+     "max": [
+      null,
+      2.7,
+      null
+     ]
+    },
+    {
+     "min": [
+      null,
+      2.7,
+      null
+     ],
+     "max": [
+      null,
+      null,
+      -0.1
+     ]
+    }
+   ],
+   "obb": {
+    "fill": 0.85,
+    "min_dim": 3
+   }
   }
  ],
- "layout_height": 4.6
+ "layout_height": 4.6,
+ "obb_fill": 0.78,
+ "obb_resolution": 24.0,
+ "obb_min_dim": 4,
+ "units_per_block": 5.0
 }

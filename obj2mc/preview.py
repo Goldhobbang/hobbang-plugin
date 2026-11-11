@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 from render import render, label, grid
 from obj2mc import FACE_VERTS, FACE_NORMAL, load_mesh
+from obb import rot
 
 PART_COLORS = [(230, 80, 80), (80, 200, 90), (80, 140, 240), (240, 200, 60), (200, 90, 220), (70, 210, 210), (240, 140, 60), (160, 160, 160)]
 
@@ -28,11 +29,16 @@ def pack_tris(pack, man):
                 u1, v1, u2, v2 = fd['uv']
                 vs = np.array(FACE_VERTS[fn], float)
                 P = fr + (to - fr) * vs                        # model units
+                nrm = np.array(FACE_NORMAL[fn], float)
+                if 'rotation' in el:                           # single-axis element rotation about its origin
+                    r_ = el['rotation']; o_ = np.array(r_['origin'], float); Rm = rot('xyz'.index(r_['axis']), r_['angle'])
+                    P = o_ + (P - o_) @ Rm.T
+                    nrm = Rm @ nrm
                 UV = np.array([[u1 if i in (0, 1) else u2, v1 if i in (0, 3) else v2] for i in range(4)]) / 16.0
                 # item_display: translation + scale * Ry(180) * (m/16 - 0.5)
                 q = (P / 16.0 - 0.5) * s
                 q = np.stack([-q[:, 0], q[:, 1], -q[:, 2]], 1) + piv
-                n_exp = np.array(FACE_NORMAL[fn], float) * [-1, 1, -1]
+                n_exp = nrm * [-1, 1, -1]
                 for tri in ((0, 1, 2), (0, 2, 3)):
                     T = q[list(tri)]; U = UV[list(tri)]
                     if np.dot(np.cross(T[1] - T[0], T[2] - T[0]), n_exp) < 0:

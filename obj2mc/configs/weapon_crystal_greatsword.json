@@ -22,7 +22,12 @@
    ],
    "regions": [
     {}
-   ]
+   ],
+   "mode": "obb"
   }
- ]
+ ],
+ "obb_fill": 0.85,
+ "obb_resolution": 32,
+ "obb_min_dim": 3,
+ "units_per_block": 13.0
 }

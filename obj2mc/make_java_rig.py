@@ -43,6 +43,10 @@ public final class BossModels {
 		return s;
 	}
 
+	static Iterable<Spec> all() {
+		return SPECS.values();
+	}
+
 	public static float height(String boss) {
 		return HEIGHT.getOrDefault(boss, 0F);
 	}
@@ -52,5 +56,5 @@ public final class BossModels {
 	}
 }
 ''' % '\n'.join(lines)
-open(out, 'w').write(src)
+open(out, 'w', encoding='utf-8', newline='\n').write(src)
 print('wrote', out, len(lines), 'lines')

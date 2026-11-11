@@ -1,0 +1,115 @@
+{
+ "id": "boss/chrono_sentinel",
+ "namespace": "hobbang",
+ "obj": "/workspace/mc/models/chrono_sentinel/Meshy_AI_chronos_sentinel_20261110_texture_obj/Meshy_AI_chronos_sentinel_20261110_texture.obj",
+ "texture": "/workspace/mc/models/chrono_sentinel/Meshy_AI_chronos_sentinel_20261110_texture_obj/Meshy_AI_chronos_sentinel_20261110_texture.png",
+ "height_blocks": 5.0,
+ "source_yaw_deg": 0,
+ "resolution": 24,
+ "texels_per_voxel": 2,
+ "color_knn": 4,
+ "min_speck_voxels": 6,
+ "per_part_speck_voxels": 3,
+ "parts": [
+  {
+   "name": "ring",
+   "parent": "body",
+   "pivot": "centroid",
+   "spin": true,
+   "note": "tilted gear halo - spin about spin_axis",
+   "regions": [
+    {
+     "min": [
+      -0.62,
+      2.15,
+      null
+     ],
+     "max": [
+      0.62,
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "clock",
+   "parent": "body",
+   "pivot": "centroid",
+   "spin": true,
+   "note": "clock face disc - spin about spin_axis (~Z)",
+   "regions": [
+    {
+     "center": [
+      0.0,
+      1.75,
+      0.0
+     ],
+     "radius": 0.3,
+     "axis": "z",
+     "min": [
+      null,
+      null,
+      0.2
+     ]
+    }
+   ]
+  },
+  {
+   "name": "arm_r",
+   "parent": "body",
+   "pivot": [
+    -0.55,
+    2.05,
+    0.0
+   ],
+   "regions": [
+    {
+     "max": [
+      -0.62,
+      2.15,
+      null
+     ]
+    },
+    {
+     "max": [
+      -0.62,
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "arm_l",
+   "parent": "body",
+   "pivot": [
+    0.55,
+    2.05,
+    0.0
+   ],
+   "regions": [
+    {
+     "min": [
+      0.62,
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "body",
+   "parent": null,
+   "pivot": [
+    0.0,
+    1.4,
+    0.0
+   ],
+   "regions": [
+    {}
+   ]
+  }
+ ],
+ "layout_height": 2.8
+}

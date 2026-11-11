@@ -1,0 +1,38 @@
+{
+ "id": "weapon/smith_hammer",
+ "namespace": "hobbang",
+ "obj": "/workspace/mc/models/forge_hammer/Meshy_AI_magma_forge_hammer_20261110_texture_obj/Meshy_AI_magma_forge_hammer_20261110_texture.obj",
+ "texture": "/workspace/mc/models/forge_hammer/Meshy_AI_magma_forge_hammer_20261110_texture_obj/Meshy_AI_magma_forge_hammer_20261110_texture.png",
+ "height_blocks": 2.0,
+ "source_rot": [
+  [
+   "x",
+   90
+  ],
+  [
+   "y",
+   90
+  ]
+ ],
+ "resolution": 16,
+ "texels_per_voxel": 2,
+ "color_knn": 4,
+ "sample_offset_vox": 0.25,
+ "min_speck_voxels": 6,
+ "per_part_speck_voxels": 3,
+ "layout_height": 2.0,
+ "parts": [
+  {
+   "name": "held",
+   "parent": null,
+   "pivot": [
+    -0.147,
+    0.62,
+    0
+   ],
+   "regions": [
+    {}
+   ]
+  }
+ ]
+}

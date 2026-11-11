@@ -21,6 +21,7 @@ import trimesh
 from PIL import Image
 from scipy import ndimage
 from scipy.spatial import cKDTree
+import obb as obbmod
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -159,7 +160,7 @@ def scale_layout(cfg):
     for p in parts:
         if isinstance(p.get('pivot'), list):
             p['pivot'] = [x * k for x in p['pivot']]
-        for key in ('regions', 'exclude'):
+        for key in ('regions', 'exclude', 'obb_regions'):
             for r in p.get(key, []):
                 for f in ('min', 'max', 'center'):
                     if f in r: r[f] = [sc(x) for x in r[f]]
@@ -342,18 +343,62 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
     rgb = col[:, :3]
     rays = make_ray_engine(v, f)
 
+    # OBB groups (parts with mode obb / mixed): a finer voxelisation so the tilted boxes fit tightly
+    obb_on = any(p.get('mode', 'voxel') in ('obb', 'mixed') for p in parts)
+    fgrid = flo = None
+    ores = ovox = None
+    if obb_on:
+        ores = cfg.get('obb_resolution', res * 2)
+        ovox = 1.0 / ores
+        opts_, _, _ = surface_samples(v, f, uv, tex, ovox / 3)
+        focc, _, flo = voxelize(opts_, ores)
+        focc = remove_specks(focc, cfg.get('min_speck_voxels', 4) * 4)
+        fgrid = assign_parts(focc, flo, ores, parts)
+        log(f'[obj2mc] obb grid {focc.shape} @ {ores:g} vox/block, solid {int(focc.sum())}')
+
+    def in_any(c, regs):
+        m = np.zeros(len(c), bool)
+        for r in regs:
+            m |= in_region(c, r)
+        return m
+
     # pivots, uniform model-units-per-voxel k so every part fits -16..32 around its pivot (8,8,8)
     ext_max = 0
     part_boxes = []
     for pi, p in enumerate(parts):
+        mode = p.get('mode', 'voxel')
         pocc = grid == pi
-        if not pocc.any():
-            part_boxes.append(None); continue
-        if cfg.get('per_part_speck_voxels'):
+        obb_pts = None
+        if mode in ('obb', 'mixed'):
+            fi = np.argwhere(remove_specks(fgrid == pi, 24) if (fgrid == pi).any() else fgrid == pi)
+            fc = (fi + flo + 0.5) / ores
+            if mode == 'obb':
+                obb_pts = fc
+                pocc = np.zeros_like(pocc)
+            else:
+                regs = p.get('obb_regions', [])
+                obb_pts = fc[in_any(fc, regs)]
+                ci = np.argwhere(pocc)
+                if len(ci):
+                    cc = (ci + lo + 0.5) / res
+                    mk = in_any(cc, regs)
+                    pocc[tuple(ci[mk].T)] = False
+            if obb_pts is not None and len(obb_pts) == 0:
+                obb_pts = None
+        if pocc.any() and p.get('per_part_speck_voxels'):
+            pocc = remove_specks(pocc, p.get('per_part_speck_voxels') if isinstance(p.get('per_part_speck_voxels'), int) else cfg['per_part_speck_voxels'])
+        elif pocc.any() and cfg.get('per_part_speck_voxels'):
             pocc = remove_specks(pocc, cfg['per_part_speck_voxels'])
-        ijk = np.argwhere(pocc)
-        bmin = (ijk.min(0) + lo) / res; bmax = (ijk.max(0) + 1 + lo) / res
-        cen = (ijk + lo + 0.5) / res
+        if not pocc.any() and obb_pts is None:
+            part_boxes.append(None); continue
+        cens = []
+        if pocc.any():
+            cens.append((np.argwhere(pocc) + lo + 0.5) / res)
+        if obb_pts is not None:
+            cens.append(obb_pts)
+        cen = np.vstack(cens)
+        half = np.vstack([np.full((len(c_), 3), (0.5 / res) if i_ == 0 and pocc.any() else (0.5 / (ores or res))) for i_, c_ in enumerate(cens)])
+        bmin = (cen - half).min(0); bmax = (cen + half).max(0)
         centroid = cen.mean(0)
         if p['pivot'] == 'centroid':
             p['pivot'] = [round(float(x), 4) for x in centroid]
@@ -366,12 +411,14 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
             p['_spin_axis'] = [round(float(x), 4) for x in ax_]
         piv = np.array(p['pivot'], float)
         ext_max = max(ext_max, np.abs(bmin - piv).max(), np.abs(bmax - piv).max())
-        part_boxes.append(pocc)
+        part_boxes.append((pocc if pocc.any() else None, obb_pts))
     margin = cfg.get('bound_margin_units', 0.5)
     k_units_per_block = min(16.0 * cfg.get('max_units_per_pixel', 1.0) * res / 16.0,
                             (24.0 - margin) / ext_max)
     # quantise to a friendly value so translation math is exact-ish
     k_units_per_block = math.floor(k_units_per_block * 4) / 4
+    if cfg.get('units_per_block'):      # pin the scale (held weapons: display transforms were tuned for it)
+        k_units_per_block = float(cfg['units_per_block'])
     disp_scale = 16.0 / k_units_per_block     # item_display scale (blocks per 16 units)
     log(f'[obj2mc] max part extent from pivot {ext_max:.3f} blocks -> {k_units_per_block} model units/block, item_display scale {disp_scale:.4f}')
 
@@ -385,16 +432,20 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
                         'translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.',
                 'parts': []}
     total = 0
+    S_REF = np.diag([-1.0, 1.0, -1.0])    # Ry(180): world -> model axis flip
     for pi, p in enumerate(parts):
-        pocc = part_boxes[pi]
-        if pocc is None:
+        pb = part_boxes[pi]
+        if pb is None:
             log(f'[obj2mc] part {p["name"]}: EMPTY'); continue
-        boxes = best_boxes(pocc)
-        faces = []   # (box index, face name, w_texels, h_texels)
+        pocc, obb_pts = pb
+        piv = np.array(p['pivot'], float)
+        kk = k_units_per_block
+        # ---------------- voxel group ----------------
+        boxes = best_boxes(pocc) if pocc is not None else []
+        faces = []   # (box index, face name)
         for bi, b in enumerate(boxes):
             for fn in visible_faces(b, pocc):
                 faces.append((bi, fn))
-        # face rect sizes in texels
         rects = []
         for bi, fn in faces:
             lo_b, hi_b = boxes[bi]
@@ -403,36 +454,104 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
             v0, v1, v3 = corner(vs[0]), corner(vs[1]), corner(vs[3])
             wu = int(round(np.abs(v3 - v0).sum())); hv = int(round(np.abs(v1 - v0).sum()))
             rects.append((wu * tpv, hv * tpv))
-        pos, size = shelf_pack(rects, pad=1)
+        nv = len(faces)
+        # ---------------- obb group ----------------
+        oc = p.get('obb', {})
+        obbs = []
+        if obb_pts is not None:
+            obbs = obbmod.fit_boxes(obb_pts, ovox, fill=oc.get('fill', cfg.get('obb_fill', 0.8)),
+                                    min_pts=oc.get('min_pts', cfg.get('obb_min_pts', 10)),
+                                    max_depth=oc.get('max_depth', cfg.get('obb_max_depth', 8)),
+                                    min_dim=oc.get('min_dim', cfg.get('obb_min_dim', 4.0)))
+            if obbs:
+                cells = sum(float(np.prod(b_['hi'] - b_['lo'])) for b_ in obbs) / ovox ** 3
+                log(f'[obj2mc]   {p["name"]}: obb {len(obbs)} boxes, fill {len(obb_pts) / cells:.2f}')
+        tpb = oc.get('texels_per_block', cfg.get('obb_texels_per_block', res * tpv))
+        ob_elems, ob_jobs = [], []
+        for b in obbs:
+            Cw, h, Rw = obbmod.world_box(b)
+            Cm = 8 + kk * (S_REF @ (Cw - piv)); hm = kk * h
+            ax = b['axis']; angm = b['ang'] if ax == 1 else -b['ang']
+            Rm = obbmod.rot(ax, angm)
+            el = {'from': Cm - hm, 'to': Cm + hm, 'axis': 'xyz'[ax], 'ang': angm, 'faces': {}}
+            others = [o for o in obbs if o is not b]
+            jobs_here = []
+            for fn in FACE_NORMAL:
+                vs = np.array(FACE_VERTS[fn], float)
+                cn = lambda t: el['from'] + (el['to'] - el['from']) * t
+                v0, v1, v3 = cn(vs[0]), cn(vs[1]), cn(vs[3])
+                W = max(1, int(round(np.linalg.norm(v3 - v0) / kk * tpb)))
+                H = max(1, int(round(np.linalg.norm(v1 - v0) / kk * tpb)))
+                a_ = (np.arange(W) + 0.5) / W; b_ = (np.arange(H) + 0.5) / H
+                A, B = np.meshgrid(a_, b_)
+                Pm = v0 + A[..., None] * (v3 - v0) + B[..., None] * (v1 - v0)         # unrotated model units
+                Pr = Cm + (Pm - Cm) @ Rm.T                                             # rotated
+                Xw = piv + ((Pr - 8) / kk) @ S_REF.T                                   # world blocks
+                Nw = S_REF @ (Rm @ np.array(FACE_NORMAL[fn], float))
+                Xf = Xw.reshape(-1, 3)
+                probe = Xf + Nw * (0.75 * ovox)
+                hid = np.zeros(len(Xf), bool)
+                for o in others:
+                    hid |= obbmod.inside(o, probe)
+                if pocc is not None:
+                    ii = np.floor(probe * res - lo).astype(int)
+                    okk = ((ii >= 0) & (ii < pocc.shape)).all(1)
+                    hid[okk] |= pocc[ii[okk, 0], ii[okk, 1], ii[okk, 2]]
+                if hid.mean() >= 0.92:
+                    continue
+                jobs_here.append(dict(face=fn, W=W, H=H, P=Xf, N=np.tile(Nw, (len(Xf), 1))))
+            if not jobs_here:
+                continue
+            ei = len(ob_elems)
+            ob_elems.append(el)
+            for j in jobs_here:
+                j['elem'] = ei
+                ob_jobs.append(j)
+        all_rects = rects + [(j['W'], j['H']) for j in ob_jobs]
+        if not all_rects:
+            log(f'[obj2mc] part {p["name"]}: EMPTY'); continue
+        pos, size = shelf_pack(all_rects, pad=1)
         atlas = np.zeros((size, size, 4), np.uint8)
-        # bake texels
-        qpts, qdst, qn = [], [], []
-        for (bi, fn), (W, H), (px, py) in zip(faces, rects, pos):
-            lo_b, hi_b = boxes[bi]
-            vs = np.array(FACE_VERTS[fn], float)
-            corner = lambda t: (lo_b + (hi_b - lo_b) * t + lo) / res
-            v0, v1, v3 = corner(vs[0]), corner(vs[1]), corner(vs[3])
-            a = (np.arange(W) + 0.5) / W; bb = (np.arange(H) + 0.5) / H
-            A, B = np.meshgrid(a, bb)
-            P = v0 + A[..., None] * (v3 - v0) + B[..., None] * (v1 - v0)
-            qpts.append(P.reshape(-1, 3))
-            qn.append(np.tile(np.array(FACE_NORMAL[fn], float), (W * H, 1)))
-            yy, xx = np.meshgrid(np.arange(H) + py, np.arange(W) + px, indexing='ij')
-            qdst.append(np.stack([yy.ravel(), xx.ravel()], 1))
-        qpts = np.vstack(qpts); qdst = np.vstack(qdst); qn = np.vstack(qn)
-        c = color_texels(qpts, qn, tree, rgb, rays, v, f, uv, tex, vox, cfg)
-        c = np.clip(c * cfg.get('brightness', 1.0), 0, 255)
-        atlas[qdst[:, 0], qdst[:, 1], :3] = c.astype(np.uint8)
-        atlas[qdst[:, 0], qdst[:, 1], 3] = 255
+        # bake voxel texels
+        if nv:
+            qpts, qdst, qn = [], [], []
+            for (bi, fn), (W, H), (px, py) in zip(faces, rects, pos[:nv]):
+                lo_b, hi_b = boxes[bi]
+                vs = np.array(FACE_VERTS[fn], float)
+                corner = lambda t: (lo_b + (hi_b - lo_b) * t + lo) / res
+                v0, v1, v3 = corner(vs[0]), corner(vs[1]), corner(vs[3])
+                a = (np.arange(W) + 0.5) / W; bb = (np.arange(H) + 0.5) / H
+                A, B = np.meshgrid(a, bb)
+                P = v0 + A[..., None] * (v3 - v0) + B[..., None] * (v1 - v0)
+                qpts.append(P.reshape(-1, 3))
+                qn.append(np.tile(np.array(FACE_NORMAL[fn], float), (W * H, 1)))
+                yy, xx = np.meshgrid(np.arange(H) + py, np.arange(W) + px, indexing='ij')
+                qdst.append(np.stack([yy.ravel(), xx.ravel()], 1))
+            qpts = np.vstack(qpts); qdst = np.vstack(qdst); qn = np.vstack(qn)
+            c = color_texels(qpts, qn, tree, rgb, rays, v, f, uv, tex, vox, cfg)
+            c = np.clip(c * cfg.get('brightness', 1.0), 0, 255)
+            atlas[qdst[:, 0], qdst[:, 1], :3] = c.astype(np.uint8)
+            atlas[qdst[:, 0], qdst[:, 1], 3] = 255
+        # bake obb texels (deeper rays: the box face can sit a few voxels off the true surface)
+        if ob_jobs:
+            cfg2 = dict(cfg, ray_depth_vox=cfg.get('obb_ray_depth_vox', 6.0), ray_start_vox=cfg.get('obb_ray_start_vox', 2.0))
+            qpts = np.vstack([j['P'] for j in ob_jobs]); qn = np.vstack([j['N'] for j in ob_jobs])
+            qdst = []
+            for j, (px, py) in zip(ob_jobs, pos[nv:]):
+                yy, xx = np.meshgrid(np.arange(j['H']) + py, np.arange(j['W']) + px, indexing='ij')
+                qdst.append(np.stack([yy.ravel(), xx.ravel()], 1))
+            qdst = np.vstack(qdst)
+            c = color_texels(qpts, qn, tree, rgb, rays, v, f, uv, tex, vox, cfg2)
+            c = np.clip(c * cfg.get('brightness', 1.0), 0, 255)
+            atlas[qdst[:, 0], qdst[:, 1], :3] = c.astype(np.uint8)
+            atlas[qdst[:, 0], qdst[:, 1], 3] = 255
         # extrude 1px border so nearest sampling at rect edges never bleeds
-        for (W, H), (px, py) in zip(rects, pos):
+        for (W, H), (px, py) in zip(all_rects, pos):
             atlas[py - 1, px:px + W] = atlas[py, px:px + W]
             atlas[py + H, px:px + W] = atlas[py + H - 1, px:px + W]
             atlas[py - 1:py + H + 1, px - 1] = atlas[py - 1:py + H + 1, px]
             atlas[py - 1:py + H + 1, px + W] = atlas[py - 1:py + H + 1, px + W - 1]
         # elements in model units: m = 8 + k * Ry180(X - pivot)
-        piv = np.array(p['pivot'], float)
-        kk = k_units_per_block
         def to_model(Xb):  # Xb (...,3) blocks -> model units
             d_ = Xb - piv
             return np.stack([8 - kk * d_[..., 0], 8 + kk * d_[..., 1], 8 - kk * d_[..., 2]], -1)
@@ -442,7 +561,6 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
             face_by_box.setdefault(bi, []).append(fi)
         # Ry180 swaps faces: world +X face becomes model -X (west) etc.
         swap = {'east': 'west', 'west': 'east', 'north': 'south', 'south': 'north', 'up': 'up', 'down': 'down'}
-        # After the 180° turn the per-face UV orientation must be re-derived in model space.
         for bi, b in enumerate(boxes):
             if bi not in face_by_box:
                 continue
@@ -455,8 +573,6 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
                 (W, H), (px, py) = rects[fi], pos[fi]
                 mf = swap[fn]
                 # texel rect was painted in WORLD face orientation (v0->v3 = +u, v0->v1 = +v).
-                # Find which model-space corners those world corners map to, and choose uv
-                # (possibly flipped) so the same texel lands on the same spot.
                 vs_w = np.array(FACE_VERTS[fn], float)
                 Wc = lambda t: to_model(lo_b + (hi_b - lo_b) * t)
                 w0, w1, w3 = Wc(vs_w[0]), Wc(vs_w[1]), Wc(vs_w[3])
@@ -474,6 +590,19 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
                 if sv < 0: v1, v2 = v2, v1
                 el['faces'][mf] = {'uv': [round(u1, 5), round(v1, 5), round(u2, 5), round(v2, 5)], 'texture': '#t'}
             elements.append(el)
+        n_vox_el = len(elements)
+        # obb elements: painted directly in the (unrotated) model frame, so uv has no flips
+        for ei, oe in enumerate(ob_elems):
+            el = {'from': [round(float(x), 4) for x in oe['from']], 'to': [round(float(x), 4) for x in oe['to']]}
+            if oe['ang']:
+                el['rotation'] = {'angle': oe['ang'], 'axis': oe['axis'], 'origin': [round(float(x), 4) for x in (oe['from'] + oe['to']) / 2]}
+            el['faces'] = {}
+            for j, (px, py) in zip(ob_jobs, pos[nv:]):
+                if j['elem'] != ei:
+                    continue
+                el['faces'][j['face']] = {'uv': [round(px * 16.0 / size, 5), round(py * 16.0 / size, 5),
+                                                  round((px + j['W']) * 16.0 / size, 5), round((py + j['H']) * 16.0 / size, 5)], 'texture': '#t'}
+            elements.append(el)
         tex_ref = f'{ns}:item/{model_id}/{p["name"]}'
         model = {'credit': 'obj2mc (HobbangEnhance)', 'texture_size': [size, size],
                  'textures': {'t': tex_ref, 'particle': tex_ref}, 'elements': elements,
@@ -488,15 +617,17 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
         Image.fromarray(atlas).save(os.path.join(tdir, p['name'] + '.png'), optimize=True)
         with open(os.path.join(idir, p['name'] + '.json'), 'w') as fh:
             json.dump({'model': {'type': 'minecraft:model', 'model': f'{ns}:item/{model_id}/{p["name"]}'}}, fh, indent=2)
-        nfaces = len(faces)
+        nfaces = len(all_rects)
         total += len(elements)
-        log(f'[obj2mc] part {p["name"]:10s}: voxels {int(pocc.sum()):6d}  cuboids {len(elements):5d}  faces {nfaces:5d}  atlas {size}x{size}')
+        log(f'[obj2mc] part {p["name"]:10s}: mode {p.get("mode", "voxel"):5s} voxels {int(pocc.sum()) if pocc is not None else 0:6d}  cuboids {len(elements):5d} (vox {n_vox_el}, obb {len(ob_elems)})  faces {nfaces:5d}  atlas {size}x{size}')
         manifest['parts'].append({'name': p['name'], 'item_model': f'{ns}:{model_id}/{p["name"]}',
                                   'parent': p.get('parent'), 'pivot_blocks': list(map(float, piv)),
                                   'translation': list(map(float, piv)), 'scale': disp_scale,
                                   'spin_axis': p.get('_spin_axis'),
-                                  'cuboids': len(elements), 'faces': nfaces, 'texture_px': size,
-                                  'voxels': int(pocc.sum())})
+                                  'mode': p.get('mode', 'voxel'),
+                                  'cuboids': len(elements), 'cuboids_voxel': n_vox_el, 'cuboids_obb': len(ob_elems),
+                                  'faces': nfaces, 'texture_px': size,
+                                  'voxels': int(pocc.sum()) if pocc is not None else 0})
     manifest['total_cuboids'] = total
     if cfg.get('attach'):
         manifest['attach'] = cfg['attach']

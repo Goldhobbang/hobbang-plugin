@@ -1,532 +1,533 @@
 {
-  "id": "boss/tempest_wyvern",
-  "namespace": "hobbang",
-  "obj": "/workspace/mc/models/tempest_wyvern/Meshy_AI_tempest_wyvern_20261110_texture_obj/Meshy_AI_tempest_wyvern_20261110_texture.obj",
-  "texture": "/workspace/mc/models/tempest_wyvern/Meshy_AI_tempest_wyvern_20261110_texture_obj/Meshy_AI_tempest_wyvern_20261110_texture.png",
-  "height_blocks": 6.0,
-  "source_yaw_deg": 0,
-  "resolution": 15,
-  "texels_per_voxel": 2,
-  "color_knn": 4,
-  "min_speck_voxels": 6,
-  "per_part_speck_voxels": 3,
-  "parts": [
+ "id": "boss/tempest_wyvern",
+ "namespace": "hobbang",
+ "obj": "/workspace/mc/models/tempest_wyvern/Meshy_AI_tempest_wyvern_20261110_texture_obj/Meshy_AI_tempest_wyvern_20261110_texture.obj",
+ "texture": "/workspace/mc/models/tempest_wyvern/Meshy_AI_tempest_wyvern_20261110_texture_obj/Meshy_AI_tempest_wyvern_20261110_texture.png",
+ "height_blocks": 6.0,
+ "source_yaw_deg": 0,
+ "resolution": 16,
+ "texels_per_voxel": 2,
+ "color_knn": 4,
+ "min_speck_voxels": 6,
+ "per_part_speck_voxels": 3,
+ "parts": [
+  {
+   "name": "foot_fl",
+   "parent": "shin_fl",
+   "pivot": [
+    0.4,
+    0.22,
+    1.55
+   ],
+   "regions": [
     {
-      "name": "foot_fl",
-      "parent": "shin_fl",
-      "pivot": [
-        0.4,
-        0.22,
-        1.55
-      ],
-      "regions": [
-        {
-          "min": [
-            0.0,
-            null,
-            0.95
-          ],
-          "max": [
-            null,
-            0.22,
-            null
-          ]
-        }
-      ]
-    },
-    {
-      "name": "foot_fr",
-      "parent": "shin_fr",
-      "pivot": [
-        -0.4,
-        0.22,
-        1.55
-      ],
-      "regions": [
-        {
-          "min": [
-            null,
-            null,
-            0.95
-          ],
-          "max": [
-            0.0,
-            0.22,
-            null
-          ]
-        }
-      ]
-    },
-    {
-      "name": "foot_hl",
-      "parent": "shin_hl",
-      "pivot": [
-        0.4,
-        0.22,
-        -0.1
-      ],
-      "regions": [
-        {
-          "min": [
-            0.0,
-            null,
-            -0.7
-          ],
-          "max": [
-            null,
-            0.22,
-            0.35
-          ]
-        }
-      ]
-    },
-    {
-      "name": "foot_hr",
-      "parent": "shin_hr",
-      "pivot": [
-        -0.4,
-        0.22,
-        -0.1
-      ],
-      "regions": [
-        {
-          "min": [
-            null,
-            null,
-            -0.7
-          ],
-          "max": [
-            0.0,
-            0.22,
-            0.35
-          ]
-        }
-      ]
-    },
-    {
-      "name": "shin_fl",
-      "parent": "thigh_fl",
-      "pivot": [
-        0.4,
-        0.48,
-        1.48
-      ],
-      "regions": [
-        {
-          "min": [
-            0.0,
-            null,
-            0.95
-          ],
-          "max": [
-            null,
-            0.48,
-            null
-          ]
-        }
-      ]
-    },
-    {
-      "name": "shin_fr",
-      "parent": "thigh_fr",
-      "pivot": [
-        -0.4,
-        0.48,
-        1.48
-      ],
-      "regions": [
-        {
-          "min": [
-            null,
-            null,
-            0.95
-          ],
-          "max": [
-            0.0,
-            0.48,
-            null
-          ]
-        }
-      ]
-    },
-    {
-      "name": "shin_hl",
-      "parent": "thigh_hl",
-      "pivot": [
-        0.4,
-        0.48,
-        -0.08
-      ],
-      "regions": [
-        {
-          "min": [
-            0.0,
-            null,
-            -0.7
-          ],
-          "max": [
-            null,
-            0.48,
-            0.35
-          ]
-        }
-      ]
-    },
-    {
-      "name": "shin_hr",
-      "parent": "thigh_hr",
-      "pivot": [
-        -0.4,
-        0.48,
-        -0.08
-      ],
-      "regions": [
-        {
-          "min": [
-            null,
-            null,
-            -0.7
-          ],
-          "max": [
-            0.0,
-            0.48,
-            0.35
-          ]
-        }
-      ]
-    },
-    {
-      "name": "thigh_fl",
-      "parent": "body",
-      "pivot": [
-        0.42,
-        0.92,
-        1.25
-      ],
-      "regions": [
-        {
-          "min": [
-            0.12,
-            null,
-            1.05
-          ],
-          "max": [
-            1.15,
-            0.95,
-            2.05
-          ],
-          "center": [
-            0.45,
-            0.55,
-            1.4
-          ],
-          "radius": 0.58,
-          "axis": "y"
-        }
-      ]
-    },
-    {
-      "name": "thigh_fr",
-      "parent": "body",
-      "pivot": [
-        -0.42,
-        0.92,
-        1.25
-      ],
-      "regions": [
-        {
-          "min": [
-            -1.15,
-            null,
-            1.05
-          ],
-          "max": [
-            -0.12,
-            0.95,
-            2.05
-          ],
-          "center": [
-            -0.45,
-            0.55,
-            1.4
-          ],
-          "radius": 0.58,
-          "axis": "y"
-        }
-      ]
-    },
-    {
-      "name": "thigh_hl",
-      "parent": "hips",
-      "pivot": [
-        0.42,
-        0.92,
-        -0.05
-      ],
-      "regions": [
-        {
-          "min": [
-            0.22,
-            null,
-            -0.65
-          ],
-          "max": [
-            1.1,
-            0.95,
-            0.18
-          ],
-          "center": [
-            0.55,
-            0.55,
-            -0.1
-          ],
-          "radius": 0.42,
-          "axis": "y"
-        }
-      ]
-    },
-    {
-      "name": "thigh_hr",
-      "parent": "hips",
-      "pivot": [
-        -0.42,
-        0.92,
-        -0.05
-      ],
-      "regions": [
-        {
-          "min": [
-            -1.15,
-            null,
-            -0.7
-          ],
-          "max": [
-            -0.12,
-            0.95,
-            0.35
-          ],
-          "center": [
-            -0.48,
-            0.55,
-            -0.08
-          ],
-          "radius": 0.58,
-          "axis": "y"
-        }
-      ]
-    },
-    {
-      "name": "head",
-      "parent": "neck_2",
-      "pivot": [
-        0.0,
-        2.1,
-        1.42
-      ],
-      "regions": [
-        {
-          "min": [
-            null,
-            1.7,
-            1.42
-          ]
-        }
-      ]
-    },
-    {
-      "name": "neck_2",
-      "parent": "neck_1",
-      "pivot": [
-        0.0,
-        1.95,
-        0.9
-      ],
-      "regions": [
-        {
-          "min": [
-            -0.75,
-            1.68,
-            0.9
-          ],
-          "max": [
-            0.75,
-            null,
-            1.42
-          ]
-        }
-      ]
-    },
-    {
-      "name": "neck_1",
-      "parent": "body",
-      "pivot": [
-        0.0,
-        1.75,
-        0.4
-      ],
-      "regions": [
-        {
-          "min": [
-            -0.8,
-            1.5,
-            0.28
-          ],
-          "max": [
-            0.8,
-            null,
-            0.9
-          ]
-        }
-      ]
-    },
-    {
-      "name": "wing_l",
-      "parent": "body",
-      "pivot": [
-        0.55,
-        2.0,
-        0.4
-      ],
-      "regions": [
-        {
-          "min": [
-            0.5,
-            1.7,
-            -1.0
-          ]
-        }
-      ]
-    },
-    {
-      "name": "wing_r",
-      "parent": "body",
-      "pivot": [
-        -0.55,
-        2.0,
-        0.4
-      ],
-      "regions": [
-        {
-          "min": [
-            null,
-            1.7,
-            -1.0
-          ],
-          "max": [
-            -0.5,
-            null,
-            null
-          ]
-        }
-      ]
-    },
-    {
-      "name": "tail_4",
-      "parent": "tail_3",
-      "pivot": [
-        0.0,
-        1.35,
-        -1.8
-      ],
-      "regions": [
-        {
-          "max": [
-            null,
-            null,
-            -1.5
-          ]
-        }
-      ]
-    },
-    {
-      "name": "tail_3",
-      "parent": "tail_2",
-      "pivot": [
-        0.0,
-        1.05,
-        -1.25
-      ],
-      "regions": [
-        {
-          "max": [
-            null,
-            null,
-            -0.97
-          ]
-        }
-      ]
-    },
-    {
-      "name": "tail_2",
-      "parent": "tail_1",
-      "pivot": [
-        0.0,
-        1.0,
-        -0.85
-      ],
-      "regions": [
-        {
-          "max": [
-            null,
-            null,
-            -0.57
-          ]
-        }
-      ]
-    },
-    {
-      "name": "tail_1",
-      "parent": "hips",
-      "pivot": [
-        0.0,
-        1.1,
-        -0.5
-      ],
-      "regions": [
-        {
-          "max": [
-            null,
-            null,
-            -0.15
-          ]
-        }
-      ]
-    },
-    {
-      "name": "hips",
-      "parent": "body",
-      "pivot": [
-        0.0,
-        1.15,
-        -0.2
-      ],
-      "regions": [
-        {
-          "min": [
-            null,
-            0.55,
-            null
-          ],
-          "max": [
-            null,
-            1.95,
-            0.18
-          ]
-        }
-      ]
-    },
-    {
-      "name": "body",
-      "parent": null,
-      "pivot": [
-        0.0,
-        1.2,
-        0.15
-      ],
-      "regions": [
-        {}
-      ]
+     "min": [
+      0.0,
+      null,
+      0.95
+     ],
+     "max": [
+      null,
+      0.22,
+      null
+     ]
     }
-  ],
-  "layout_height": 4.0
+   ]
+  },
+  {
+   "name": "foot_fr",
+   "parent": "shin_fr",
+   "pivot": [
+    -0.4,
+    0.22,
+    1.55
+   ],
+   "regions": [
+    {
+     "min": [
+      null,
+      null,
+      0.95
+     ],
+     "max": [
+      0.0,
+      0.22,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "foot_hl",
+   "parent": "shin_hl",
+   "pivot": [
+    0.4,
+    0.22,
+    -0.1
+   ],
+   "regions": [
+    {
+     "min": [
+      0.0,
+      null,
+      -0.7
+     ],
+     "max": [
+      null,
+      0.22,
+      0.35
+     ]
+    }
+   ]
+  },
+  {
+   "name": "foot_hr",
+   "parent": "shin_hr",
+   "pivot": [
+    -0.4,
+    0.22,
+    -0.1
+   ],
+   "regions": [
+    {
+     "min": [
+      null,
+      null,
+      -0.7
+     ],
+     "max": [
+      0.0,
+      0.22,
+      0.35
+     ]
+    }
+   ]
+  },
+  {
+   "name": "shin_fl",
+   "parent": "thigh_fl",
+   "pivot": [
+    0.4,
+    0.48,
+    1.48
+   ],
+   "regions": [
+    {
+     "min": [
+      0.0,
+      null,
+      0.95
+     ],
+     "max": [
+      null,
+      0.48,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "shin_fr",
+   "parent": "thigh_fr",
+   "pivot": [
+    -0.4,
+    0.48,
+    1.48
+   ],
+   "regions": [
+    {
+     "min": [
+      null,
+      null,
+      0.95
+     ],
+     "max": [
+      0.0,
+      0.48,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "shin_hl",
+   "parent": "thigh_hl",
+   "pivot": [
+    0.4,
+    0.48,
+    -0.08
+   ],
+   "regions": [
+    {
+     "min": [
+      0.0,
+      null,
+      -0.7
+     ],
+     "max": [
+      null,
+      0.48,
+      0.35
+     ]
+    }
+   ]
+  },
+  {
+   "name": "shin_hr",
+   "parent": "thigh_hr",
+   "pivot": [
+    -0.4,
+    0.48,
+    -0.08
+   ],
+   "regions": [
+    {
+     "min": [
+      null,
+      null,
+      -0.7
+     ],
+     "max": [
+      0.0,
+      0.48,
+      0.35
+     ]
+    }
+   ]
+  },
+  {
+   "name": "thigh_fl",
+   "parent": "body",
+   "pivot": [
+    0.42,
+    0.92,
+    1.25
+   ],
+   "regions": [
+    {
+     "min": [
+      0.12,
+      null,
+      1.05
+     ],
+     "max": [
+      1.15,
+      0.95,
+      2.05
+     ],
+     "center": [
+      0.45,
+      0.55,
+      1.4
+     ],
+     "radius": 0.58,
+     "axis": "y"
+    }
+   ]
+  },
+  {
+   "name": "thigh_fr",
+   "parent": "body",
+   "pivot": [
+    -0.42,
+    0.92,
+    1.25
+   ],
+   "regions": [
+    {
+     "min": [
+      -1.15,
+      null,
+      1.05
+     ],
+     "max": [
+      -0.12,
+      0.95,
+      2.05
+     ],
+     "center": [
+      -0.45,
+      0.55,
+      1.4
+     ],
+     "radius": 0.58,
+     "axis": "y"
+    }
+   ]
+  },
+  {
+   "name": "thigh_hl",
+   "parent": "hips",
+   "pivot": [
+    0.42,
+    0.92,
+    -0.05
+   ],
+   "regions": [
+    {
+     "min": [
+      0.22,
+      null,
+      -0.65
+     ],
+     "max": [
+      1.1,
+      0.95,
+      0.18
+     ],
+     "center": [
+      0.55,
+      0.55,
+      -0.1
+     ],
+     "radius": 0.42,
+     "axis": "y"
+    }
+   ]
+  },
+  {
+   "name": "thigh_hr",
+   "parent": "hips",
+   "pivot": [
+    -0.42,
+    0.92,
+    -0.05
+   ],
+   "regions": [
+    {
+     "min": [
+      -1.15,
+      null,
+      -0.7
+     ],
+     "max": [
+      -0.12,
+      0.95,
+      0.35
+     ],
+     "center": [
+      -0.48,
+      0.55,
+      -0.08
+     ],
+     "radius": 0.58,
+     "axis": "y"
+    }
+   ]
+  },
+  {
+   "name": "head",
+   "parent": "neck_2",
+   "pivot": [
+    0.0,
+    2.1,
+    1.42
+   ],
+   "regions": [
+    {
+     "min": [
+      null,
+      1.7,
+      1.42
+     ]
+    }
+   ]
+  },
+  {
+   "name": "neck_2",
+   "parent": "neck_1",
+   "pivot": [
+    0.0,
+    1.95,
+    0.9
+   ],
+   "regions": [
+    {
+     "min": [
+      -0.75,
+      1.68,
+      0.9
+     ],
+     "max": [
+      0.75,
+      null,
+      1.42
+     ]
+    }
+   ]
+  },
+  {
+   "name": "neck_1",
+   "parent": "body",
+   "pivot": [
+    0.0,
+    1.75,
+    0.4
+   ],
+   "regions": [
+    {
+     "min": [
+      -0.8,
+      1.5,
+      0.28
+     ],
+     "max": [
+      0.8,
+      null,
+      0.9
+     ]
+    }
+   ]
+  },
+  {
+   "name": "wing_l",
+   "parent": "body",
+   "pivot": [
+    0.55,
+    2.0,
+    0.4
+   ],
+   "regions": [
+    {
+     "min": [
+      0.5,
+      1.7,
+      -1.0
+     ]
+    }
+   ]
+  },
+  {
+   "name": "wing_r",
+   "parent": "body",
+   "pivot": [
+    -0.55,
+    2.0,
+    0.4
+   ],
+   "regions": [
+    {
+     "min": [
+      null,
+      1.7,
+      -1.0
+     ],
+     "max": [
+      -0.5,
+      null,
+      null
+     ]
+    }
+   ]
+  },
+  {
+   "name": "tail_4",
+   "parent": "tail_3",
+   "pivot": [
+    0.0,
+    1.35,
+    -1.8
+   ],
+   "regions": [
+    {
+     "max": [
+      null,
+      null,
+      -1.5
+     ]
+    }
+   ]
+  },
+  {
+   "name": "tail_3",
+   "parent": "tail_2",
+   "pivot": [
+    0.0,
+    1.05,
+    -1.25
+   ],
+   "regions": [
+    {
+     "max": [
+      null,
+      null,
+      -0.97
+     ]
+    }
+   ]
+  },
+  {
+   "name": "tail_2",
+   "parent": "tail_1",
+   "pivot": [
+    0.0,
+    1.0,
+    -0.85
+   ],
+   "regions": [
+    {
+     "max": [
+      null,
+      null,
+      -0.57
+     ]
+    }
+   ]
+  },
+  {
+   "name": "tail_1",
+   "parent": "hips",
+   "pivot": [
+    0.0,
+    1.1,
+    -0.5
+   ],
+   "regions": [
+    {
+     "max": [
+      null,
+      null,
+      -0.15
+     ]
+    }
+   ]
+  },
+  {
+   "name": "hips",
+   "parent": "body",
+   "pivot": [
+    0.0,
+    1.15,
+    -0.2
+   ],
+   "regions": [
+    {
+     "min": [
+      null,
+      0.55,
+      null
+     ],
+     "max": [
+      null,
+      1.95,
+      0.18
+     ]
+    }
+   ]
+  },
+  {
+   "name": "body",
+   "parent": null,
+   "pivot": [
+    0.0,
+    1.2,
+    0.15
+   ],
+   "regions": [
+    {}
+   ]
+  }
+ ],
+ "layout_height": 4.0,
+ "units_per_block": 6.75
 }

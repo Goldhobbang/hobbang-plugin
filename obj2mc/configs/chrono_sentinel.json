@@ -78,6 +78,16 @@
       null
      ]
     }
+   ],
+   "mode": "mixed",
+   "obb_regions": [
+    {
+     "max": [
+      null,
+      1.2,
+      null
+     ]
+    }
    ]
   },
   {
@@ -96,6 +106,16 @@
       null
      ]
     }
+   ],
+   "mode": "mixed",
+   "obb_regions": [
+    {
+     "max": [
+      null,
+      1.2,
+      null
+     ]
+    }
    ]
   },
   {
@@ -111,5 +131,9 @@
    ]
   }
  ],
- "layout_height": 2.8
+ "layout_height": 2.8,
+ "obb_fill": 0.78,
+ "obb_resolution": 36.0,
+ "obb_min_dim": 4,
+ "units_per_block": 7.0
 }
