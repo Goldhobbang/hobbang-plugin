@@ -146,10 +146,15 @@ public class ColossusBoss extends DisplayBoss {
 		} else if (action == ACT_SPIKE) {
 			armRX = actionTimer > 4 ? -150 : -30; lean = actionTimer > 4 ? -5 : 12;
 		} else if (action == ACT_BEAM) {
-			armLZ = -75; armRZ = 75; armLX = armRX = -20;
+			float kick = motion(CAST).release();
+			armLZ = -75 - 13 * kick; armRZ = 75 + 13 * kick;
+			armLX = armRX = -20 - 35 * kick;
 		} else if (action == ACT_RAIN) {
 			armLX = armRX = -180; armLZ = -20; armRZ = 20;
 		}
+		BossMotion.Frame awaken = motion(PHASE);
+		armLX -= 45 * awaken.prepare() + 65 * awaken.release();
+		armRX -= 45 * awaken.prepare() + 65 * awaken.release();
 		if (swingAnim > 0) armRX = -110 + (10 - swingAnim) * 10;
 
 		place(legL, root.at(0.55F, 1.7F, 0).rotX(sw));
@@ -219,11 +224,13 @@ public class ColossusBoss extends DisplayBoss {
 			p.damage(amount * 0.2, BU.thorns(mob));
 			Location l = p.getLocation();
 			p.getWorld().spawnParticle(Particle.END_ROD, l.getX(), l.getY() + 1, l.getZ(), 6, 0.3, 0.5, 0.3, 0.05);
+			Fx.puff(p.getWorld(), Particle.ELECTRIC_SPARK, l.toVector().add(new Vector(0, 1, 0)), 5, 0.31, 0.06);
 		}
 	}
 
 	@Override
 	protected void onPhaseChange(int p) {
+		Fx.burst(mob.getWorld(), eye(), kind, 12, 0.7);
 		if (core != null) core.setBlock(coreBlock());
 		if (p == 2) {
 			BU.say(mob, Component.text("프리즘 콜로서스: \"공명하라, 수정이여... 너희의 강철을 산산이 비추리라!\"", NamedTextColor.LIGHT_PURPLE, TextDecoration.ITALIC));
@@ -257,6 +264,7 @@ public class ColossusBoss extends DisplayBoss {
 			boolean ok = BU.hurtable(target);
 			target.damage(16, BU.mob(mob));
 			if (ok) {
+				Fx.burst(mob.getWorld(), target.getLocation().toVector().add(new Vector(0, 0.85, 0)), kind, 7, 0.4);
 				Vector d = target.getLocation().toVector().subtract(mob.getLocation().toVector()).setY(0);
 				if (d.lengthSquared() > 1e-4) d.normalize();
 				target.setVelocity(target.getVelocity().add(new Vector(d.getX() * 1.0, 0.45, d.getZ() * 1.0)));
@@ -340,11 +348,15 @@ public class ColossusBoss extends DisplayBoss {
 		switch (action) {
 			case ACT_SLAM -> {
 				if (actionTimer > 6) {
-					if (actionTimer % 2 == 0) BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.5F), c, SLAM_R, 48);
+					if (actionTimer % 2 == 0) {
+						BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.5F), c, SLAM_R, 48);
+						Fx.groundMark(w, c, SLAM_R, (actionLength - actionTimer) / (double) (actionLength - 6), kind);
+					}
 				} else if (actionTimer == 6) {
 					BU.sound(mob.getLocation(), Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.HOSTILE, 2.5F, 0.5F);
 					w.spawnParticle(Particle.EXPLOSION, c.getX(), c.getY() + 0.3, c.getZ(), 10, 3.8, 0.2, 3.8, 0);
 					w.spawnParticle(Particle.BLOCK, c.getX(), c.getY() + 0.3, c.getZ(), 80, 3.8, 0.3, 3.8, 0.2, bd(Material.AMETHYST_BLOCK));
+					Fx.slam(this, c, SLAM_R);
 					for (Player p : BU.victims(w, mob.getBoundingBox().expand(SLAM_R, 2, SLAM_R))) {
 						Location pl = p.getLocation();
 						double dx = pl.getX() - c.getX(), dz = pl.getZ() - c.getZ();
@@ -375,6 +387,7 @@ public class ColossusBoss extends DisplayBoss {
 					}
 					if (actionTimer > 36) BU.line(w, Particle.DUST, BU.dust(0x80E0FF, 0.8F), eye, eye.clone().add(lockDir.clone().multiply(22)), 0.8);
 					else BU.line(w, Particle.DUST, BU.dust(0xFF3030, 1.0F), eye, eye.clone().add(lockDir.clone().multiply(22)), 0.5);
+					if (actionTimer % 3 == 0) Fx.beamCharge(w, eye, lockDir, actionLength - actionTimer, kind);
 					if (core != null) core.display.setGlowing(true);
 					else if (head != null) { head.display.setGlowColorOverride(org.bukkit.Color.fromRGB(0x80E0FF)); head.display.setGlowing(true); }
 				} else if (actionTimer == 30) {
@@ -386,6 +399,7 @@ public class ColossusBoss extends DisplayBoss {
 			}
 			case ACT_RAIN -> {
 				if (actionTimer == 33) {
+					Fx.burst(w, eye().add(new Vector(0, 0.6, 0)), kind, 14, 0.75);
 					BU.say(mob, Component.text("⚠ 수정 낙하!", NamedTextColor.LIGHT_PURPLE));
 					for (Player p : nearbyPlayers(32)) {
 						if (!BU.valid(p)) continue;
@@ -415,6 +429,10 @@ public class ColossusBoss extends DisplayBoss {
 			} else if (fx.age == delay + 2) {
 				for (var d : fx.displays) Fx.shape(d, new Vector3f(-size / 2, -0.2F, -size / 2), new Quaternionf(), new Vector3f(size, size * 1.6F, size), 3);
 				w.spawnParticle(Particle.BLOCK, at.getX(), at.getY() + 0.3, at.getZ(), 12, 0.3, 0.2, 0.3, 0.1, Material.AMETHYST_BLOCK.createBlockData());
+				if (BossManager.isBoss(source)) {
+					Fx.puff(w, Particle.END_ROD, at.clone().add(new Vector(0, size, 0)), 5, 0.45, 0.13);
+					Fx.groundMark(w, at, 1.3, 0.2, BossKind.PRISM_COLOSSUS);
+				}
 				BU.sound(new Location(w, at.getX(), at.getY(), at.getZ()), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.HOSTILE, 1.2F, 0.7F);
 				for (Entity ent : w.getNearbyEntities(BU.box(at, 1.3, 2.5, 1.3), en -> en instanceof LivingEntity le && !le.isDead() && en != source)) {
 					LivingEntity e = (LivingEntity) ent;
@@ -434,37 +452,36 @@ public class ColossusBoss extends DisplayBoss {
 	}
 
 	private void beam(World world, Vector start, Vector dir, float len, int life) {
-		Quaternionf q = new Quaternionf().rotationTo(0, 0, 1, (float) dir.getX(), (float) dir.getY(), (float) dir.getZ());
 		Fx.spawn(world, uuid, start, life, (fx, w) -> {
-			if (fx.age == 1) {
-				BlockDisplay d = fx.addBlock(bd(Material.LIGHT_BLUE_STAINED_GLASS), true);
-				BlockDisplay d2 = fx.addBlock(bd(Material.WHITE_STAINED_GLASS), true);
-				d.setGlowing(true);
-				d.setGlowColorOverride(org.bukkit.Color.fromRGB(0x60E0FF));
-				Fx.shape(d, new Vector3f(-0.35F, -0.35F, 0).rotate(q), q, new Vector3f(0.7F, 0.7F, len), 2);
-				Fx.shape(d2, new Vector3f(-0.15F, -0.15F, 0).rotate(q), q, new Vector3f(0.3F, 0.3F, len), 2);
-			}
+			if (fx.age == 1) Fx.beam(this, () -> start, dir, len, life, Material.LIGHT_BLUE_STAINED_GLASS, 0x60E0FF);
 			if (fx.age % 5 == 0) {
 				Vector end = start.clone().add(dir.clone().multiply(len));
 				BoundingBox box = BoundingBox.of(start, end).expand(1.5);
+				int visibleHits = 0;
 				for (Player p : BU.victims(w, box)) {
-					if (BU.distToSegment(p.getLocation().toVector().add(new Vector(0, 0.9, 0)), start, end) < 1.1) {
+					Vector contact = p.getLocation().toVector().add(new Vector(0, 0.9, 0));
+					if (BU.distToSegment(contact, start, end) < 1.1) {
 						p.damage(6, BU.magic(mob));
 						p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 1));
+						if (visibleHits++ < 2) Fx.beamHit(this, contact);
 					}
 				}
 				double k = random.nextDouble();
 				w.spawnParticle(Particle.END_ROD, start.getX() + dir.getX() * len * k, start.getY() + dir.getY() * len * random.nextDouble(),
 					start.getZ() + dir.getZ() * len * random.nextDouble(), 4, 0.2, 0.2, 0.2, 0.02);
 			}
-			if (fx.age == life - 4) for (var d : fx.displays) Fx.shape(d, new Vector3f(), q, new Vector3f(0, 0, len), 4);
 		});
 	}
 
 	private void fallingShard(World world, Vector at) {
 		Fx.spawn(world, uuid, at, 56, (fx, w) -> {
+			if (fx.age >= 30 && fx.age < 37 && fx.age % 2 == 0) {
+				Vector trail = at.clone().add(new Vector(0, (37 - fx.age) * 1.7, 0));
+				Fx.burst(w, trail, kind, 5, 0.52);
+			}
 			if (fx.age < 30) {
 				if (fx.age % 3 == 0) BU.ring(w, Particle.DUST, BU.dust(0xFF60C0, 1.3F), at, 2.2, 18);
+				if (fx.age % 6 == 0) Fx.groundMark(w, at, 2.2, fx.age / 30.0, kind);
 			} else if (fx.age == 30) {
 				BlockDisplay d = fx.addBlock(bd(Material.AMETHYST_BLOCK), true);
 				Quaternionf q = new Quaternionf().rotateXYZ(0.6F, 0.8F, 0.3F);
@@ -477,6 +494,8 @@ public class ColossusBoss extends DisplayBoss {
 				BU.sound(l, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.HOSTILE, 2F, 0.6F);
 				w.spawnParticle(Particle.EXPLOSION, at.getX(), at.getY() + 0.5, at.getZ(), 1, 0, 0, 0, 0);
 				w.spawnParticle(Particle.BLOCK, at.getX(), at.getY() + 0.5, at.getZ(), 30, 0.6, 0.4, 0.6, 0.2, bd(Material.AMETHYST_BLOCK));
+				Fx.burst(w, at.clone().add(new Vector(0, 0.5, 0)), kind, 10, 0.62);
+				Fx.ripple(this, at, 2.2, 8);
 				for (Player p : BU.victims(w, BU.box(at, 2.2, 2.5, 2.2))) BU.hit(p, mob, 10, at, 0.5, 0.4);
 			} else if (fx.age == 48) {
 				for (var d : fx.displays) Fx.shape(d, new Vector3f(0, 0, 0), new Quaternionf(), new Vector3f(0, 0, 0), 6);
@@ -498,6 +517,7 @@ public class ColossusBoss extends DisplayBoss {
 
 	@Override
 	protected void onDeathStart() {
+		Fx.burst(mob.getWorld(), eye(), kind, 22, 1.1);
 		BU.sound(mob.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.HOSTILE, 2F, 0.6F);
 	}
 

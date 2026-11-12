@@ -153,14 +153,14 @@ final class BossPoses {
 			sink.place("shin" + q, child(COLOSSUS, l, leg, "shin" + q)
 				.rotX(3 + Math.max(0, -swingLeg) * 0.75F + 13 * impact - sign * tremor), 1);
 			float armPitch = -0.52F * swingLeg - 146 * slam.prepare() - 26 * slam.release()
-				- 18 * beam.release() - 52 * rain.release() - 120 * rain.prepare() - 43 * phase.release();
-			float elbow = -10 - 21 * slam.prepare() + 4 * impact - 8 * beam.prepare();
+				- 36 * beam.release() - 52 * rain.release() - 120 * rain.prepare() - 24 * phase.prepare() - 56 * phase.release();
+			float elbow = -10 - 21 * slam.prepare() + 4 * impact - 25 * beam.prepare() + 18 * beam.release();
 			if (side == 1) {
 				armPitch -= 128 * spike.prepare() + 33 * spike.release() + 86 * swing.release() * (1 - brace);
 				elbow -= 28 * spike.prepare() + 15 * swing.release() * (1 - brace);
 			}
 			Rigid a = child(COLOSSUS, chest, "chest", arm)
-				.rotX(clamp(armPitch, -167, 42)).rotZ(sign * (4 + 57 * beam.strength() + 13 * phase.release()));
+				.rotX(clamp(armPitch, -167, 42)).rotZ(sign * (4 + 42 * beam.prepare() + 68 * beam.release() + 18 * phase.release()));
 			sink.place(arm, a, 1);
 			Rigid f = child(COLOSSUS, a, arm, fore).rotX(elbow + sign * tremor);
 			sink.place(fore, f, 1);
@@ -190,7 +190,7 @@ final class BossPoses {
 			String q = SIDES[side], arm = "arm" + q;
 			float sign = side == 0 ? 1 : -1;
 			float sway = sign * sin(cycle - 0.28F) * 6 * (1 - power);
-			float wind = -35 * cast.prepare() - 58 * sweep.prepare() - 49 * channel.prepare();
+			float wind = -35 * cast.prepare() - 58 * sweep.prepare() - 49 * channel.prepare() - 25 * phase.prepare();
 			float release = -68 * cast.release() - 25 * sweep.release() - 32 * channel.release() - 40 * phase.release();
 			Rigid a = child(SENTINEL, body, "body", arm).rotX(clamp(wind + release + sway, -120, 15))
 				.rotZ(sign * (4 + 28 * sweep.release() + 16 * power));

@@ -55,6 +55,8 @@ public class SentinelBoss extends DisplayBoss {
 	private Rigid coreRig;
 	private float gearAngle, gearSpeed = 1, deathU, tilt;
 	private int gearHoldUntil, lastDeathFrame;
+	private int phaseClockUntil;
+	private Fx skillClock;
 	private static final float LEGACY = 5.6F / (2.0F / 0.6F);
 
 	public SentinelBoss(Mob mob) {
@@ -174,12 +176,37 @@ public class SentinelBoss extends DisplayBoss {
 		return mob.getLocation().toVector().add(new Vector(0, 1.6 * vs, 0));
 	}
 
+	private boolean clockActive() {
+		return rewindTimer > 0 || stopTimer > 0 || tickCount < phaseClockUntil;
+	}
+
+	private void showClock() {
+		if (skillClock == null || skillClock.dead) {
+			skillClock = Fx.clock(this, this::clockAnchor, this::clockAngle, this::clockActive);
+		}
+	}
+
+	private Vector clockAnchor() {
+		double yaw = Math.toRadians(modelYaw());
+		Vector at = coreAt().add(new Vector(-Math.sin(yaw) * 2.15, 1.55, Math.cos(yaw) * 2.15));
+		if (mob.getWorld().isChunkLoaded(at.getBlockX() >> 4, at.getBlockZ() >> 4)) return at;
+		return mob.getLocation().toVector().add(new Vector(0, mob.getHeight() + 1.55, 0));
+	}
+
+	private double clockAngle() {
+		if (rewindTimer > 0) return -(160 - rewindTimer) * Math.PI / 20;
+		if (stopTimer > 0) return (61 - stopTimer) * Math.PI / 30;
+		return Math.toRadians(gearAngle * 2);
+	}
+
 	private void setLabel(Component c) {
 		if (label != null && label.display instanceof TextDisplay td && td.isValid()) td.text(c);
 	}
 
 	@Override
 	protected void onPhaseChange(int p) {
+		phaseClockUntil = tickCount + 21;
+		showClock();
 		for (Part r : ringA) if (r != null) r.setBlock(copper(0));
 		for (Part r : ringB) if (r != null) r.setBlock(copper(1));
 		if (p == 2) {
@@ -205,6 +232,8 @@ public class SentinelBoss extends DisplayBoss {
 				Vector cc = coreAt();
 				BU.sound(l, Sound.BLOCK_ANVIL_BREAK, SoundCategory.HOSTILE, 2F, 0.5F);
 				mob.getWorld().spawnParticle(Particle.EXPLOSION, cc.getX(), cc.getY(), cc.getZ(), 4, 1.5, 1.5, 1.5, 0);
+				Fx.burst(l.getWorld(), clockAnchor(), kind, 22, 0.75);
+				Fx.ripple(this, cc, 3.4, 10);
 				BU.say(mob, Component.text("✦ 시간 역행 저지! 센티넬이 과부하 상태입니다 (받는 피해 +50%)", NamedTextColor.GREEN, TextDecoration.BOLD));
 				setLabel(Component.text("과부하!", NamedTextColor.RED, TextDecoration.BOLD));
 			}
@@ -216,6 +245,7 @@ public class SentinelBoss extends DisplayBoss {
 		World w = mob.getWorld();
 		Location here = mob.getLocation();
 		advanceGears();
+		if (clockActive()) showClock();
 		// 부유 이동
 		if (target != null) {
 			Vector to = target.getLocation().toVector().subtract(here.toVector());
@@ -258,6 +288,7 @@ public class SentinelBoss extends DisplayBoss {
 		if (phase >= 3 && rewindCd <= 0) { startRewind(); rewindCd = 520; return; }
 		if (phase >= 2 && stopCd <= 0 && stopTimer <= 0) {
 			stopTimer = 61; stopCd = 320;
+			showClock();
 			BU.say(mob, Component.text("⚠ 시간 정지! 카운트다운이 끝날 때 보스에게서 시선을 돌리세요!", NamedTextColor.GOLD));
 		}
 		if (sweepCd <= 0) { sweep(phase >= 3); sweepCd = 170; }
@@ -285,6 +316,7 @@ public class SentinelBoss extends DisplayBoss {
 		stopTimer--;
 		Location here = mob.getLocation();
 		if (stopTimer % 20 == 0 && stopTimer > 0) {
+			Fx.puff(here.getWorld(), Particle.WAX_ON, clockAnchor(), 8, 0.64, 0.06);
 			setLabel(Component.text("⏳ " + (stopTimer / 20), NamedTextColor.GOLD, TextDecoration.BOLD));
 			BU.sound(here, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.HOSTILE, 3F, 0.5F + stopTimer / 60F);
 		}
@@ -295,6 +327,8 @@ public class SentinelBoss extends DisplayBoss {
 			Fx.later(30, () -> setLabel(Component.empty()));
 			BU.sound(here, Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.HOSTILE, 3F, 0.5F);
 			Vector me = coreAt();
+			Fx.burst(here.getWorld(), clockAnchor(), kind, 19, 0.72);
+			Fx.ripple(this, me, 4.4, 10);
 			Set<UUID> frozen = new HashSet<>();
 			for (Player p : nearbyPlayers(32)) {
 				if (!BU.valid(p)) continue;
@@ -316,6 +350,7 @@ public class SentinelBoss extends DisplayBoss {
 	private void startRewind() {
 		rewindTimer = 160;
 		rewindDamage = 0;
+		showClock();
 		BU.sound(mob.getLocation(), Sound.BLOCK_PORTAL_TRIGGER, SoundCategory.HOSTILE, 2F, 1.5F);
 		BU.say(mob, Component.text("⚠ 시간 역행 시작! 8초 안에 " + (int) REWIND_BREAK + " 피해를 주세요!", NamedTextColor.DARK_AQUA, TextDecoration.BOLD));
 	}
@@ -327,10 +362,13 @@ public class SentinelBoss extends DisplayBoss {
 			setLabel(Component.text("되감는 중… 저지까지 " + Math.max(0, (int) (REWIND_BREAK - rewindDamage)), NamedTextColor.AQUA));
 			Vector cc = coreAt();
 			mob.getWorld().spawnParticle(Particle.REVERSE_PORTAL, cc.getX(), cc.getY(), cc.getZ(), 24, 2.2, 2.2, 2.2, 0.05);
+			Fx.puff(here.getWorld(), Particle.WAX_OFF, clockAnchor(), 5, 0.7, 0.06);
 		}
 		if (rewindTimer == 0) {
 			cue(CHANNEL, 0, 0, 16);
 			heal(maxHealth() * 0.12);
+			Fx.burst(here.getWorld(), clockAnchor(), kind, 22, 0.75);
+			Fx.ripple(this, coreAt(), 3.6, 10);
 			BU.sound(here, Sound.ITEM_TOTEM_USE, SoundCategory.HOSTILE, 2F, 0.6F);
 			BU.say(mob, Component.text("✖ 시간 역행 성공... 센티넬의 체력이 회복되었습니다", NamedTextColor.RED));
 			setLabel(Component.empty());
@@ -349,6 +387,7 @@ public class SentinelBoss extends DisplayBoss {
 		cue(SWEEP, 25, 50, 12);
 		BU.sound(c0, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.HOSTILE, 3F, 0.6F);
 		BU.say(mob, Component.text("⚠ 시계침이 돕니다! 점프하거나 범위 밖으로!", NamedTextColor.YELLOW));
+		Fx.sweepDial(this, c, len + 0.5F, 25, 80);
 		Fx.spawn(world, uuid, c, 80, (f, w) -> {
 			if (f.age == 1) {
 				for (int h = 0; h < hands; h++) {
@@ -372,6 +411,13 @@ public class SentinelBoss extends DisplayBoss {
 				Fx.shape(f.displays.get(h), new Vector3f(-0.2F, 0.05F, 0.5F).rotate(q), q, new Vector3f(0.4F, f.age < warm ? 0.1F : 0.6F, len), 1);
 			}
 			if (f.age > warm && f.age <= warm + 50) {
+				if (f.age % 3 == 0) {
+					for (int h = 0; h < hands; h++) {
+						double a = Math.toRadians(angle + h * 180);
+						Vector tip = c.clone().add(new Vector(Math.sin(a) * len, 0.35, Math.cos(a) * len));
+						Fx.puff(w, Particle.ELECTRIC_SPARK, tip, 6, 0.22, 0.05);
+					}
+				}
 				for (Player p : BU.victims(w, BU.box(c, len + 1, 3, len + 1))) {
 					Location pl = p.getLocation();
 					double dx = pl.getX() - c.getX(), dz = pl.getZ() - c.getZ();
@@ -410,6 +456,7 @@ public class SentinelBoss extends DisplayBoss {
 				}
 				for (Display d : f.displays)
 					Fx.shape(d, new Vector3f(-0.25F), new Quaternionf().rotateXYZ(f.age * 0.4F, f.age * 0.3F, idx), new Vector3f(0.5F), 1);
+				if (f.age <= 20 + idx * 2 && f.age % 4 == 0) Fx.puff(w, Particle.WAX_ON, f.pos, 2, 0.24, 0.02);
 				if (f.age == 20 + idx * 2) {
 					Player tgt = null;
 					double best = 1e9;
@@ -421,6 +468,7 @@ public class SentinelBoss extends DisplayBoss {
 					}
 					if (tgt == null) { f.kill(); return; }
 					f.vel = tgt.getLocation().toVector().add(new Vector(0, 1, 0)).subtract(f.pos).normalize().multiply(0.7);
+					Fx.puff(w, Particle.ELECTRIC_SPARK, f.pos, 5, 0.24, 0.05);
 					BU.sound(new Location(w, f.pos.getX(), f.pos.getY(), f.pos.getZ()), Sound.ENTITY_ARROW_SHOOT, SoundCategory.HOSTILE, 1F, 1.8F);
 				}
 				if (f.age > 20) {
@@ -432,6 +480,7 @@ public class SentinelBoss extends DisplayBoss {
 						burst = true;
 					}
 					if (burst) {
+						Fx.burst(w, f.pos, kind, 8, 0.35);
 						w.spawnParticle(Particle.END_ROD, f.pos.getX(), f.pos.getY(), f.pos.getZ(), 8, 0.2, 0.2, 0.2, 0.08);
 						f.kill();
 					}
@@ -456,6 +505,7 @@ public class SentinelBoss extends DisplayBoss {
 	protected void onDeathStart() {
 		deathU = 0;
 		lastDeathFrame = 0;
+		Fx.burst(mob.getWorld(), coreAt(), kind, 20, 0.95);
 		BU.sound(mob.getLocation(), Sound.BLOCK_BELL_RESONATE, SoundCategory.HOSTILE, 2F, 0.6F);
 	}
 

@@ -173,9 +173,10 @@ public class WyvernBoss extends DisplayBoss {
 			tl = tl.at(0, 0, -lens[i]);
 		}
 		place(fin, tl.rotY(sin(t * 0.12F - 3) * 20));
+		BossMotion.Frame stormPose = motion(CHANNEL).blend(motion(PHASE));
 		for (int s = 0; s < 2; s++) {
 			float sx = s == 0 ? 1 : -1;
-			float a1 = base + sin(flap) * amp;
+			float a1 = base + sin(flap) * amp + 22 * stormPose.prepare() - 34 * stormPose.release();
 			float a2 = base * 0.5F + sin(flap - 0.7F) * amp * 0.8F;
 			Rigid sh = b.at(sx * 0.6F, 0.3F, 0.3F).rotZ(sx * a1).rotY(sx * -8);
 			place(wing[s * 4], sh);
@@ -312,6 +313,7 @@ public class WyvernBoss extends DisplayBoss {
 				Vector desired = target.getLocation().toVector().add(new Vector(Math.cos(circleAngle) * r, 8.5 + Math.sin(tickCount * 0.05) * 1.5, Math.sin(circleAngle) * r));
 				steer(desired, 0.03, 0.65);
 				faceVelocity(8);
+				if (tickCount % 8 == 0 && !near.isEmpty()) Fx.windWake(w, pos(), flyYaw, 3.1, false);
 				if (invulTicks > 0) break;
 				orbCd -= spd; diveCd -= spd; gustCd -= spd;
 				if (phase >= 2) tornadoCd -= spd;
@@ -348,7 +350,9 @@ public class WyvernBoss extends DisplayBoss {
 			case M_DIVE_AIM -> {
 				steer(diveTarget.clone().add(new Vector(0, 12, 0)), 0.05, 0.6);
 				faceVelocity(12);
-				if (modeTimer % 2 == 0) BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.6F), diveTarget, 5.5 + mob.getWidth() / 2, 44);
+				double radius = 5.5 + mob.getWidth() / 2;
+				if (modeTimer % 2 == 0) BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.6F), diveTarget, radius, 44);
+				if (modeTimer % 4 == 0) Fx.groundMark(w, diveTarget, radius, 1 - modeTimer / 30.0, kind);
 				if (modeTimer <= 0) { mode = M_DIVE; modeTimer = 40; }
 			}
 			case M_DIVE -> {
@@ -358,11 +362,13 @@ public class WyvernBoss extends DisplayBoss {
 				drive(dir.clone().multiply(phase >= 3 ? 2.0 : 1.6));
 				faceVelocity(30);
 				w.spawnParticle(Particle.CLOUD, here.getX(), here.getY() + 0.5, here.getZ(), 3, 0.5, 0.3, 0.5, 0.01);
+				if (modeTimer % 3 == 0) Fx.windWake(w, here.toVector(), flyYaw, 1.25, false);
 				if (len < 2.0 || modeTimer <= 0 || (modeTimer < 38 && collided(dir))) {
 					drive(new Vector());
 					BU.sound(here, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 2.5F, 0.7F);
 					w.spawnParticle(Particle.EXPLOSION_EMITTER, here.getX(), here.getY(), here.getZ(), 1, 0, 0, 0, 0);
 					w.spawnParticle(Particle.GUST_EMITTER_LARGE, here.getX(), here.getY(), here.getZ(), 1, 0, 0, 0, 0);
+					Fx.slam(this, pos(), 5.5 + mob.getWidth() / 2);
 					for (Player p : BU.victims(w, mob.getBoundingBox().expand(5.5, 3, 5.5))) BU.hit(p, mob, 12, pos(), 1.2, 0.8);
 					mode = M_REST; modeTimer = 60;
 					restContact = false;
@@ -387,6 +393,7 @@ public class WyvernBoss extends DisplayBoss {
 				Vector look = new Vector(-Math.sin(yr), 0, Math.cos(yr));
 				steer(pos().add(new Vector(look.getX() * 4, 8, look.getZ() * 4)), 0.05, 0.6);
 				faceVelocity(8);
+				if (modeTimer % 4 == 0 && !near.isEmpty()) Fx.windWake(w, pos(), flyYaw, 3.3, true);
 				if (modeTimer <= 0) mode = M_CIRCLE;
 			}
 			default -> mode = M_CIRCLE;
@@ -406,6 +413,7 @@ public class WyvernBoss extends DisplayBoss {
 		World world = mob.getWorld();
 		BU.sound(mob.getLocation(), Sound.ENTITY_BREEZE_SHOOT, SoundCategory.HOSTILE, 2F, 0.6F);
 		Vector m = mouth();
+		Fx.burst(world, m, kind, 13, 0.46);
 		for (int i = 0; i < n; i++) {
 			Vector aim = target.getLocation().toVector().add(new Vector((i - n / 2) * 1.8, 1, (random.nextDouble() - 0.5) * 2));
 			Vector vel = aim.subtract(m).normalize().multiply(0.55);
@@ -425,9 +433,12 @@ public class WyvernBoss extends DisplayBoss {
 				}
 				Vector p0 = f.pos;
 				w.spawnParticle(Particle.ELECTRIC_SPARK, p0.getX(), p0.getY(), p0.getZ(), 2, 0.1, 0.1, 0.1, 0.02);
+				if (f.age % 3 == 0) Fx.puff(w, Particle.SNOWFLAKE, p0.clone().subtract(f.vel), 3, 0.22, 0.03);
 				boolean burst = BU.solidAt(w, p0);
 				if (!burst && !BU.victims(w, BU.box(p0, 1.2, 1.2, 1.2)).isEmpty()) burst = true;
 				if (burst && f.age > 3) {
+					Fx.burst(w, p0, kind, 12, 0.68);
+					Fx.ripple(this, p0, 2.5, 8);
 					w.spawnParticle(Particle.ELECTRIC_SPARK, p0.getX(), p0.getY(), p0.getZ(), 30, 0.8, 0.8, 0.8, 0.3);
 					w.spawnParticle(Particle.EXPLOSION, p0.getX(), p0.getY(), p0.getZ(), 1, 0, 0, 0, 0);
 					BU.sound(new Location(w, p0.getX(), p0.getY(), p0.getZ()), Sound.ITEM_TRIDENT_THUNDER, SoundCategory.HOSTILE, 0.8F, 1.6F);
@@ -443,13 +454,16 @@ public class WyvernBoss extends DisplayBoss {
 		cue(SWEEP, 0, 0, 14);
 		Vector m = mouth();
 		World w = mob.getWorld();
+		Fx.puff(w, Particle.GUST, m, 4, 0.46, 0.02);
+		Fx.puff(w, Particle.CLOUD, m, 10, 0.58, 0.045);
 		for (int i = 0; i < 2; i++) {
 			Vector dir = target.getLocation().toVector().add(new Vector(0, 1, 0)).subtract(m).normalize()
 				.add(new Vector((random.nextDouble() - 0.5) * 0.2, 0, (random.nextDouble() - 0.5) * 0.2));
-			w.spawn(new Location(w, m.getX(), m.getY(), m.getZ()), WindCharge.class, wc -> {
+			WindCharge charge = w.spawn(new Location(w, m.getX(), m.getY(), m.getZ()), WindCharge.class, wc -> {
 				wc.setShooter(mob);
 				wc.setVelocity(dir.clone().normalize().multiply(0.8));
 			});
+			Fx.projectileTrail(this, charge, 40);
 		}
 		BU.sound(mob.getLocation(), Sound.ENTITY_WIND_CHARGE_WIND_BURST, SoundCategory.HOSTILE, 2F, 0.6F);
 	}
@@ -489,6 +503,14 @@ public class WyvernBoss extends DisplayBoss {
 				double gy = BU.groundY(w, f.pos.getX(), f.pos.getY() + 2, f.pos.getZ());
 				f.pos.setY(gy);
 				w.spawnParticle(Particle.CLOUD, f.pos.getX(), f.pos.getY() + 0.3, f.pos.getZ(), 3, 0.8, 0.1, 0.8, 0.02);
+				if (f.age % 4 == 0) {
+					for (int band = 0; band < 4; band++) {
+						double angle = f.age * 0.33 + band * 1.4;
+						double r = 0.6 + band * 0.42;
+						Vector swirl = f.pos.clone().add(new Vector(Math.cos(angle) * r, 0.35 + band, Math.sin(angle) * r));
+						Fx.puff(w, Particle.SNOWFLAKE, swirl, 2, 0.14, 0.02);
+					}
+				}
 				org.bukkit.util.BoundingBox box = new org.bukkit.util.BoundingBox(f.pos.getX() - 1.8, f.pos.getY(), f.pos.getZ() - 1.8,
 					f.pos.getX() + 1.8, f.pos.getY() + 4.5, f.pos.getZ() + 1.8);
 				for (Player p : BU.victims(w, box)) {
@@ -505,7 +527,7 @@ public class WyvernBoss extends DisplayBoss {
 	}
 
 	private void storm() {
-		cue(CHANNEL, 29, 0, 15);
+		Fx.awaken(this, CHANNEL, 29, 0, 15);
 		World world = mob.getWorld();
 		BU.sound(mob.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.HOSTILE, 2F, 1.4F);
 		for (Player p : nearbyPlayers(40)) {
@@ -517,8 +539,12 @@ public class WyvernBoss extends DisplayBoss {
 				Vector g = new Vector(at.getX(), BU.groundY(world, at.getX(), at.getY() + 2, at.getZ()), at.getZ());
 				Fx.spawn(world, uuid, g, 36, (f, w) -> {
 					if (f.age < 30 && f.age % 3 == 0) BU.ring(w, Particle.DUST, BU.dust(0xFFE040, 1.4F), g, 1.8, 16);
+					if (f.age < 30 && f.age % 6 == 0) Fx.groundMark(w, g, 1.8, f.age / 30.0, kind);
 					if (f.age == 30) {
 						BU.lightning(w, g.getX(), g.getY(), g.getZ());
+						Fx.burst(w, g.clone().add(new Vector(0, 0.6, 0)), kind, 12, 0.65);
+						Fx.puff(w, Particle.ELECTRIC_SPARK, g.clone().add(new Vector(0, 1.0, 0)), 8, 0.45, 0.15);
+						Fx.ripple(this, g, 1.8, 6);
 						for (Player v : BU.victims(w, BU.box(g, 1.8, 3, 1.8))) v.damage(10, BU.mob(mob));
 					}
 				});
@@ -542,6 +568,7 @@ public class WyvernBoss extends DisplayBoss {
 	protected void onDeathStart() {
 		deathU = 0;
 		mob.setGravity(false);   // v1.5.0: 낙하는 drive() 로 직접 (중력/속도 Y 가 안 먹는다)
+		Fx.burst(mob.getWorld(), mouth(), kind, 24, 1.25);
 		BU.sound(mob.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 3F, 0.5F);
 	}
 

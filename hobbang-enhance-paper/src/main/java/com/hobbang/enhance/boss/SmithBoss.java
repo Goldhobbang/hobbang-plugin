@@ -343,7 +343,14 @@ public class SmithBoss extends DisplayBoss {
 			for (int h = 0; h < need; h++) if (w.getBlockAt(bx, by + h, bz).isCollidable()) return false;
 			Location to = new Location(w, bx + 0.5, by, bz + 0.5, mob.getLocation().getYaw(), 0);
 			// v1.3.0: 모델 파츠(탑승 디스플레이)를 태운 채로 순간이동
-			return mob.teleport(to, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+			Vector from = mob.getLocation().toVector();
+			boolean moved = mob.teleport(to, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+			if (moved) {
+				Fx.burst(w, from.add(new Vector(0, 1.1, 0)), kind, 14, 0.9);
+				Fx.burst(w, to.toVector().add(new Vector(0, 1.1, 0)), kind, 18, 0.9);
+				Fx.ripple(this, to.toVector(), 2.5, 8);
+			}
+			return moved;
 		}
 		return false;
 	}
@@ -352,6 +359,7 @@ public class SmithBoss extends DisplayBoss {
 		setPhase(newPhase);
 		invulTicks = 60;
 		Location l = mob.getLocation();
+		Fx.puff(l.getWorld(), Particle.SOUL_FIRE_FLAME, l.toVector().add(new Vector(0, 1.5, 0)), 10, 0.8, 0.06);
 		BU.sound(l, Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 3.0F, newPhase == 3 ? 0.6F : 0.9F);
 		mob.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, l.getX(), l.getY() + 1, l.getZ(), 1, 0, 0, 0, 0);
 		if (newPhase == 2) {
@@ -371,6 +379,7 @@ public class SmithBoss extends DisplayBoss {
 	private void startSlam() {
 		slamTimer = SLAM_TIME;
 		slamAt = null;
+		Fx.burst(mob.getWorld(), hammerHead(), kind, 8, 0.45);
 		BU.sound(mob.getLocation(), Sound.ENTITY_WITHER_SKELETON_AMBIENT, SoundCategory.HOSTILE, 2.0F, 0.5F);
 	}
 
@@ -381,7 +390,10 @@ public class SmithBoss extends DisplayBoss {
 		Vector at = slamPoint();
 		at.setY(BU.groundY(w, at.getX(), mob.getLocation().getY() + 1, at.getZ()));
 		if (slamTimer > SLAM_HIT) {
-			if (slamTimer % 2 == 0) BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.6F), at, SLAM_RADIUS, 44);
+			if (slamTimer % 2 == 0) {
+				BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.6F), at, SLAM_RADIUS, 44);
+				Fx.groundMark(w, at, SLAM_RADIUS, (SLAM_TIME - slamTimer) / (double) (SLAM_TIME - SLAM_HIT), kind);
+			}
 			slamAt = at;
 		} else if (slamTimer == SLAM_HIT) {
 			cue(SLAM, 0, 0, SLAM_HIT + 6);
@@ -396,6 +408,7 @@ public class SmithBoss extends DisplayBoss {
 		BU.sound(l, Sound.BLOCK_ANVIL_LAND, SoundCategory.HOSTILE, 2.0F, 0.5F);
 		w.spawnParticle(Particle.EXPLOSION, c.getX(), c.getY() + 0.3, c.getZ(), 8, 3.0, 0.2, 3.0, 0.0);
 		w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, c.getX(), c.getY() + 0.3, c.getZ(), 30, 3.0, 0.1, 3.0, 0.02);
+		Fx.slam(this, c, SLAM_RADIUS);
 		for (Player p : BU.victims(w, BU.box(c, SLAM_RADIUS, 3.0, SLAM_RADIUS))) {
 			Location pl = p.getLocation();
 			double dx = pl.getX() - c.getX(), dz = pl.getZ() - c.getZ();
@@ -413,16 +426,19 @@ public class SmithBoss extends DisplayBoss {
 		BU.sound(mob.getLocation(), Sound.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, 1.5F, 0.7F);
 		int n = phase == 3 ? 5 : 3;
 		Vector m = mouth();
+		Fx.burst(w, m, kind, 16, 0.52);
+		Fx.puff(w, Particle.SOUL_FIRE_FLAME, m, 9, 0.36, 0.07);
 		for (int i = 0; i < n; i++) {
 			Location tl = target.getLocation();
 			Vector dir = new Vector(tl.getX() - m.getX(), tl.getY() + target.getHeight() * 0.5 - m.getY(), tl.getZ() - m.getZ());
 			double len = dir.length();
 			dir.add(new Vector(tri() * len, 0, tri() * len)).normalize();
 			Location at = new Location(w, m.getX(), m.getY(), m.getZ());
-			w.spawn(at, SmallFireball.class, fb -> {
+			SmallFireball fireball = w.spawn(at, SmallFireball.class, fb -> {
 				fb.setShooter(mob);
 				fb.setDirection(dir);
 			});
+			Fx.projectileTrail(this, fireball, 40);
 		}
 	}
 
@@ -437,6 +453,7 @@ public class SmithBoss extends DisplayBoss {
 		waveRadius = 1.0;
 		waveCenter = mob.getLocation().toVector();
 		waveHit.clear();
+		Fx.burst(mob.getWorld(), waveCenter.clone().add(new Vector(0, 0.35, 0)), kind, 12, 0.7);
 		BU.sound(mob.getLocation(), Sound.ITEM_FIRECHARGE_USE, SoundCategory.HOSTILE, 2.0F, 0.5F);
 		BU.say(mob, Component.text("⚠ 용암 파동! 점프해서 피하세요!", NamedTextColor.GOLD));
 	}
@@ -450,6 +467,10 @@ public class SmithBoss extends DisplayBoss {
 			double a = (Math.PI * 2 * i) / pts;
 			w.spawnParticle(Particle.FLAME, waveCenter.getX() + Math.cos(a) * waveRadius, waveCenter.getY() + 0.2, waveCenter.getZ() + Math.sin(a) * waveRadius,
 				0, 0, 0.05, 0, 1);
+		}
+		if (tickCount % 3 == 0) {
+			Fx.groundMark(w, waveCenter, waveRadius, 0, kind);
+			Fx.puff(w, Particle.LAVA, waveCenter.clone().add(new Vector(0, 0.3, 0)), 3, waveRadius * 0.55, 0.03);
 		}
 		for (Player p : BU.victims(w, BU.box(waveCenter, waveRadius + 1, 3, waveRadius + 1))) {
 			Location pl = p.getLocation();
@@ -471,7 +492,11 @@ public class SmithBoss extends DisplayBoss {
 			double x = s[0], y = s[1], z = s[2];
 			s[3]--;
 			w.spawnParticle(Particle.ELECTRIC_SPARK, x, y + 0.1, z, 8, 1.0, 0.05, 1.0, 0.0);
+			if (s[3] > 0 && s[3] % 5 == 0) Fx.groundMark(w, new Vector(x, y, z), 2, 1 - s[3] / 20, kind);
 			if (s[3] <= 0) {
+				Vector at = new Vector(x, y + 0.2, z);
+				Fx.burst(w, at, kind, 13, 0.78);
+				Fx.ripple(this, at, 2, 8);
 				it.remove();
 				BU.lightning(w, x, y, z);
 				for (Player p : BU.victims(w, new org.bukkit.util.BoundingBox(x - 2, y - 2, z - 2, x + 2, y + 3, z + 2))) p.damage(12.0, BU.mob(mob));
@@ -496,6 +521,8 @@ public class SmithBoss extends DisplayBoss {
 			});
 			if (tgt != null) ws.setTarget(tgt);
 			w.spawnParticle(Particle.SOUL, at.getX(), at.getY() + 1, at.getZ(), 20, 0.3, 0.6, 0.3, 0.05);
+			Fx.ripple(this, at.toVector(), 1.45, 8);
+			Fx.puff(w, Particle.SOUL_FIRE_FLAME, at.toVector().add(new Vector(0, 0.7, 0)), 8, 0.42, 0.07);
 		}
 	}
 
@@ -518,6 +545,8 @@ public class SmithBoss extends DisplayBoss {
 				e.getPersistentDataContainer().set(Keys.MINION, PersistentDataType.STRING, uuid.toString());
 			});
 			if (tgt != null) v.setTarget(tgt);
+			Fx.puff(w, Particle.REVERSE_PORTAL, at.toVector(), 12, 0.38, 0.08);
+			Fx.burst(w, at.toVector(), kind, 9, 0.38);
 		}
 	}
 
@@ -535,7 +564,10 @@ public class SmithBoss extends DisplayBoss {
 
 	@Override
 	public void onAttack(EntityDamageByEntityEvent e) {
-		if (e.getDamager() == mob) cue(STRIKE, 0, 0, 11);
+		if (e.getDamager() == mob) {
+			cue(STRIKE, 0, 0, 11);
+			Fx.burst(mob.getWorld(), e.getEntity().getLocation().toVector().add(new Vector(0, 0.9, 0)), kind, 8, 0.38);
+		}
 		if (phase >= 2 && e.getEntity() instanceof LivingEntity le && e.getDamager() == mob) {
 			le.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 100, 0));
 		}
@@ -563,6 +595,9 @@ public class SmithBoss extends DisplayBoss {
 
 	@Override
 	protected void onDeathStart() {
+		Location at = mob.getLocation();
+		Fx.burst(at.getWorld(), hammerHead(), kind, 24, 1.2);
+		Fx.puff(at.getWorld(), Particle.SOUL_FIRE_FLAME, at.toVector().add(new Vector(0, 1.3, 0)), 18, 1.2, 0.11);
 		BU.sound(mob.getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.HOSTILE, 2.0F, 1.5F);
 	}
 

@@ -42,6 +42,10 @@ public final class BossWarmup {
 		blocks.add(Material.MAGMA_BLOCK);
 		blocks.add(Material.AMETHYST_BLOCK);
 		blocks.add(Material.CUT_COPPER);
+		for (Material m : List.of(Material.POLISHED_DEEPSLATE, Material.WAXED_CUT_COPPER, Material.WAXED_OXIDIZED_CUT_COPPER,
+			Material.GOLD_BLOCK, Material.SEA_LANTERN, Material.WHITE_STAINED_GLASS)) {
+			if (!blocks.contains(m)) blocks.add(m);
+		}
 		int[] i = {0};
 		final int itemN = items.size();
 		final int blockN = blocks.size();

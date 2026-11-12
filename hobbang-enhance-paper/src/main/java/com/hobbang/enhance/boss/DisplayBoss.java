@@ -349,6 +349,7 @@ public abstract class DisplayBoss extends Boss {
 			return;
 		}
 		animTick++;
+		if (!dying && tickCount % 8 == 0) Fx.ambient(this);
 		if (animTick % ANIM_INTERVAL == 0) {
 			motion.expire(tickCount);
 			updateRiderOffset();
@@ -1067,6 +1068,7 @@ public abstract class DisplayBoss extends Boss {
 	protected void startDeath() {
 		if (dying || dead) return;
 		dying = true;
+		Fx.discardOwned(uuid, true);
 		deathTick = 0;
 		deathLen = Math.max(1, deathDuration());
 		deathAt = mob.getLocation().clone();
