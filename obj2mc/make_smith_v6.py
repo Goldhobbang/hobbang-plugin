@@ -197,6 +197,15 @@ class Smith(V5.Smith):
         painter = armor_tex(center, size, rotation, key, trim, heated)
         self._box(part, center, size, painter, rotation, light=7 if trim else 0)
 
+    def chain(self, part, center, size, rotation=None):
+        self.raw(part, center, size, chain, rotation)
+
+    def apron(self, part, center, size, *, skirt=None):
+        self.raw(part, center, size, leather if skirt is None else V5.leather_apron(skirt))
+
+    def eye_socket(self, part, side):
+        self._box(part, (side * 0.25, 7.91, 0.31), (0.40, 0.37, 0.09), socket_tex, None, light=9)
+
     def bone(self, part, center, size, rotation=None, *, tone=2, nasal=False, vault=False):
         key = len(self.T[part]['boxes'])
         self.raw(part, center, size, bone_tex(center, size, rotation, key, tone, nasal, vault), rotation)
@@ -226,7 +235,7 @@ def skull(b):
         bone((side * 0.34, 8.29, 0.18), (0.29, 0.38, 0.25), ('y', side * 45), vault=True)
         bone((side * 0.25, 8.10, 0.50), (0.44, 0.16, 0.28), ('z', side * 22.5), tone=2)
         bone((side * 0.45, 7.94, 0.34), (0.13, 0.34, 0.28), ('z', side * 22.5), tone=1)
-        b._box(p, (side * 0.25, 7.91, 0.31), (0.40, 0.37, 0.09), socket_tex, None, light=9)
+        b.eye_socket(p, side)
         bone((side * 0.35, 7.68, 0.49), (0.36, 0.13, 0.28), ('z', side * 22.5))
         bone((side * 0.46, 7.71, 0.22), (0.17, 0.16, 0.55), ('y', side * 22.5), tone=1)
         bone((side * 0.28, 7.51, 0.20), (0.14, 0.27, 0.31), ('z', -side * 45), tone=0)
@@ -238,20 +247,21 @@ def skull(b):
         bone((side * 0.086, 7.31, 0.54), (0.12, 0.06, 0.08), tone=1)
 
 
-def torso_and_chest(b):
+def torso_and_chest(b, *, flared_hips=True):
     p = b.part('torso', None, (0.0, 2.7, 0.0))
     b.core(p, (0, 3.58, 0.0), (1.66, 1.69, 1.03))
-    b.raw(p, (0, 4.26, 0.09), (2.34, 0.24, 1.45), chain)
+    b.chain(p, (0, 4.26, 0.09), (2.34, 0.24, 1.45))
     b.plate(p, (0, 4.28, 0.86), (0.46, 0.36, 0.14))
     for side in (-1, 1):
         b.plate(p, (side * 0.94, 3.61, 0.56), (0.56, 1.16, 0.26), ('y', side * 22.5))
-        b.plate(p, (side * 1.08, 3.35, 0.08), (0.34, 1.38, 0.88), ('z', side * 22.5))
+        if flared_hips:
+            b.plate(p, (side * 1.08, 3.35, 0.08), (0.34, 1.38, 0.88), ('z', side * 22.5))
         b.plate(p, (side * 0.72, 3.48, -0.58), (0.84, 1.18, 0.27), ('y', -side * 22.5))
     b.plate(p, (0, 3.94, -0.67), (0.65, 0.35, 0.27), ('x', 22.5))
     b.plate(p, (0, 3.36, -0.65), (0.48, 0.42, 0.23), ('x', -22.5))
-    b.raw(p, (0, 2.82, 0.90), (1.22, 2.46, 0.10), V5.leather_apron(True))
-    b.raw(p, (0, 1.47, 0.90), (0.66, 0.26, 0.10), leather)
-    b.raw(p, (0, 1.28, 0.90), (0.30, 0.14, 0.10), leather)
+    b.apron(p, (0, 2.82, 0.90), (1.22, 2.46, 0.10), skirt=True)
+    b.apron(p, (0, 1.47, 0.90), (0.66, 0.26, 0.10))
+    b.apron(p, (0, 1.28, 0.90), (0.30, 0.14, 0.10))
 
     p = b.part('chest', 'torso', (0.0, 4.5, 0.0))
     b.core(p, (0, 6.11, 0.0), (2.07, 1.61, 1.39))
@@ -264,16 +274,16 @@ def torso_and_chest(b):
     b.plate(p, (0, 7.05, 0.10), (0.97, 0.19, 0.94), trim=False)
     for side in (-1, 1):
         b.plate(p, (side * 1.07, 6.32, 0.58), (0.64, 1.22, 0.35), ('y', side * 45))
-        b.raw(p, (side * 1.00, 6.36, 0.90), (0.12, 1.19, 0.13), chain, ('z', -side * 22.5))
+        b.chain(p, (side * 1.00, 6.36, 0.90), (0.12, 1.19, 0.13), ('z', -side * 22.5))
         b.plate(p, (side * 1.18, 6.31, -0.51), (0.56, 1.18, 0.31), ('y', -side * 45))
         b.plate(p, (side * 1.30, 5.98, 0.0), (0.29, 1.65, 0.67), ('z', -side * 22.5))
         b.plate(p, (side * 0.75, 6.99, 0.19), (0.76, 0.25, 1.25), ('z', -side * 22.5))
         b.plate(p, (side * 0.80, 5.28, 0.41), (0.45, 0.60, 0.26), ('y', side * 45))
         b.plate(p, (side * 0.75, 5.30, -0.41), (0.44, 0.59, 0.26), ('y', -side * 45))
-    b.raw(p, (0, 4.97, 0.99), (1.13, 0.70, 0.10), V5.leather_apron(False))
+    b.apron(p, (0, 4.97, 0.99), (1.13, 0.70, 0.10), skirt=False)
 
 
-def limbs(b):
+def limbs(b, *, outer_thighs=True):
     for side, suffix in ((1, 'l'), (-1, 'r')):
         p = b.part(f'arm_{suffix}', 'chest', (side * 2.0, 6.8, 0.0))
         b.core(p, (side * 2.02, 6.25, -0.06), (0.73, 1.88, 0.83))
@@ -311,9 +321,10 @@ def limbs(b):
         hip, knee, ankle = pivots[suffix]
         p = b.part(f'leg_{suffix}', None, hip)
         b.core(p, (side * 0.99, 2.09, 0.04), (0.78, 1.06, 0.75))
-        b.plate(p, (side * 0.93, 2.10, 0.52), (0.98, 0.89, 0.26), ('x', -22.5))
-        b.plate(p, (side * 1.38, 2.09, 0.08), (0.25, 0.83, 0.73), ('z', -side * 22.5))
-        b.plate(p, (side * 1.02, 2.10, -0.39), (0.88, 0.85, 0.25), ('y', -side * 22.5))
+        if outer_thighs:
+            b.plate(p, (side * 0.93, 2.10, 0.52), (0.98, 0.89, 0.26), ('x', -22.5))
+            b.plate(p, (side * 1.38, 2.09, 0.08), (0.25, 0.83, 0.73), ('z', -side * 22.5))
+            b.plate(p, (side * 1.02, 2.10, -0.39), (0.88, 0.85, 0.25), ('y', -side * 22.5))
         b.plate(p, (side * 0.62, 2.09, 0.03), (0.20, 0.70, 0.65), trim=False)
 
         p = b.part(f'shin_{suffix}', p, knee)

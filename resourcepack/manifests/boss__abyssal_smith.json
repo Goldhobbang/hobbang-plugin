@@ -25,12 +25,12 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 14,
+      "cuboids": 12,
       "cuboids_voxel": 6,
-      "cuboids_obb": 8,
-      "faces": 84,
+      "cuboids_obb": 6,
+      "faces": 72,
       "texture_px": 128,
-      "texture_pages": 2,
+      "texture_pages": 4,
       "voxels": 0
     },
     {
@@ -55,7 +55,7 @@
       "cuboids_obb": 18,
       "faces": 138,
       "texture_px": 128,
-      "texture_pages": 2,
+      "texture_pages": 7,
       "voxels": 0
     },
     {
@@ -75,10 +75,10 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 40,
+      "cuboids": 50,
       "cuboids_voxel": 13,
-      "cuboids_obb": 27,
-      "faces": 240,
+      "cuboids_obb": 37,
+      "faces": 300,
       "texture_px": 128,
       "texture_pages": 3,
       "voxels": 0
@@ -105,7 +105,7 @@
       "cuboids_obb": 9,
       "faces": 60,
       "texture_px": 128,
-      "texture_pages": 1,
+      "texture_pages": 2,
       "voxels": 0
     },
     {
@@ -180,7 +180,7 @@
       "cuboids_obb": 9,
       "faces": 60,
       "texture_px": 128,
-      "texture_pages": 1,
+      "texture_pages": 2,
       "voxels": 0
     },
     {
@@ -250,10 +250,10 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 5,
+      "cuboids": 2,
       "cuboids_voxel": 2,
-      "cuboids_obb": 3,
-      "faces": 30,
+      "cuboids_obb": 0,
+      "faces": 12,
       "texture_px": 128,
       "texture_pages": 1,
       "voxels": 0
@@ -305,7 +305,7 @@
       "cuboids_obb": 4,
       "faces": 60,
       "texture_px": 128,
-      "texture_pages": 1,
+      "texture_pages": 2,
       "voxels": 0
     },
     {
@@ -325,10 +325,10 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 5,
+      "cuboids": 2,
       "cuboids_voxel": 2,
-      "cuboids_obb": 3,
-      "faces": 30,
+      "cuboids_obb": 0,
+      "faces": 12,
       "texture_px": 128,
       "texture_pages": 1,
       "voxels": 0
@@ -380,12 +380,26 @@
       "cuboids_obb": 4,
       "faces": 60,
       "texture_px": 128,
-      "texture_pages": 1,
+      "texture_pages": 2,
       "voxels": 0
     }
   ],
   "part_texture_resolution": {
-    "head": 32
+    "torso": 32,
+    "chest": 32,
+    "head": 32,
+    "arm_l": 24,
+    "fore_l": 24,
+    "hand_l": 24,
+    "arm_r": 24,
+    "fore_r": 24,
+    "hand_r": 24,
+    "leg_l": 24,
+    "shin_l": 24,
+    "foot_l": 24,
+    "leg_r": 24,
+    "shin_r": 24,
+    "foot_r": 24
   },
-  "total_cuboids": 183
+  "total_cuboids": 185
 }

@@ -44,19 +44,19 @@ public final class BossModels {
 	}
 
 	static {
-		put("abyssal_smith", "torso", 0.0000F, 2.7000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 14, "boss/abyssal_smith/torso");
+		put("abyssal_smith", "torso", 0.0000F, 2.7000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 12, "boss/abyssal_smith/torso");
 		put("abyssal_smith", "chest", 0.0000F, 4.5000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 23, "boss/abyssal_smith/chest");
-		put("abyssal_smith", "head", 0.0000F, 7.2000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 40, "boss/abyssal_smith/head");
+		put("abyssal_smith", "head", 0.0000F, 7.2000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 50, "boss/abyssal_smith/head");
 		put("abyssal_smith", "arm_l", 2.0000F, 6.8000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 10, "boss/abyssal_smith/arm_l");
 		put("abyssal_smith", "fore_l", 2.0278F, 5.3000F, 0.0278F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 7, "boss/abyssal_smith/fore_l");
 		put("abyssal_smith", "hand_l", 2.2917F, 4.4500F, 0.2083F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 14, "boss/abyssal_smith/hand_l");
 		put("abyssal_smith", "arm_r", -2.0000F, 6.8000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 10, "boss/abyssal_smith/arm_r");
 		put("abyssal_smith", "fore_r", -2.0278F, 5.3000F, 0.0278F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 7, "boss/abyssal_smith/fore_r");
 		put("abyssal_smith", "hand_r", -2.2917F, 4.4500F, 0.2083F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 14, "boss/abyssal_smith/hand_r");
-		put("abyssal_smith", "leg_l", 0.9000F, 2.6000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 5, "boss/abyssal_smith/leg_l");
+		put("abyssal_smith", "leg_l", 0.9000F, 2.6000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 2, "boss/abyssal_smith/leg_l");
 		put("abyssal_smith", "shin_l", 1.0833F, 1.5500F, -0.0833F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 7, "boss/abyssal_smith/shin_l");
 		put("abyssal_smith", "foot_l", 1.3056F, 0.6500F, 0.1944F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 10, "boss/abyssal_smith/foot_l");
-		put("abyssal_smith", "leg_r", -0.9000F, 2.6000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 5, "boss/abyssal_smith/leg_r");
+		put("abyssal_smith", "leg_r", -0.9000F, 2.6000F, 0.0000F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 2, "boss/abyssal_smith/leg_r");
 		put("abyssal_smith", "shin_r", -1.1389F, 1.5500F, -0.0833F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 7, "boss/abyssal_smith/shin_r");
 		put("abyssal_smith", "foot_r", -1.3056F, 0.6500F, 0.2500F, 3.7647F, 0.0000F, 1.0000F, 0.0000F, 10, "boss/abyssal_smith/foot_r");
 		HEIGHT.put("abyssal_smith", 9.0000F);
