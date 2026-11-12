@@ -22,7 +22,8 @@ RIGHT_ARM = ('arm_r', 'fore_r', 'hand_r')
 
 
 class SmithPreview:
-    def __init__(self, base, tsv):
+    def __init__(self, base, tsv, *, alpha_test=False):
+        self.alpha_test = alpha_test
         manifests = [json.loads((base / 'manifests' / f'boss__{name}.json').read_text(encoding='utf-8'))
                      for name in ('abyssal_smith', 'smith_hammer')]
         self.parts = manifests[0]['parts'] + manifests[1]['parts']
@@ -45,7 +46,7 @@ class SmithPreview:
                 local = (vertices[local_mask] - np.array(part['translation'])) * scale
                 vertices[local_mask] = local @ rotation(qx, qy, qz, qw).T + [x, y, z]
         image, _ = render(vertices[mask], self.uv[mask], self.texture, *view, SIZE, np.array(center), extent,
-                          bg=(32, 39, 48))
+                          bg=(32, 39, 48), alpha_test=self.alpha_test)
         return label(image, title)
 
 

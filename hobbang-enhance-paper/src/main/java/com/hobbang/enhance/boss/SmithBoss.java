@@ -172,14 +172,14 @@ public class SmithBoss extends DisplayBoss {
 		float kn = knee * (1 - kneel) + 115 * kneel;
 		Rigid t0 = root.at(lp.x, lp.y, lp.z).rotX(th);
 		place(thigh, t0, sc);
-		Rigid s0 = child(t0, "leg" + q, "shin" + q).rotX(kn);
+		Rigid s0 = BossPoses.smithLegChild(t0, "leg" + q, "shin" + q).rotX(kn);
 		place(shin, s0, sc);
-		place(foot, child(s0, "shin" + q, "foot" + q).rotX(-(th + kn) * 0.6F * (1 - kneel)), sc);
+		place(foot, BossPoses.smithLegChild(s0, "shin" + q, "foot" + q).rotX(-(th + kn) * 0.6F * (1 - kneel)), sc);
 	}
 
 	/** 망치 머리 (월드 좌표). 블록 모델 모드에서는 몸 앞 1.5블록 */
 	private Vector hammerHead() {
-		if (modelMode && hammerRig != null) return worldPoint(hammerRig, 0F, -2.16F, 0F);   // 망치 머리 중심 (손잡이 피벗 기준)
+		if (modelMode && hammerRig != null) return worldPoint(hammerRig, 0F, -2.808F, 0F);   // 망치 머리 중심 (손잡이 피벗 기준)
 		Location l = mob.getLocation();
 		Vector f = l.getDirection().setY(0);
 		if (f.lengthSquared() < 1e-6) f = new Vector(0, 0, 1);
@@ -579,8 +579,8 @@ public class SmithBoss extends DisplayBoss {
 		Rigid root = Rigid.yaw(modelYaw());
 		Vector3f tp = pv(kind, "torso");
 		// 무릎을 꿇으면 골반이 내려간다 (허벅지 앞으로, 정강이는 뒤로 눕는다)
-		float hipDrop = kneel * 1.4F;
-		Rigid base = root.at(0, -hipDrop - sink, 0);
+		float hipDrop = kneel * 1.4F * BossPoses.SMITH_LEG_SCALE;
+		Rigid base = root.at(0, BossPoses.smithLegLift() - hipDrop - sink, 0);
 		Rigid torso = base.at(tp.x, tp.y, tp.z).rotX(6 * kneel + 10 * slump);
 		place(pTorso, torso, sc);
 		Rigid chest = child(torso, "torso", "chest").rotX(4 * kneel + 30 * slump);

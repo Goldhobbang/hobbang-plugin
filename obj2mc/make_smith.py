@@ -634,8 +634,10 @@ def emit_model_set(pack, model_id, parts_table, height_blocks, k_units_per_block
         for (bi, fn), (W, H), (pg, px, py) in zip(jobs, rects, pos):
             b = p['boxes'][bi]
             atlas, size = atlases[pg], sizes[pg]
-            atlas[py:py + H, px:px + W, :3] = paint_face(b['kind'], fn, W, H, b['color']).astype(np.uint8)
-            atlas[py:py + H, px:px + W, 3] = 255
+            face = paint_face(b['kind'], fn, W, H, b['color']).astype(np.uint8)
+            tile = atlas[py:py + H, px:px + W]
+            tile[:, :, 3] = 255
+            tile[:, :, :face.shape[-1]] = face
             atlas[py - 1, px:px + W] = atlas[py, px:px + W]
             atlas[py + H, px:px + W] = atlas[py + H - 1, px:px + W]
             atlas[py - 1:py + H + 1, px - 1] = atlas[py - 1:py + H + 1, px]

@@ -1,10 +1,10 @@
 {
   "id": "hobbang:boss/smith_hammer",
-  "height_blocks": 4.2,
+  "height_blocks": 5.2,
   "resolution": 16,
   "texels_per_voxel": 1,
-  "model_units_per_block": 8.0,
-  "item_display_scale": 2.0,
+  "model_units_per_block": 6.75,
+  "item_display_scale": 2.3703703703703702,
   "front": "+Z (boss local, yaw 0 = south)",
   "note": "hand-designed Blockbench-style cuboid model (1.5.2); 16px/block noise-free pixel textures from original mesh palette.",
   "parts": [
@@ -22,7 +22,7 @@
         2.9,
         0.0
       ],
-      "scale": 2.0,
+      "scale": 2.3703703703703702,
       "spin_axis": null,
       "mode": "box",
       "cuboids": 35,

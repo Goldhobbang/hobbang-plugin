@@ -8,6 +8,9 @@ import static com.hobbang.enhance.boss.BossMotion.*;
 /** Pack-model joint transforms shared by the live display and the offline renderer. */
 final class BossPoses {
 	private static final String SMITH = "abyssal_smith";
+	static final float SMITH_LEG_SCALE = 1.30F;
+	// Keep the smaller hammer's flat striking face at its original contact height.
+	private static final float SMITH_HAMMER_RIM_REDUCTION = 0.1695F;
 	private static final String COLOSSUS = "prism_colossus";
 	private static final String SENTINEL = "chrono_sentinel";
 	private static final String WYVERN = "tempest_wyvern";
@@ -37,6 +40,17 @@ final class BossPoses {
 		return parent.at(offset.x, offset.y, offset.z).rotX(rest.x).rotY(rest.y).rotZ(rest.z);
 	}
 
+	static float smithLegLift() {
+		float hip = BossModels.get(SMITH, "leg_l").pivot().y;
+		float ankle = BossModels.get(SMITH, "foot_l").pivot().y;
+		return (hip - ankle) * (SMITH_LEG_SCALE - 1);
+	}
+
+	static Rigid smithLegChild(Rigid parent, String from, String to) {
+		Vector3f a = BossModels.get(SMITH, from).pivot(), b = BossModels.get(SMITH, to).pivot();
+		return parent.at(b.x - a.x, (b.y - a.y) * SMITH_LEG_SCALE, b.z - a.z);
+	}
+
 	record SmithRig(Rigid head, Rigid hammer) {}
 
 	static SmithRig smith(Sink sink, float t, float yaw, float walk, float lookYaw, float lookPitch,
@@ -50,15 +64,18 @@ final class BossPoses {
 		float rise = sin(t * 0.067F) * 0.055F + Math.abs(weight) * 0.10F;
 		float lean = -12 * load + 55 * hit + other * (9 * sweep.release() - 10 * phase.prepare());
 		Rigid root = Rigid.yaw(yaw);
-		Rigid base = root.at(shift, rise + 0.08F * stomp, -0.16F * load + 0.80F * hit);
+		float brace = ease(hit);
+		float lift = smithLegLift();
+		Rigid base = root.at(shift, rise + 0.08F * stomp + lift - (lift + SMITH_HAMMER_RIM_REDUCTION) * brace,
+			-0.16F * load + 0.80F * hit);
 		Rigid pelvis = pivot(SMITH, base.at(0, -0.50F * ease(hit), 0), "torso").rotX(0.32F * lean).rotZ(-3 * weight + 3 * load);
 		sink.place("torso", pelvis, 1);
 		Rigid chest = child(SMITH, pelvis, "torso", "chest")
 			.rotX(0.68F * lean + sin(t * 0.067F - 0.28F) * 1.4F)
 			.rotY(-5 * weight - 13 * load + 9 * hit + 18 * sweep.prepare() * other);
 		sink.place("chest", chest, 1);
-		smithLeg(sink, base, "_l", -22 * weight - 5 * load, stomp);
-		smithLeg(sink, base, "_r", 22 * weight + 8 * load, stomp);
+		smithLeg(sink, base, "_l", -22 * weight - 5 * load, stomp, brace);
+		smithLeg(sink, base, "_r", 22 * weight + 8 * load, stomp, brace);
 		Rigid head = child(SMITH, chest, "chest", "head")
 			.rotY(-lookYaw * (1 - 0.58F * strike.strength()))
 			.rotX(lookPitch - 9 * load - 12 * cast.prepare() + 8 * cast.release() - 13 * phase.release());
@@ -93,15 +110,15 @@ final class BossPoses {
 		return new SmithRig(head, hammer);
 	}
 
-	private static void smithLeg(Sink sink, Rigid root, String side, float swing, float stomp) {
+	private static void smithLeg(Sink sink, Rigid root, String side, float swing, float stomp, float brace) {
 		String leg = "leg" + side, shin = "shin" + side, foot = "foot" + side;
-		float thigh = swing - 11 * stomp;
-		float knee = 4 + Math.max(0, -swing) * 0.9F + 17 * stomp;
+		float thigh = swing - 11 * stomp - 43 * brace;
+		float knee = 4 + Math.max(0, -swing) * 0.9F + 17 * stomp + 70 * brace;
 		Rigid l = pivot(SMITH, root, leg).rotX(thigh);
-		Rigid s = child(SMITH, l, leg, shin).rotX(knee);
+		Rigid s = smithLegChild(l, leg, shin).rotX(knee);
 		sink.place(leg, l, 1);
 		sink.place(shin, s, 1);
-		sink.place(foot, child(SMITH, s, shin, foot).rotX(-(thigh + knee) * 0.65F), 1);
+		sink.place(foot, smithLegChild(s, shin, foot).rotX(-(thigh + knee) * (0.65F + 0.35F * brace)), 1);
 	}
 
 	static Rigid colossus(Sink sink, float t, float yaw, float walk, float lookYaw, float lookPitch,

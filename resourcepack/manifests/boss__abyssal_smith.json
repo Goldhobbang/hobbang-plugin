@@ -1,6 +1,6 @@
 {
   "id": "hobbang:boss/abyssal_smith",
-  "height_blocks": 9.0,
+  "height_blocks": 9.585,
   "resolution": 16,
   "texels_per_voxel": 1,
   "model_units_per_block": 4.25,
@@ -25,12 +25,12 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 12,
-      "cuboids_voxel": 6,
-      "cuboids_obb": 6,
-      "faces": 72,
+      "cuboids": 44,
+      "cuboids_voxel": 24,
+      "cuboids_obb": 20,
+      "faces": 264,
       "texture_px": 128,
-      "texture_pages": 4,
+      "texture_pages": 7,
       "voxels": 0
     },
     {
@@ -50,12 +50,12 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 23,
+      "cuboids": 34,
       "cuboids_voxel": 5,
-      "cuboids_obb": 18,
-      "faces": 138,
+      "cuboids_obb": 29,
+      "faces": 204,
       "texture_px": 128,
-      "texture_pages": 7,
+      "texture_pages": 8,
       "voxels": 0
     },
     {
@@ -250,12 +250,12 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 2,
-      "cuboids_voxel": 2,
-      "cuboids_obb": 0,
-      "faces": 12,
+      "cuboids": 13,
+      "cuboids_voxel": 9,
+      "cuboids_obb": 4,
+      "faces": 78,
       "texture_px": 128,
-      "texture_pages": 1,
+      "texture_pages": 2,
       "voxels": 0
     },
     {
@@ -325,12 +325,12 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 2,
-      "cuboids_voxel": 2,
-      "cuboids_obb": 0,
-      "faces": 12,
+      "cuboids": 13,
+      "cuboids_voxel": 9,
+      "cuboids_obb": 4,
+      "faces": 78,
       "texture_px": 128,
-      "texture_pages": 1,
+      "texture_pages": 2,
       "voxels": 0
     },
     {
@@ -401,5 +401,5 @@
     "shin_r": 24,
     "foot_r": 24
   },
-  "total_cuboids": 185
+  "total_cuboids": 250
 }

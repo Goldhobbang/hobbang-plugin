@@ -245,17 +245,24 @@ def orbital_walls(smith):
                    ('z', side * 22.5), tone=0)
 
 
-def define_smith():
-    smith = Smith(SmithMaterials())
+def build_smith(builder=Smith):
+    smith = builder(SmithMaterials())
     V6.torso_and_chest(smith, flared_hips=False)
     V6.skull(smith)
     orbital_walls(smith)
     V6.limbs(smith, outer_thighs=False)
-    return smith.T
+    return smith
+
+
+def define_smith():
+    return build_smith().T
+
+
+def emit_body(body, *, height_blocks=9.0):
+    density = {part: 32 if part in ('head', 'torso', 'chest') else 24 for part in body}
+    M.emit_model_set(str(ROOT / 'resourcepack' / 'hobbang-pack'), 'boss/abyssal_smith', body, height_blocks, 4.25,
+                     credit='make_smith_v7 (HobbangEnhance)', part_ppu=density)
 
 
 if __name__ == '__main__':
-    body = define_smith()
-    density = {part: 32 if part in ('head', 'torso', 'chest') else 24 for part in body}
-    M.emit_model_set(str(ROOT / 'resourcepack' / 'hobbang-pack'), 'boss/abyssal_smith', body, 9.0, 4.25,
-                     credit='make_smith_v7 (HobbangEnhance)', part_ppu=density)
+    emit_body(define_smith())
