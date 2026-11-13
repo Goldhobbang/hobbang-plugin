@@ -1,0 +1,562 @@
+{
+  "smith.slam": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/smith/slam",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/anvil",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/anvil_hits",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/hammer",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/metal_impact",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/heavy_thud",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "smith.scrape": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/smith/screech_short",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/screech",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/screech_mid",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/screech_long",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/scrape",
+        "volume": 0.95,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/scrape_long",
+        "volume": 0.85,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/scrape_file",
+        "volume": 0.6,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/grind",
+        "volume": 0.85,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "smith.ping": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/smith/ping",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/smith/ping_short",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "smith.grind": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/smith/grind",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "colossus.beam.charge": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/colossus/beam_charge",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/colossus/beam_blast",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/colossus/beam_launch",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "colossus.beam.fire": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/colossus/beam_fire",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 4,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/colossus/beam_blast",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/colossus/beam_alt",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/colossus/beam_launch",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/colossus/beam_short",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/colossus/beam_pulse",
+        "volume": 0.9,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/colossus/beam_pulse2",
+        "volume": 0.9,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "colossus.beam.hum": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/colossus/beam_hum",
+        "volume": 0.8,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "sentinel.clockwork": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/sentinel/clockwork",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/sentinel/clockwork_short",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "sentinel.gears": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/sentinel/ratchet",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/sentinel/gear",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/sentinel/industrial",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/sentinel/grind",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/sentinel/clockwork_short",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "sentinel.engine": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/sentinel/engine",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/sentinel/engine2",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/sentinel/engine_heavy",
+        "volume": 0.85,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "wyvern.roar": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/wyvern/roar_deep",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 4,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_rumble",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 4,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b05",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b06",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b07",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b01",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b02",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b04",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b09",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b11",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b12",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b03",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b08",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/growl",
+        "volume": 0.95,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "wyvern.roar.awaken": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/wyvern/roar_awaken",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_triumph",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_deep",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b10",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 2,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b07",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "wyvern.roar.distant": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/wyvern/roar_distant",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 3,
+        "attenuation_distance": 48,
+        "preload": true
+      },
+      {
+        "name": "hobbang:boss/wyvern/roar_b01",
+        "volume": 0.7,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "wyvern.breath": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/wyvern/roar_fire",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "wyvern.flap": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/wyvern/flap",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  },
+  "wyvern.growl": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/wyvern/growl",
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 48,
+        "preload": true
+      }
+    ]
+  }
+}
