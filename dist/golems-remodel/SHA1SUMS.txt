@@ -1,0 +1,2 @@
+87dab5b0efbc3d57e37c8008bb5e81a03fc5d6aa *hobbang-enhance-paper-1.5.2-golems.jar
+d617d34a4a28458a7199ddfd53ebfbb329565ded *hobbang-pack-golems.zip

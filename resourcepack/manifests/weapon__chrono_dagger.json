@@ -6,7 +6,7 @@
   "model_units_per_block": 11.75,
   "item_display_scale": 1.3617021276595744,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "hand-designed Blockbench-style cuboid model (1.5.2); 16px/block noise-free pixel textures from original mesh palette.",
+  "note": "Hand-designed weapons-detail geometry with v2 pixel textures from the original palette.",
   "parts": [
     {
       "name": "held",
@@ -25,13 +25,13 @@
       "scale": 1.3617021276595744,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 46,
-      "cuboids_voxel": 15,
-      "cuboids_obb": 31,
-      "faces": 276,
+      "cuboids": 273,
+      "cuboids_voxel": 116,
+      "cuboids_obb": 157,
+      "faces": 1638,
       "texture_px": 128,
       "voxels": 0
     }
   ],
-  "total_cuboids": 46
+  "total_cuboids": 273
 }

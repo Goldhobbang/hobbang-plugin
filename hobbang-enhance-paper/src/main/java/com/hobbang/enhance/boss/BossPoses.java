@@ -159,6 +159,9 @@ final class BossPoses {
 		sink.place("ring", child(SENTINEL, body, "body", "ring").rotY(gear), sc);
 		Rigid clock = child(SENTINEL, body, "body", "clock");
 		sink.place("clock", clock.rotAxis(-2 * gear, BossModels.get(SENTINEL, "clock").spinAxis()), sc);
+		// cogs beside the dial mesh with the clock: opposite direction, faster (smaller wheel)
+		sink.place("gear_l", child(SENTINEL, body, "body", "gear_l").rotZ(3 * gear), sc);
+		sink.place("gear_r", child(SENTINEL, body, "body", "gear_r").rotZ(-3 * gear), sc);
 		for (int side = 0; side < SIDES.length; side++) {
 			String q = SIDES[side], arm = "arm" + q;
 			float sign = side == 0 ? 1 : -1;

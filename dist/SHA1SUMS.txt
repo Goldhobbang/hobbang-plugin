@@ -1,0 +1,2 @@
+ea0dd16de18ccdcf2acc89d34fda38f1fcfa4375  hobbang-enhance-paper-1.5.2.jar
+d3ef0026a8509d5acbdf8bff2da86633c9e057e3  hobbang-pack-1.5.2.zip
