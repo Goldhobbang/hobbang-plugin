@@ -1,12 +1,12 @@
 {
   "id": "hobbang:weapon/crystal_greatsword",
   "height_blocks": 2.3,
-  "resolution": 32,
-  "texels_per_voxel": 2,
+  "resolution": 16,
+  "texels_per_voxel": 1,
   "model_units_per_block": 13.0,
   "item_display_scale": 1.2307692307692308,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "note": "hand-designed Blockbench-style cuboid model (1.5.2); 16px/block noise-free pixel textures from original mesh palette.",
   "parts": [
     {
       "name": "held",
@@ -24,14 +24,14 @@
       ],
       "scale": 1.2307692307692308,
       "spin_axis": null,
-      "mode": "obb",
-      "cuboids": 30,
-      "cuboids_voxel": 0,
-      "cuboids_obb": 30,
-      "faces": 127,
+      "mode": "box",
+      "cuboids": 29,
+      "cuboids_voxel": 8,
+      "cuboids_obb": 21,
+      "faces": 174,
       "texture_px": 128,
       "voxels": 0
     }
   ],
-  "total_cuboids": 30
+  "total_cuboids": 29
 }

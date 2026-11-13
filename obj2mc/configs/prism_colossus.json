@@ -39,9 +39,9 @@
    "name": "fist_r",
    "parent": "fore_r",
    "pivot": [
-    null,
+    -1.3759257142857142,
     2.17,
-    null
+    0.14378285714285713
    ],
    "joint_cap": 0.12,
    "regions": [
@@ -63,9 +63,9 @@
    "name": "fore_r",
    "parent": "arm_r",
    "pivot": [
-    null,
+    -1.170502857142857,
     2.83,
-    null
+    -0.10264571428571428
    ],
    "joint_cap": 0.15,
    "regions": [
@@ -111,9 +111,9 @@
    "name": "fist_l",
    "parent": "fore_l",
    "pivot": [
-    null,
+    1.3759257142857142,
     2.17,
-    null
+    0.14378285714285713
    ],
    "joint_cap": 0.12,
    "regions": [
@@ -135,9 +135,9 @@
    "name": "fore_l",
    "parent": "arm_l",
    "pivot": [
-    null,
+    1.1294971428571428,
     2.83,
-    null
+    -0.10264571428571428
    ],
    "joint_cap": 0.15,
    "regions": [
@@ -183,9 +183,9 @@
    "name": "shin_r",
    "parent": "leg_r",
    "pivot": [
-    null,
+    -0.5955028571428571,
     0.92,
-    null
+    -0.23276
    ],
    "joint_cap": 0.15,
    "mode": "mixed",
@@ -236,7 +236,7 @@
    "parent": null,
    "pivot": [
     -0.55,
-    1.55,
+    1.5499999999999998,
     0.0
    ],
    "regions": [
@@ -283,9 +283,9 @@
    "name": "shin_l",
    "parent": "leg_l",
    "pivot": [
-    null,
+    0.5886685714285714,
     0.92,
-    null
+    -0.23276
    ],
    "joint_cap": 0.15,
    "mode": "mixed",
@@ -336,7 +336,7 @@
    "parent": null,
    "pivot": [
     0.55,
-    1.55,
+    1.5499999999999998,
     0.0
    ],
    "regions": [
@@ -388,9 +388,9 @@
    "name": "chest",
    "parent": "torso",
    "pivot": [
-    0,
+    0.0,
     2.69,
-    0
+    0.0
    ],
    "joint_cap": 0.24,
    "mode": "mixed",
@@ -434,7 +434,7 @@
    "parent": null,
    "pivot": [
     0.0,
-    1.55,
+    1.5499999999999998,
     0.0
    ],
    "regions": [
@@ -472,5 +472,6 @@
  "obb_fill": 0.78,
  "obb_resolution": 24.0,
  "obb_min_dim": 4,
- "units_per_block": 5.0
+ "units_per_block": 5.0,
+ "island_max_voxels": 64
 }

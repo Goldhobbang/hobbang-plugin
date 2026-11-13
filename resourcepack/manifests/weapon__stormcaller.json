@@ -1,12 +1,12 @@
 {
   "id": "hobbang:weapon/stormcaller",
   "height_blocks": 2.2,
-  "resolution": 24,
-  "texels_per_voxel": 2,
+  "resolution": 16,
+  "texels_per_voxel": 1,
   "model_units_per_block": 14.5,
   "item_display_scale": 1.103448275862069,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "note": "hand-designed Blockbench-style cuboid model (1.5.2); 16px/block noise-free pixel textures from original mesh palette.",
   "parts": [
     {
       "name": "held",
@@ -24,14 +24,14 @@
       ],
       "scale": 1.103448275862069,
       "spin_axis": null,
-      "mode": "mixed",
-      "cuboids": 140,
-      "cuboids_voxel": 104,
-      "cuboids_obb": 36,
-      "faces": 610,
-      "texture_px": 256,
-      "voxels": 955
+      "mode": "box",
+      "cuboids": 54,
+      "cuboids_voxel": 14,
+      "cuboids_obb": 40,
+      "faces": 324,
+      "texture_px": 128,
+      "voxels": 0
     }
   ],
-  "total_cuboids": 140
+  "total_cuboids": 54
 }

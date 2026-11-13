@@ -1,12 +1,12 @@
 {
   "id": "hobbang:boss/smith_hammer",
   "height_blocks": 4.2,
-  "resolution": 12,
-  "texels_per_voxel": 2,
+  "resolution": 16,
+  "texels_per_voxel": 1,
   "model_units_per_block": 8.0,
   "item_display_scale": 2.0,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "item_display renders the model rotated 180deg about Y; the emitted model is pre-rotated so that translation=pivot, left_rotation=identity, scale=item_display_scale reproduces the rest pose.",
+  "note": "hand-designed Blockbench-style cuboid model (1.5.2); 16px/block noise-free pixel textures from original mesh palette.",
   "parts": [
     {
       "name": "hammer",
@@ -24,16 +24,15 @@
       ],
       "scale": 2.0,
       "spin_axis": null,
-      "mode": "obb",
-      "cuboids": 76,
-      "cuboids_voxel": 0,
-      "cuboids_obb": 76,
-      "faces": 287,
+      "mode": "box",
+      "cuboids": 13,
+      "cuboids_voxel": 13,
+      "cuboids_obb": 0,
+      "faces": 78,
       "texture_px": 256,
       "voxels": 0
     }
   ],
-  "total_cuboids": 76,
   "attach": {
     "boss": "abyssal_smith",
     "part": "hammer",
@@ -42,5 +41,6 @@
       3.5,
       0.45
     ]
-  }
+  },
+  "total_cuboids": 13
 }

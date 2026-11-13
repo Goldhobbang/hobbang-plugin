@@ -14,12 +14,12 @@
       "parent": "body",
       "pivot_blocks": [
         0.0041,
-        4.2407,
+        4.2406999999999995,
         0.1224
       ],
       "translation": [
         0.0041,
-        4.2407,
+        4.2406999999999995,
         0.1224
       ],
       "scale": 2.2857142857142856,
@@ -29,24 +29,24 @@
         0.3608
       ],
       "mode": "voxel",
-      "cuboids": 538,
-      "cuboids_voxel": 538,
+      "cuboids": 541,
+      "cuboids_voxel": 541,
       "cuboids_obb": 0,
-      "faces": 2409,
+      "faces": 2421,
       "texture_px": 512,
-      "voxels": 7120
+      "voxels": 7123
     },
     {
       "name": "clock",
       "item_model": "hobbang:boss/chrono_sentinel/clock",
       "parent": "body",
       "pivot_blocks": [
-        0.0013,
+        0.0013000000000000002,
         3.1295,
         0.5763
       ],
       "translation": [
-        0.0013,
+        0.0013000000000000002,
         3.1295,
         0.5763
       ],
@@ -69,12 +69,12 @@
       "item_model": "hobbang:boss/chrono_sentinel/blade_r",
       "parent": "arm_r",
       "pivot_blocks": [
-        -1.7708,
+        -1.7708000000000002,
         2.5535714285714284,
         0.1875
       ],
       "translation": [
-        -1.7708,
+        -1.7708000000000002,
         2.5535714285714284,
         0.1875
       ],
@@ -105,24 +105,24 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "voxel",
-      "cuboids": 321,
-      "cuboids_voxel": 321,
+      "cuboids": 326,
+      "cuboids_voxel": 326,
       "cuboids_obb": 0,
-      "faces": 1315,
+      "faces": 1338,
       "texture_px": 512,
-      "voxels": 5003
+      "voxels": 5076
     },
     {
       "name": "blade_l",
       "item_model": "hobbang:boss/chrono_sentinel/blade_l",
       "parent": "arm_l",
       "pivot_blocks": [
-        1.7708,
+        1.7708000000000002,
         2.5535714285714284,
         0.1875
       ],
       "translation": [
-        1.7708,
+        1.7708000000000002,
         2.5535714285714284,
         0.1875
       ],
@@ -153,12 +153,12 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "voxel",
-      "cuboids": 332,
-      "cuboids_voxel": 332,
+      "cuboids": 338,
+      "cuboids_voxel": 338,
       "cuboids_obb": 0,
-      "faces": 1324,
+      "faces": 1352,
       "texture_px": 512,
-      "voxels": 4963
+      "voxels": 5057
     },
     {
       "name": "pendulum",
@@ -167,12 +167,12 @@
       "pivot_blocks": [
         0.0,
         2.1964285714285716,
-        0.2292
+        0.22920000000000001
       ],
       "translation": [
         0.0,
         2.1964285714285716,
-        0.2292
+        0.22920000000000001
       ],
       "scale": 2.2857142857142856,
       "spin_axis": null,
@@ -201,13 +201,13 @@
       "scale": 2.2857142857142856,
       "spin_axis": null,
       "mode": "voxel",
-      "cuboids": 978,
-      "cuboids_voxel": 978,
+      "cuboids": 965,
+      "cuboids_voxel": 965,
       "cuboids_obb": 0,
-      "faces": 3923,
+      "faces": 3867,
       "texture_px": 1024,
-      "voxels": 23063
+      "voxels": 22898
     }
   ],
-  "total_cuboids": 3455
+  "total_cuboids": 3456
 }

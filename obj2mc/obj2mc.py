@@ -213,6 +213,49 @@ def assign_parts(occ, lo, res, parts):
     return grid
 
 
+def clean_islands(grid, max_vox, names, drop_vox=12):
+    """Region boxes cut slivers off a limb: a few voxels that belong to part A by the rules but are only attached to
+    part B. They show up as crumbs that move with the wrong part. For every part, each connected piece (26-connectivity)
+    smaller than `max_vox` that is not the part's largest piece is handed to the neighbouring part it touches most;
+    a piece that touches nothing at all is dropped only when it is a crumb (< `drop_vox`); bigger free-floating pieces
+    (a hanging gear, a detached crystal) are design and stay. Shape is unchanged except for those crumbs."""
+    st = np.ones((3, 3, 3), bool)
+    out = grid.copy()
+    moved = dropped = mv_vox = dr_vox = 0
+    report = {}
+    for pi in range(len(names)):
+        lab, n = ndimage.label(grid == pi, structure=st)
+        if n <= 1:
+            continue
+        sizes = np.bincount(lab.ravel())[1:]
+        keep = int(np.argmax(sizes)) + 1
+        objs = ndimage.find_objects(lab)
+        for k in range(1, n + 1):
+            if k == keep or sizes[k - 1] >= max_vox:
+                continue
+            sl = tuple(slice(max(0, o.start - 1), min(grid.shape[i], o.stop + 1)) for i, o in enumerate(objs[k - 1]))
+            comp = lab[sl] == k
+            ring = ndimage.binary_dilation(comp, structure=st) & ~comp
+            nb = grid[sl][ring]
+            nb = nb[(nb >= 0) & (nb != pi)]
+            if len(nb):
+                tgt = int(np.bincount(nb).argmax())
+                out[sl][comp] = tgt
+                moved += 1; mv_vox += int(sizes[k - 1])
+                key = f'{names[pi]}->{names[tgt]}'
+            elif sizes[k - 1] < drop_vox:
+                out[sl][comp] = -1
+                dropped += 1; dr_vox += int(sizes[k - 1])
+                key = f'{names[pi]} (floating crumb, dropped)'
+            else:
+                key = f'{names[pi]} (floating, {int(sizes[k - 1])} vox, kept)'
+            report[key] = report.get(key, 0) + 1
+    log(f'[obj2mc] islands < {max_vox} vox: reassigned {moved} pieces ({mv_vox} vox), dropped {dropped} floating ({dr_vox} vox)')
+    for k_, v_ in sorted(report.items(), key=lambda kv: -kv[1]):
+        log(f'[obj2mc]   {k_}: {v_}')
+    return out
+
+
 # ----------------------------------------------------------------------------- texel colours
 def make_ray_engine(v, f):
     mesh = trimesh.Trimesh(v, f, process=False)
@@ -349,6 +392,10 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
     log(f'[obj2mc] grid {occ.shape}, solid voxels {occ.sum()}, surface {surf.sum()}')
     parts = scale_layout(cfg)
     grid = assign_parts(occ, lo, res, parts)
+    isl = cfg.get('island_max_voxels', 0)
+    if isl:
+        grid = clean_islands(grid, isl, [p_['name'] for p_ in parts], cfg.get('island_drop_voxels', 12))
+        occ = grid >= 0
     tree = cKDTree(pts)
     rgb = col[:, :3]
     rays = make_ray_engine(v, f)
@@ -364,6 +411,9 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
         focc, _, flo = voxelize(opts_, ores)
         focc = remove_specks(focc, cfg.get('min_speck_voxels', 4) * 4)
         fgrid = assign_parts(focc, flo, ores, parts)
+        if isl:
+            fgrid = clean_islands(fgrid, int(round(isl * (ores / res) ** 3)), [p_['name'] for p_ in parts],
+                                  int(round(cfg.get('island_drop_voxels', 12) * (ores / res) ** 3)))
         log(f'[obj2mc] obb grid {focc.shape} @ {ores:g} vox/block, solid {int(focc.sum())}')
 
     def in_any(c, regs):
@@ -421,7 +471,9 @@ def build(cfg, base, out_pack, res=None, tpv=None, quiet=False):
             dd = np.abs(cen[:, given] - np.array([p['pivot'][i_] for i_ in given])).max(1) if given else np.zeros(len(cen))
             near = cen[dd <= max(tol, dd.min() + 1e-9)]
             p['pivot'] = [round(float(np.median(near[:, i_])), 4) if p['pivot'][i_] is None else p['pivot'][i_] for i_ in range(3)]
-        if p.get('spin'):
+        if p.get('spin') and p.get('spin_axis'):
+            p['_spin_axis'] = p['spin_axis']          # frozen (freeze_pivots.py)
+        elif p.get('spin'):
             # spin axis = direction of least spread (normal of a ring / disc), via PCA
             w, vec = np.linalg.eigh(np.cov((cen - centroid).T))
             ax_ = vec[:, 0] * (1 if vec[np.argmax(np.abs(vec[:, 0])), 0] > 0 else -1)

@@ -11,16 +11,18 @@ from obb import rot
 PART_COLORS = [(230, 80, 80), (80, 200, 90), (80, 140, 240), (240, 200, 60), (200, 90, 220), (70, 210, 210), (240, 140, 60), (160, 160, 160)]
 
 
-def pack_tris(pack, man):
-    ns, mid = man['id'].split(':')
-    k = man['model_units_per_block']
+def pack_tris(pack, man, attachments=()):
+    parts = [(manifest['id'], part) for manifest in (man, *attachments) for part in manifest['parts']]
     all_t, all_uv, texs, pid = [], [], [], []
-    for pi, p in enumerate(man['parts']):
+    for pi, (model_id, p) in enumerate(parts):
+        ns, mid = model_id.split(':')
         name = p['name']
         model = json.load(open(os.path.join(pack, 'assets', ns, 'models', 'item', *mid.split('/'), name + '.json')))
         tref = model['textures']['t']
         tns, tpath = tref.split(':')
         tex = np.array(Image.open(os.path.join(pack, 'assets', tns, 'textures', tpath + '.png')).convert('RGBA'))
+        if tex.shape[0] > tex.shape[1]:
+            tex = tex[:tex.shape[1]]
         piv = np.array(p['translation']); s = p['scale']
         tris, uvs = [], []
         for el in model['elements']:
