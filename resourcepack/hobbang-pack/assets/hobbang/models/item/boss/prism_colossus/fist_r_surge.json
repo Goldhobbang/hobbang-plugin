@@ -1,0 +1,7 @@
+{
+  "parent": "hobbang:item/boss/prism_colossus/fist_r",
+  "textures": {
+    "t": "hobbang:item/boss/prism_colossus/fist_r_surge",
+    "particle": "hobbang:item/boss/prism_colossus/fist_r_surge"
+  }
+}

@@ -46,7 +46,8 @@ public final class Fx {
 	public final List<Display> displays = new ArrayList<>();
 	public final UUID owner;
 	public int age = 0;
-	public final int life;
+	public int life;
+	public String group;
 	public Vector pos;
 	public Vector vel = new Vector();
 	public final FxTick tick;
@@ -59,6 +60,23 @@ public final class Fx {
 
 	public BlockDisplay addBlock(BlockData data, boolean bright) {
 		BlockDisplay d = spawnBlockDisplay(new Location(world, pos.getX(), pos.getY(), pos.getZ()), data, bright, FX_TAG, 2);
+		displays.add(d);
+		LIVE++;
+		return d;
+	}
+
+	/** 아이템 디스플레이 (무기 스킬 연출용: 삼지창 등). 다른 디스플레이와 똑같이 Fx 수명이 끝나면 지워진다 */
+	public org.bukkit.entity.ItemDisplay addItem(org.bukkit.inventory.ItemStack stack, org.bukkit.entity.ItemDisplay.ItemDisplayTransform mode, boolean bright) {
+		org.bukkit.entity.ItemDisplay d = world.spawn(new Location(world, pos.getX(), pos.getY(), pos.getZ()), org.bukkit.entity.ItemDisplay.class, e -> {
+			e.setPersistent(false);
+			e.setItemStack(stack);
+			e.setItemDisplayTransform(mode);
+			e.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(), new Quaternionf()));
+			e.setInterpolationDuration(2);
+			e.setTeleportDuration(2);
+			if (bright) e.setBrightness(new Display.Brightness(15, 15));
+			e.addScoreboardTag(FX_TAG);
+		});
 		displays.add(d);
 		LIVE++;
 		return d;
@@ -105,7 +123,7 @@ public final class Fx {
 		return fx;
 	}
 
-	private static Fx visual(Boss boss, Vector pos, int life, FxTick tick) {
+	static Fx visual(Boss boss, Vector pos, int life, FxTick tick) {
 		Fx fx = spawn(boss.mob.getWorld(), boss.uuid, pos, life, tick);
 		fx.visualOwner = boss;
 		return fx;
@@ -121,6 +139,34 @@ public final class Fx {
 		Bukkit.getScheduler().runTaskLater(HobbangPlugin.get(), () -> {
 			try { r.run(); } catch (Exception e) { HobbangPlugin.get().getLogger().warning("fx task: " + e); }
 		}, Math.max(1, ticks));
+	}
+
+
+	public static final String BEAM_GROUP = "beam";
+	/** Ticks a beam takes to collapse back into its origin. */
+	public static final int BEAM_RETRACT = 5;
+
+	public Fx group(String group) {
+		this.group = group;
+		return this;
+	}
+
+	/** Collapse a beam toward its origin over BEAM_RETRACT ticks, then remove it. Controllers without a visual die immediately. */
+	void retract() {
+		if (this.visualOwner == null) {
+			this.kill();
+		} else if (this.life - this.age > BEAM_RETRACT) {
+			this.life = this.age + BEAM_RETRACT;
+		}
+	}
+
+	/** Retract only this owner's beam effects. Marks, slams, orbs and clocks are left alone. */
+	public static void discardBeams(UUID owner) {
+		for (Fx fx : ACTIVE) {
+			if (!fx.dead && owner.equals(fx.owner) && BEAM_GROUP.equals(fx.group)) {
+				fx.retract();
+			}
+		}
 	}
 
 	public static void discardOwned(UUID owner) {
@@ -209,16 +255,15 @@ public final class Fx {
 		world.spawnParticle(Particle.BLOCK, at.getX(), at.getY(), at.getZ(), count / 2, spread, spread * 0.45, spread, 0.12, theme.debris);
 	}
 
-	static void ambient(Boss boss) {
+	static void ambient(DisplayBoss boss) {
 		Location at = boss.mob.getLocation();
-		if (BU.nearbyPlayers(boss.mob, 28).isEmpty()) return;
 		World w = at.getWorld();
 		Vector body = at.toVector().add(new Vector(0, boss.mob.getHeight() * 0.58, 0));
 		Theme theme = Theme.of(boss.kind);
 		double spread = Math.min(1.4, 0.3 + boss.mob.getWidth() * 0.37);
 		puff(w, theme.accent, body, 2, spread, 0.015);
 		puff(w, theme.trail, body, 1, spread, 0.015);
-		if (boss.tickCount % 16 == 0) {
+		if (boss.idle.ticks() % 16 == 0) {
 			if (theme == Theme.SMITH) puff(w, Particle.SOUL_FIRE_FLAME, body, 1, spread, 0.02);
 			w.spawnParticle(Particle.BLOCK, body.getX(), body.getY(), body.getZ(), 1, spread, 0.5, spread, 0.025, theme.debris);
 		}
@@ -244,49 +289,147 @@ public final class Fx {
 		});
 	}
 
+	private static final int HEAVE_START = 2;
+	/** Ticks for the heave wave to travel from the impact to the edge of the radius. */
+	private static final int HEAVE_WAVE = 9;
+	/** Per-tile keyframes: {tick offset, lift fraction, tilt fraction, interpolation ticks}. */
+	private static final float[][] HEAVE_KEYS = {
+		{0, 0.82F, 0.70F, 2}, // fast kick up (ease-out: 82% in 2 ticks...)
+		{2, 1.00F, 1.00F, 2}, // ...last 18% in 2 ticks
+		{4, 1.04F, 1.00F, 2}, // brief hang, slight drift
+		{6, 0.80F, 0.60F, 2}, // fall starts slow (ease-in)...
+		{8, 0.00F, 0.00F, 2}, // ...then slams back flat
+		{10, 0.07F, 0.00F, 2}, // small settle bounce
+		{12, 0.00F, 0.00F, 2}  // exact rest pose
+	};
+	private static final int HEAVE_TILE_TICKS = 14;
+	private static final int HEAVE_LIFE = HEAVE_START + HEAVE_WAVE + HEAVE_TILE_TICKS + 1; // 26
+	private static final int HEAVE_MAX_TILES = 70;
+	private static final float HEAVE_LIFT_CENTER = 1.7F;
+	private static final float HEAVE_LIFT_EDGE = 0.72F;
+	private static final Vector3f TILE_PIVOT = new Vector3f(0.5F, 0.5F, 0.5F);
+
+	private record HeaveTile(BlockDisplay display, Vector3f base, int delay, float lift, Quaternionf tilt, Vector landing, BlockData data) {
+	}
+
 	static void slam(Boss boss, Vector impact, double radius) {
 		World w = boss.mob.getWorld();
 		Vector center = impact.clone();
-		center.setY(BU.groundY(w, center.getX(), center.getY() + 1, center.getZ()));
-		if (!BU.solidAt(w, center.clone().add(new Vector(0, -0.01, 0)))) {
-			ripple(boss, impact, radius, 14);
-			return;
-		}
-		ripple(boss, center, radius, 14);
-		visual(boss, center, 14, (fx, world) -> {
-			if (fx.age == 1) {
-				if (!world.isChunkLoaded(center.getBlockX() >> 4, center.getBlockZ() >> 4)) { fx.kill(); return; }
-				burst(world, center.clone().add(new Vector(0, 0.4, 0)), boss.kind, 18, radius * 0.23);
-				slamTiles(fx, radius);
-			} else if (fx.age == 2 || fx.age == 8) {
-				for (int i = 0; i < fx.displays.size(); i++) {
-					Display tile = fx.displays.get(i);
-					Vector3f offset = tile.getTransformation().getTranslation();
-					float lift = 0.34F + (i % 4) * 0.13F;
-					offset.add(0, fx.age == 2 ? lift : -lift, 0);
-					shape(tile, offset, new Quaternionf(), new Vector3f(1), fx.age == 2 ? 4 : 5);
+		center.setY(BU.groundY(w, center.getX(), center.getY() + 1.0, center.getZ()));
+		int rippleTicks = HEAVE_START + HEAVE_WAVE + 3;
+		if (!BU.solidAt(w, center.clone().add(new Vector(0.0, -0.01, 0.0)))) {
+			ripple(boss, impact, radius, rippleTicks);
+		} else {
+			ripple(boss, center, radius, rippleTicks);
+			List<HeaveTile> tiles = new ArrayList<>();
+			visual(boss, center, HEAVE_LIFE, (fx, world) -> {
+				if (!world.isChunkLoaded(center.getBlockX() >> 4, center.getBlockZ() >> 4)) {
+					fx.kill();
+					return;
 				}
-			}
-		});
+
+				if (fx.age == 1) {
+					burst(world, center.clone().add(new Vector(0.0, 0.4, 0.0)), boss.kind, 26, radius * 0.25);
+					tiles.addAll(slamTiles(fx, radius));
+					return;
+				}
+
+				for (HeaveTile tile : tiles) {
+					int local = fx.age - HEAVE_START - tile.delay();
+					if (local < 0 || local >= HEAVE_TILE_TICKS || !tile.display().isValid()) {
+						continue;
+					}
+
+					for (float[] key : HEAVE_KEYS) {
+						if ((int)key[0] == local) {
+							heavePose(tile, key[1], key[2], (int)key[3]);
+							if (local == 8) {
+								Vector l = tile.landing();
+								world.spawnParticle(Particle.BLOCK, l.getX(), l.getY(), l.getZ(), 3, 0.3, 0.05, 0.3, 0.08, tile.data());
+							}
+							break;
+						}
+					}
+				}
+			});
+		}
 	}
 
-	private static void slamTiles(Fx uplift, double radius) {
+	private static void heavePose(HeaveTile tile, float liftFrac, float tiltFrac, int interp) {
+		Quaternionf rot = new Quaternionf().slerp(tile.tilt(), tiltFrac);
+		// rotate around the tile's own centre, not the display origin corner
+		Vector3f pivotFix = new Vector3f(TILE_PIVOT).sub(rot.transform(new Vector3f(TILE_PIVOT)));
+		Vector3f t = new Vector3f(tile.base()).add(0.0F, tile.lift() * liftFrac, 0.0F).add(pivotFix);
+		if (liftFrac == 0.0F && tiltFrac == 0.0F) {
+			t.set(tile.base());
+			rot.identity();
+		}
+
+		shape(tile.display(), t, rot, new Vector3f(1.0F), interp);
+	}
+
+	private static List<HeaveTile> slamTiles(Fx uplift, double radius) {
 		World w = uplift.world;
 		Vector center = uplift.pos;
-		for (int i = 0; i < 12; i++) {
-			double a = i * Math.PI / 6;
-			double r = radius * (i % 2 == 0 ? 0.49 : 0.83);
-			int x = (int) Math.floor(center.getX() + Math.cos(a) * r);
-			int z = (int) Math.floor(center.getZ() + Math.sin(a) * r);
-			if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
-			int y = (int) BU.groundY(w, x, center.getY() + 2, z) - 1;
-			if (y < w.getMinHeight() || y + 1 >= w.getMaxHeight() || Math.abs(y + 1 - center.getY()) > 2) continue;
-			Block block = w.getBlockAt(x, y, z);
-			if (!block.getType().isSolid() || w.getBlockAt(x, y + 1, z).isCollidable()) continue;
-			BlockDisplay tile = uplift.addBlock(block.getBlockData(), false);
-			shape(tile, new Vector3f((float) (x - center.getX()), (float) (y - center.getY()) - 0.035F, (float) (z - center.getZ())),
-				new Quaternionf(), new Vector3f(1), 0);
+		List<HeaveTile> tiles = new ArrayList<>();
+		java.util.Set<Long> used = new java.util.HashSet<>();
+		java.util.concurrent.ThreadLocalRandom rnd = java.util.concurrent.ThreadLocalRandom.current();
+		double r0 = Math.max(1.0, radius);
+		// spacing along each ring so the whole disc lands near the cap
+		int rings = (int)Math.floor(r0);
+		double circumference = 0.0;
+		for (int k = 1; k <= rings; k++) {
+			circumference += Math.PI * 2.0 * Math.min(k, r0 - 0.15);
 		}
+
+		double spacing = Math.max(1.05, circumference / (HEAVE_MAX_TILES - 6));
+
+		for (int k = 0; k <= rings && tiles.size() < HEAVE_MAX_TILES; k++) {
+			double r = k == 0 ? 0.0 : Math.min(k, r0 - 0.15);
+			int count = k == 0 ? 1 : Math.max(4, (int)Math.round(Math.PI * 2.0 * r / spacing));
+			double phase = k * 2.39996; // golden angle: no straight spokes
+
+			for (int i = 0; i < count && tiles.size() < HEAVE_MAX_TILES; i++) {
+				double a = phase + i * Math.PI * 2.0 / count;
+				int x = (int)Math.floor(center.getX() + Math.cos(a) * r);
+				int z = (int)Math.floor(center.getZ() + Math.sin(a) * r);
+				if (!used.add(((long)x << 32) ^ (z & 0xFFFFFFFFL)) || !w.isChunkLoaded(x >> 4, z >> 4)) {
+					continue;
+				}
+
+				int y = (int)BU.groundY(w, x, center.getY() + 2.0, z) - 1;
+				if (y < w.getMinHeight() || y + 1 >= w.getMaxHeight() || Math.abs(y + 1 - center.getY()) > 2.0) {
+					continue;
+				}
+
+				Block block = w.getBlockAt(x, y, z);
+				if (!block.getType().isSolid() || w.getBlockAt(x, y + 1, z).isCollidable()) {
+					continue;
+				}
+
+				double dx = x + 0.5 - center.getX();
+				double dz = z + 0.5 - center.getZ();
+				double dist = Math.sqrt(dx * dx + dz * dz);
+				double f = Math.min(1.0, dist / r0);
+				float lift = (float)(HEAVE_LIFT_CENTER + (HEAVE_LIFT_EDGE - HEAVE_LIFT_CENTER) * f + rnd.nextDouble(-0.12, 0.12));
+				lift = Math.max(0.55F, Math.min(1.85F, lift));
+				int delay = (int)Math.round(f * HEAVE_WAVE);
+				// tilt the top away from the impact (radial heave) with a little jitter
+				float ux = dist < 0.3 ? (float)Math.cos(a) : (float)(dx / dist);
+				float uz = dist < 0.3 ? (float)Math.sin(a) : (float)(dz / dist);
+				float angle = (float)Math.toRadians(7.0 + 7.0 * f + rnd.nextDouble(-3.0, 3.0));
+				Quaternionf tilt = new Quaternionf()
+					.rotateAxis(angle, uz, 0.0F, -ux)
+					.rotateY((float)Math.toRadians(rnd.nextDouble(-6.0, 6.0)));
+				BlockData data = block.getBlockData();
+				BlockDisplay display = uplift.addBlock(data, false);
+				Vector3f base = new Vector3f((float)(x - center.getX()), (float)(y - center.getY()) - 0.035F, (float)(z - center.getZ()));
+				shape(display, base, new Quaternionf(), new Vector3f(1.0F), 0);
+				tiles.add(new HeaveTile(display, base, delay, lift, tilt, new Vector(x + 0.5, y + 1.05, z + 0.5), data));
+			}
+		}
+
+		return tiles;
 	}
 
 	static void awaken(DisplayBoss boss, BossMotion.Move move, int hit, int live, int recovery) {
@@ -339,8 +482,7 @@ public final class Fx {
 		for (int side = -1; side <= 1; side += 2) {
 			Vector tip = at.clone().add(new Vector(Math.cos(a) * span * side + Math.sin(a), climb ? -0.4 : 0.55,
 				Math.sin(a) * span * side - Math.cos(a)));
-			puff(w, climb ? Particle.CLOUD : Particle.GUST, tip, 1, 0.1, 0.02);
-			puff(w, Particle.SNOWFLAKE, tip, 2, 0.35, 0.02);
+			puff(w, Particle.CLOUD, tip, climb ? 2 : 3, 0.22, 0.01);
 		}
 	}
 
@@ -360,49 +502,95 @@ public final class Fx {
 	}
 
 	static void beam(Boss boss, Supplier<Vector> origin, Vector direction, float length, int life, Material shell, int rgb) {
-		if (!(direction.lengthSquared() > 1e-6)) return;
-		Quaternionf axis = beamAxis(direction);
-		Theme theme = Theme.of(boss.kind);
-		Vector start = origin.get();
-		if (!boss.mob.getWorld().isChunkLoaded(start.getBlockX() >> 4, start.getBlockZ() >> 4)) return;
-		visual(boss, start, life, (fx, w) -> {
-			Vector o = origin.get();
-			if (!w.isChunkLoaded(o.getBlockX() >> 4, o.getBlockZ() >> 4)) { fx.kill(); return; }
-			if (fx.pos.distanceSquared(o) > 0.025) fx.moveTo(o);
-			if (fx.age == 1) {
-				fx.addBlock(shell.createBlockData(), true);
-				fx.addBlock(Material.WHITE_STAINED_GLASS.createBlockData(), true);
-				BlockDisplay core = fx.addBlock(Material.SEA_LANTERN.createBlockData(), true);
-				core.setGlowing(true);
-				core.setGlowColorOverride(Color.fromRGB(rgb));
-			}
-			if (fx.age % 2 == 1 || fx.age == life - 4) {
-				float fade = Math.min(1F, (life - fx.age) / 4F);
-				for (int layer = 0; layer < fx.displays.size(); layer++) {
-					float width = (layer == 0 ? 1.04F : layer == 1 ? 0.66F : 0.36F)
-						* (1 + 0.18F * BossMotion.sin(fx.age * 1.16F + layer)) * fade;
-					Quaternionf rot = new Quaternionf(axis).rotateZ(fx.age * (0.13F + 0.065F * layer));
-					float jitter = layer == 2 ? 0 : 0.14F * BossMotion.sin(fx.age * 0.82F + layer * 2);
-					Vector3f offset = new Vector3f(-width / 2, -width / 2, 0).rotate(rot)
-						.add(new Vector3f(jitter, -jitter, 0).rotate(axis));
-					shape(fx.displays.get(layer), offset, rot, new Vector3f(width, width, length), 2);
-				}
-			}
-			if (fx.age % 3 == 1) {
-				for (int i = 0; i < 4; i++) {
-					double t = (i + 0.5 + 0.35 * Math.sin(fx.age + i)) / 4;
-					burst(w, o.clone().add(direction.clone().multiply(length * t)), boss.kind, 2, 0.38);
-				}
-			}
-			if (fx.age == 1 || fx.age % 12 == 0) {
-				Vector end = beamContact(w, o, direction, length);
-				beamHit(boss, end);
-				if (fx.age == 1) w.spawnParticle(Particle.FLASH, end.getX(), end.getY(), end.getZ(), 1, 0, 0, 0, 0, theme.dust.getColor());
-			}
-		});
+		if (direction.lengthSquared() > 1.0E-6) {
+			Vector fixed = direction.clone();
+			beam(boss, origin, () -> fixed, length, life, shell, rgb);
+		}
 	}
 
-	/** The scenery contact is sampled for particles only. */
+	/**
+	 * Beam whose direction is re-read every tick (axis recomputed each update), so it can track.
+	 * The last {@link #BEAM_RETRACT} ticks of its life collapse it back into the origin; a call to
+	 * {@link #discardBeams(UUID)} triggers the same retract early.
+	 */
+	static Fx beam(Boss boss, Supplier<Vector> origin, Supplier<Vector> directionSource, float length, int life, Material shell, int rgb) {
+		Vector first = directionSource.get();
+		if (first != null && first.lengthSquared() > 1.0E-6) {
+			Fx.Theme theme = Fx.Theme.of(boss.kind);
+			Vector start = origin.get();
+			Vector[] lastDir = new Vector[]{first.clone().normalize()};
+			if (boss.mob.getWorld().isChunkLoaded(start.getBlockX() >> 4, start.getBlockZ() >> 4)) {
+				return visual(boss, start, life, (fx, w) -> {
+					Vector o = origin.get();
+					Vector nd = directionSource.get();
+					if (nd != null && nd.lengthSquared() > 1.0E-6) {
+						lastDir[0] = nd.clone().normalize();
+					}
+
+					Vector direction = lastDir[0];
+					Quaternionf axis = beamAxis(direction);
+					int left = fx.life - fx.age;
+					boolean retracting = left < BEAM_RETRACT;
+					if (!w.isChunkLoaded(o.getBlockX() >> 4, o.getBlockZ() >> 4)) {
+						fx.kill();
+					} else {
+						if (fx.pos.distanceSquared(o) > 0.025) {
+							fx.moveTo(o);
+						}
+
+						if (fx.age == 1) {
+							fx.addBlock(shell.createBlockData(), true);
+							fx.addBlock(Material.WHITE_STAINED_GLASS.createBlockData(), true);
+							BlockDisplay core = fx.addBlock(Material.SEA_LANTERN.createBlockData(), true);
+							core.setGlowing(true);
+							core.setGlowColorOverride(Color.fromRGB(rgb));
+						}
+
+						if (retracting && left == BEAM_RETRACT - 1) {
+							// "빠용": snap shut with a short zap and a puff at the mouth.
+							Location at = new Location(w, o.getX(), o.getY(), o.getZ());
+							w.playSound(at, org.bukkit.Sound.BLOCK_BEACON_DEACTIVATE, org.bukkit.SoundCategory.HOSTILE, 1.6F, 1.9F);
+							w.playSound(at, org.bukkit.Sound.ENTITY_BREEZE_WIND_BURST, org.bukkit.SoundCategory.HOSTILE, 0.9F, 1.7F);
+							burst(w, o, boss.kind, 6, 0.3);
+						}
+
+						if (retracting || fx.age % 2 == 1) {
+							// k: 1 while firing, then 4/5, 3/5 ... 0 over the retract (length collapses into the origin).
+							float k = retracting ? Math.max(0.0F, (left - 1) / (float)(BEAM_RETRACT - 1)) : 1.0F;
+							float thin = retracting ? 0.35F + 0.65F * k : 1.0F;
+							int interp = retracting ? 1 : 2;
+
+							for (int layer = 0; layer < fx.displays.size(); layer++) {
+								float width = (layer == 0 ? 1.04F : (layer == 1 ? 0.66F : 0.36F)) * (1.0F + 0.18F * BossMotion.sin(fx.age * 1.16F + layer)) * thin * (k > 0.0F ? 1.0F : 0.0F);
+								Quaternionf rot = new Quaternionf(axis).rotateZ(fx.age * (0.13F + 0.065F * layer));
+								float jitter = layer == 2 || retracting ? 0.0F : 0.14F * BossMotion.sin(fx.age * 0.82F + layer * 2);
+								Vector3f offset = new Vector3f(-width / 2.0F, -width / 2.0F, 0.0F).rotate(rot).add(new Vector3f(jitter, -jitter, 0.0F).rotate(axis));
+								shape(fx.displays.get(layer), offset, rot, new Vector3f(width, width, length * k), interp);
+							}
+						}
+
+						if (!retracting && fx.age % 3 == 1) {
+							for (int i = 0; i < 4; i++) {
+								double t = (i + 0.5 + 0.35 * Math.sin(fx.age + i)) / 4.0;
+								burst(w, o.clone().add(direction.clone().multiply(length * t)), boss.kind, 2, 0.38);
+							}
+						}
+
+						if (!retracting && (fx.age == 1 || fx.age % 12 == 0)) {
+							Vector end = beamContact(w, o, direction, length);
+							beamHit(boss, end);
+							if (fx.age == 1) {
+								w.spawnParticle(Particle.FLASH, end.getX(), end.getY(), end.getZ(), 1, 0.0, 0.0, 0.0, 0.0, theme.dust.getColor());
+							}
+						}
+					}
+				}).group(BEAM_GROUP);
+			}
+		}
+
+		return null;
+	}
+
 	private static Vector beamContact(World w, Vector start, Vector dir, float length) {
 		Vector point = start.clone();
 		Vector step = dir.clone().multiply(0.65);

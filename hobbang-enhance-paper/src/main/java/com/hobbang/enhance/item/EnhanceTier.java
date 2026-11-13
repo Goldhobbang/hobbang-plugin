@@ -70,10 +70,18 @@ public final class EnhanceTier {
 	public static final double[] REFLECT = {0, 0, 0.15, 0.30};
 	public static final double BLEED_CHANCE = 0.20, PIERCE_CHANCE = 0.15, PIERCE_RATIO = 0.25, SIGNATURE_RATIO = 0.35;
 
-	/** 보스 무기 스킬 배율 */
-	public static double bossDamageMult(int l) { return 1 + 0.04 * l; }          // +15 = ×1.6
-	public static double bossRadiusAdd(int l) { return 0.1 * l; }                // +15 = +1.5칸
-	public static double bossCooldownMult(int l) { return 1 - 0.02 * l; }        // +15 = −30%
+	/** 보스 무기 기본 스킬이 열리는 강화 단계 (t384: 모든 보스 무기 3강 해금) */
+	public static final int BOSS_SKILL_UNLOCK = 3;
+	public static boolean bossSkillUnlocked(int l) { return l >= BOSS_SKILL_UNLOCK; }
+	/** 스킬 강화 단계: 해금(3강) = 0, 그 위로 강화마다 +1 (3강 미만 0) */
+	public static int bossSkillLv(int l) { return Math.max(0, l - BOSS_SKILL_UNLOCK); }
+
+	/** 보스 무기 스킬 배율 — 3강(해금) 기본값에서 시작해 강화마다 오른다 */
+	public static double bossDamageMult(int l) { return 1 + 0.04 * bossSkillLv(l); }          // +15 = ×1.48
+	public static double bossRadiusAdd(int l) { return 0.1 * bossSkillLv(l); }                // +15 = +1.2칸
+	public static double bossCooldownMult(int l) { return 1 - 0.02 * bossSkillLv(l); }        // +15 = −24%
+	/** 수정 대검 관통 베기(돌진) 거리: 3강 10칸, 이후 강화당 +1칸 (+15 = 22칸). CrystalSkill.pierce 가 쓴다 */
+	public static double crystalPierceRange(int l) { return 10.0 + bossSkillLv(l); }
 
 	private static NamespacedKey k(String p) { return Keys.k(p); }
 	private static AttributeModifier mod(String key, double v, AttributeModifier.Operation op, EquipmentSlotGroup g) { return new AttributeModifier(k(key), v, op, g); }
@@ -164,15 +172,23 @@ public final class EnhanceTier {
 
 	/** 보스 무기 단계별 스킬 설명 */
 	public static String bossSkill(HItem h, int l) {
-		String common = "스킬 피해 ×" + String.format("%.2f", bossDamageMult(l)) + " · 범위 +" + String.format("%.1f", bossRadiusAdd(l)) + "칸 · 재사용 −" + Math.round((1 - bossCooldownMult(l)) * 100) + "%";
+		// 크로노 낫은 강화당 범위 증가량이 2배
+		double range = h == HItem.CHRONO_DAGGER ? bossRadiusAdd(l) * 2 : bossRadiusAdd(l);
+		String common = "스킬 피해 ×" + String.format("%.2f", bossDamageMult(l)) + " · 범위 +" + String.format("%.1f", range) + "칸 · 재사용 −" + Math.round((1 - bossCooldownMult(l)) * 100) + "%";
+		if (!bossSkillUnlocked(l)) return "스킬 잠김 — +" + BOSS_SKILL_UNLOCK + "강에서 해금";
 		String extra = switch (h) {
-			case SMITH_HAMMER -> l >= 15 ? "여진 2회 + 구속" : l >= 10 ? "여진 1회" : null;
-			case CRYSTAL_GREATSWORD -> "수정 가시 " + (8 + l / 5) + "개";
-			case STORMCALLER -> l >= 15 ? "낙뢰 연쇄(주변 2마리)" : l >= 10 ? "낙뢰 연쇄(주변 1마리)" : null;
-			case CHRONO_DAGGER -> "정지 " + String.format("%.1f", (80 + 4 * l) / 20.0) + "초" + (l >= 10 ? " · 정지 시 피해" : "");
+			case SMITH_HAMMER -> (bossSkillLv(l) / 5 > 0 ? "지진 범위 +" + (bossSkillLv(l) / 5) + "칸" : "")   // = HammerSkill.cast 의 bossSkillLv/5
+				+ (l >= 15 ? " · 구속 · [영혼 수집] 처치당 최대 체력의 " + (5 + l - 10) + "%"
+				: l >= 10 ? " · [영혼 수집] 처치당 최대 체력의 " + (5 + l - 10) + "%" : "");
+			case CRYSTAL_GREATSWORD -> "우클릭: 관통 베기 " + num(crystalPierceRange(l)) + "칸" + (l >= 7 ? " + 대검 낙하 20" : " (대검 낙하는 7강~)")   // = CrystalSkill.PLUNGE_LV
+				+ (l >= 15 ? " · 웅크리고 우클릭: 수정 가시 " + Math.max(2, Math.round((8 + l / 5) * 0.3)) + "개 × " + (l >= 13 ? 4 : l >= 10 ? 3 : 1) + "갈래, 바라보는 방향으로" : "");   // = CrystalSkill.lines   // 가시 수 = CrystalSkill.spikes 와 동일 (RANGE_CUT 0.6 × 0.5)
+			case STORMCALLER -> l >= 10 ? "낙뢰 연쇄 " + (l - 9) + "마리 · 웅크리고 우클릭 심판: 낙뢰 " + l + "번"
+				+ (l >= 15 ? " · 돌진 낙뢰 2연 · 삼지창 " + (int) (10 + 5 * Math.max(0, l - 10)) : "") : null;
+			case CHRONO_DAGGER -> "정지 " + String.format("%.1f", (80 + 6 * bossSkillLv(l)) / 20.0) + "초" + (l >= 10 ? " · 정지 시 피해" : "")
+				+ (l >= 15 ? " · 웅크리고 우클릭: 5초 타이머" : "");
 			default -> null;
 		};
-		return extra == null ? common : common + " · " + extra;
+		return extra == null || extra.isEmpty() ? common : common + " · " + extra;
 	}
 
 	/** 장비 설명(lore)용: 마일스톤 3줄 (달성 ✔ / 미달성 🔒) */
@@ -182,7 +198,12 @@ public final class EnhanceTier {
 		if (g == null || g == Gear.WEAPON) return out;
 		if (g == Gear.BOSS) {
 			HItem h = ItemUtil.hitem(s);
-			if (l > 0 && h != null) out.add(new String[]{"on", "◆ " + bossSkill(h, l)});
+			if (h != null) out.add(bossSkillUnlocked(l) ? new String[]{"on", "◆ " + bossSkill(h, l)}
+				: new String[]{"off", "◇ +" + BOSS_SKILL_UNLOCK + " 스킬 해금 (우클릭 스킬 사용 가능)"});
+			if (h == HItem.CRYSTAL_GREATSWORD) {   // t388: 수정 대검 마일스톤
+				out.add(new String[]{l >= 7 ? "on" : "off", (l >= 7 ? "◆" : "◇") + " +7 관통 베기 뒤 거대 대검 낙하 (20 피해)"});
+				out.add(new String[]{l >= 15 ? "on" : "off", (l >= 15 ? "◆" : "◇") + " +15 웅크리고 우클릭: 바라보는 방향으로 수정 가시"});
+			}
 			return out;
 		}
 		int[] ms = {5, 10, 15};
@@ -198,7 +219,11 @@ public final class EnhanceTier {
 	public static String gainAt(ItemStack s, int next) {
 		Gear g = gear(s);
 		if (g == null) return null;
-		if (g == Gear.BOSS) { HItem h = ItemUtil.hitem(s); return h == null ? null : bossSkill(h, next); }
+		if (g == Gear.BOSS) {
+			HItem h = ItemUtil.hitem(s);
+			if (h == null || !bossSkillUnlocked(next)) return null;
+			return (next == BOSS_SKILL_UNLOCK ? "스킬 해금! " : h == HItem.CRYSTAL_GREATSWORD && next == 7 ? "대검 낙하 해금! " : "") + bossSkill(h, next);
+		}
 		if (next == 5 || next == 10 || next == 15) return milestone(g, tier(next));
 		return null;
 	}

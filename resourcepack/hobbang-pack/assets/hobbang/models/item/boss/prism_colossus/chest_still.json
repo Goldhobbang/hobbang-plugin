@@ -1,0 +1,7 @@
+{
+  "parent": "hobbang:item/boss/prism_colossus/chest",
+  "textures": {
+    "t": "hobbang:item/boss/prism_colossus/chest_still",
+    "particle": "hobbang:item/boss/prism_colossus/chest_still"
+  }
+}

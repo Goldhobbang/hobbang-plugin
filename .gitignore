@@ -4,3 +4,9 @@ build/
 __pycache__/
 work/
 *.log
+# local pre-edit source backups (agent .bak-tNNN-* folders)
+.bak-*/
+*.bak-*
+# experimental pack snapshots (only release packs are kept in dist/)
+dist/hobbang-pack-*-*.zip
+hobbang-skill-sounds.zip

@@ -20,6 +20,42 @@ final class BossMotion {
 		}
 	}
 
+	/** Idle runs on its own distance-gated clock. Combat frames never scale these offsets. */
+	static final class Idle {
+		private static final int FADE_TICKS = 18;
+		private boolean nearby;
+		private int ticks;
+		private int fadeTicks;
+		private float weight;
+
+		double radiusSquared() { return nearby ? 56 * 56 : 50 * 50; }
+
+		void tick(boolean nearby) {
+			this.nearby = nearby;
+			if (nearby) ticks++;
+			// Advance one step on entry and twice as fast on exit.
+			fadeTicks = nearby ? Math.min(FADE_TICKS, fadeTicks + 1) : Math.max(0, fadeTicks - 2);
+			weight = ease(fadeTicks / (float) FADE_TICKS);
+		}
+
+		boolean active() { return nearby; }
+		int ticks() { return ticks; }
+		float weight() { return weight; }
+
+		float wave(float rate, float lag) {
+			return weight == 0 ? 0 : sin(ticks * rate - lag) * weight;
+		}
+
+		static Idle preview(float time) {
+			Idle idle = new Idle();
+			idle.ticks = (int) time;
+			idle.fadeTicks = FADE_TICKS;
+			idle.weight = 1;
+			idle.nearby = true;
+			return idle;
+		}
+	}
+
 	private record Cue(Move move, int start, int hit, int live, int recovery) {
 		int end() { return start + hit + live + recovery; }
 	}

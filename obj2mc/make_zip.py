@@ -11,5 +11,5 @@ with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         zi = zipfile.ZipInfo(rel, date_time=(2026, 1, 1, 0, 0, 0)); zi.compress_type = zipfile.ZIP_DEFLATED
         z.writestr(zi, open(p, 'rb').read())
 h = hashlib.sha1(open(dst, 'rb').read()).hexdigest()
-open(dst + '.sha1', 'w').write(h + '\n')
+open(dst + '.sha1', 'w', newline='\n').write(h + '\n')
 print(dst, os.path.getsize(dst), 'bytes  sha1', h)

@@ -1,0 +1,13 @@
+{
+  "parent": "hobbang:item/boss/abyssal_smith/chest",
+  "textures": {
+    "t": "hobbang:item/boss/abyssal_smith/chest_surge",
+    "particle": "hobbang:item/boss/abyssal_smith/chest_surge",
+    "t1": "hobbang:item/boss/abyssal_smith/chest_1_surge",
+    "t2": "hobbang:item/boss/abyssal_smith/chest_2_surge",
+    "t3": "hobbang:item/boss/abyssal_smith/chest_3_surge",
+    "t4": "hobbang:item/boss/abyssal_smith/chest_4_surge",
+    "t5": "hobbang:item/boss/abyssal_smith/chest_5_surge",
+    "t6": "hobbang:item/boss/abyssal_smith/chest_6_surge"
+  }
+}

@@ -63,7 +63,10 @@ public final class ForgeGui implements InventoryHolder, EnhanceLogic.Source {
 		"파괴를 막고 유지 · 파괴될 때 1개 (파괴 방지보다 먼저)", "하락·파괴를 되감고 재료 환불 · 그때 1개 (가장 먼저)"};
 	private static final Material[] LABEL = {Material.LIME_STAINED_GLASS_PANE, Material.LIGHT_BLUE_STAINED_GLASS_PANE,
 		Material.YELLOW_STAINED_GLASS_PANE, Material.ORANGE_STAINED_GLASS_PANE, Material.MAGENTA_STAINED_GLASS_PANE, Material.PURPLE_STAINED_GLASS_PANE};
-	public static final long PRESS_COOLDOWN_MS = 500;
+	/** t385: 연타 딜레이 제거 (예전 500ms). 0 = 시간 제한 없음, 중복 방지는 busy 가드가 맡는다 */
+	public static final long PRESS_COOLDOWN_MS = 0;
+	/** 한 번의 물리 클릭이 LEFT + DOUBLE_CLICK 두 이벤트로 올 때 두 번 강화되지 않게 (DOUBLE_CLICK 쪽에만 적용) */
+	static final long DOUBLE_DEDUPE_MS = 100;
 	public static final double MAX_DISTANCE = 8.0;
 
 	private static final Map<UUID, ForgeGui> OPEN = new HashMap<>();
@@ -198,7 +201,7 @@ public final class ForgeGui implements InventoryHolder, EnhanceLogic.Source {
 	// ───────── 강화 버튼 ─────────
 	void press() {
 		long now = System.currentTimeMillis();
-		if (busy || now - lastPress < PRESS_COOLDOWN_MS) return;
+		if (busy || (PRESS_COOLDOWN_MS > 0 && now - lastPress < PRESS_COOLDOWN_MS)) return;   // busy = 재진입(중복 처리) 방지만 유지
 		lastPress = now;
 		if (!valid()) { forceClose(); return; }
 		String why = blocked();
@@ -388,6 +391,8 @@ public final class ForgeGui implements InventoryHolder, EnhanceLogic.Source {
 			InventoryAction act = e.getAction();
 			ClickType ct = e.getClick();
 			// 더블클릭 모으기는 위 창의 칸에서도 끌어오므로 어디서든 막는다
+			// t385: 강화 버튼 연타 시 두 번째 클릭이 DOUBLE_CLICK 으로 와서 무시되던 것 → 버튼이면 (모으기는 취소한 채) 강화로 처리
+			if (ct == ClickType.DOUBLE_CLICK && raw == BUTTON) { e.setCancelled(true); if (System.currentTimeMillis() - g.lastPress > DOUBLE_DEDUPE_MS) g.press(); return; }   // 같은 클릭의 LEFT 가 이미 처리됐으면 건너뜀
 			if (ct == ClickType.DOUBLE_CLICK || act == InventoryAction.COLLECT_TO_CURSOR) { e.setCancelled(true); return; }
 			boolean top = raw >= 0 && raw < SIZE;
 			if (!top) {

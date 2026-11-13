@@ -21,6 +21,7 @@ final class AssembleAnim {
 	static final int STAGGER = 12;
 
 	/* v1.4.3 와이번 급강하 */
+	static final String WYVERN_FLAP = "hobbang:wyvern.flap";
 	static final int DIVE_HANG = 8;
 	static final int DIVE_FLIGHT = 28;
 	static final int DIVE_SPREAD = 16;
@@ -118,7 +119,7 @@ final class AssembleAnim {
 			case TEMPEST_WYVERN -> new Theme(
 				new Material[]{Material.DARK_PRISMARINE, Material.PRISMARINE, Material.PRISMARINE_BRICKS, Material.SEA_LANTERN,
 					Material.CYAN_STAINED_GLASS, Material.LIGHT_BLUE_STAINED_GLASS},
-				new Sound[]{Sound.ENTITY_PHANTOM_FLAP, Sound.ENTITY_ENDER_DRAGON_FLAP, Sound.ENTITY_WIND_CHARGE_WIND_BURST},
+				new Sound[]{Sound.ENTITY_WIND_CHARGE_WIND_BURST},
 				Sound.ENTITY_LIGHTNING_BOLT_IMPACT,
 				Sound.ENTITY_LIGHTNING_BOLT_THUNDER,
 				0x60F0FF);

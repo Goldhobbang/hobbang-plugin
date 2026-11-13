@@ -502,8 +502,8 @@
       "spin_axis": null,
       "mode": "box",
       "local_offset": [
-        0.4896,
-        -0.238,
+        0.3944,
+        -0.17,
         0.306
       ],
       "rest_rot": [
@@ -511,10 +511,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 1,
+      "cuboids": 6,
       "cuboids_voxel": 0,
-      "cuboids_obb": 1,
-      "faces": 6,
+      "cuboids_obb": 6,
+      "faces": 36,
       "texture_px": 64,
       "voxels": 0
     },
@@ -537,7 +537,7 @@
       "mode": "box",
       "local_offset": [
         0.0,
-        -0.68,
+        -0.748,
         0.0
       ],
       "rest_rot": [
@@ -545,10 +545,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 1,
+      "cuboids": 5,
       "cuboids_voxel": 0,
-      "cuboids_obb": 1,
-      "faces": 6,
+      "cuboids_obb": 5,
+      "faces": 30,
       "texture_px": 64,
       "voxels": 0
     },
@@ -579,10 +579,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 7,
+      "cuboids": 8,
       "cuboids_voxel": 0,
-      "cuboids_obb": 7,
-      "faces": 42,
+      "cuboids_obb": 8,
+      "faces": 48,
       "texture_px": 64,
       "voxels": 0
     },
@@ -604,8 +604,8 @@
       "spin_axis": null,
       "mode": "box",
       "local_offset": [
-        -0.4896,
-        -0.238,
+        -0.3944,
+        -0.17,
         0.306
       ],
       "rest_rot": [
@@ -613,10 +613,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 1,
+      "cuboids": 6,
       "cuboids_voxel": 0,
-      "cuboids_obb": 1,
-      "faces": 6,
+      "cuboids_obb": 6,
+      "faces": 36,
       "texture_px": 64,
       "voxels": 0
     },
@@ -639,7 +639,7 @@
       "mode": "box",
       "local_offset": [
         0.0,
-        -0.68,
+        -0.748,
         0.0
       ],
       "rest_rot": [
@@ -647,10 +647,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 1,
+      "cuboids": 5,
       "cuboids_voxel": 0,
-      "cuboids_obb": 1,
-      "faces": 6,
+      "cuboids_obb": 5,
+      "faces": 30,
       "texture_px": 64,
       "voxels": 0
     },
@@ -681,10 +681,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 7,
+      "cuboids": 8,
       "cuboids_voxel": 0,
-      "cuboids_obb": 7,
-      "faces": 42,
+      "cuboids_obb": 8,
+      "faces": 48,
       "texture_px": 64,
       "voxels": 0
     },
@@ -706,8 +706,8 @@
       "spin_axis": null,
       "mode": "box",
       "local_offset": [
-        0.4624,
-        -0.204,
+        0.374,
+        -0.136,
         -0.374
       ],
       "rest_rot": [
@@ -715,10 +715,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 1,
+      "cuboids": 6,
       "cuboids_voxel": 0,
-      "cuboids_obb": 1,
-      "faces": 6,
+      "cuboids_obb": 6,
+      "faces": 36,
       "texture_px": 64,
       "voxels": 0
     },
@@ -741,7 +741,7 @@
       "mode": "box",
       "local_offset": [
         0.0,
-        -0.748,
+        -0.816,
         0.0
       ],
       "rest_rot": [
@@ -749,10 +749,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 1,
+      "cuboids": 5,
       "cuboids_voxel": 0,
-      "cuboids_obb": 1,
-      "faces": 6,
+      "cuboids_obb": 5,
+      "faces": 30,
       "texture_px": 64,
       "voxels": 0
     },
@@ -783,10 +783,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 7,
+      "cuboids": 8,
       "cuboids_voxel": 0,
-      "cuboids_obb": 7,
-      "faces": 42,
+      "cuboids_obb": 8,
+      "faces": 48,
       "texture_px": 64,
       "voxels": 0
     },
@@ -808,8 +808,8 @@
       "spin_axis": null,
       "mode": "box",
       "local_offset": [
-        -0.4624,
-        -0.204,
+        -0.374,
+        -0.136,
         -0.374
       ],
       "rest_rot": [
@@ -817,10 +817,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 1,
+      "cuboids": 6,
       "cuboids_voxel": 0,
-      "cuboids_obb": 1,
-      "faces": 6,
+      "cuboids_obb": 6,
+      "faces": 36,
       "texture_px": 64,
       "voxels": 0
     },
@@ -843,7 +843,7 @@
       "mode": "box",
       "local_offset": [
         0.0,
-        -0.748,
+        -0.816,
         0.0
       ],
       "rest_rot": [
@@ -851,10 +851,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 1,
+      "cuboids": 5,
       "cuboids_voxel": 0,
-      "cuboids_obb": 1,
-      "faces": 6,
+      "cuboids_obb": 5,
+      "faces": 30,
       "texture_px": 64,
       "voxels": 0
     },
@@ -885,10 +885,10 @@
         0.0,
         0.0
       ],
-      "cuboids": 7,
+      "cuboids": 8,
       "cuboids_voxel": 0,
-      "cuboids_obb": 7,
-      "faces": 42,
+      "cuboids_obb": 8,
+      "faces": 48,
       "texture_px": 64,
       "voxels": 0
     },
@@ -910,7 +910,7 @@
       "spin_axis": null,
       "mode": "box",
       "local_offset": [
-        0.4216,
+        0.3536,
         0.408,
         0.238
       ],
@@ -1080,7 +1080,7 @@
       "spin_axis": null,
       "mode": "box",
       "local_offset": [
-        -0.4216,
+        -0.3536,
         0.408,
         0.238
       ],

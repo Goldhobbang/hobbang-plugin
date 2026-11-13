@@ -274,6 +274,7 @@ public final class ItemUtil {
 		}
 		if (gear && l > 0) for (String[] e : EnhanceTier.loreLines(s, l))
 			lines.add(line(e[1], e[0].equals("on") ? NamedTextColor.GOLD : NamedTextColor.DARK_GRAY));
+		if (h == HItem.SMITH_HAMMER && l >= 10) lines.add(line(com.hobbang.enhance.weapon.Souls.lore(s, l), NamedTextColor.LIGHT_PURPLE));   // 영혼 수집량 (수치)
 		if (h != null) {
 			if (h.desc != null) lines.add(line(h.desc, h.descColor));
 			if (h.desc2 != null) lines.add(line(h.desc2, h.desc2Color));

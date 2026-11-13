@@ -105,16 +105,22 @@ public final class BossPatterns {
 	// ───────── 2. 광선: 예고선 → 발사 (디스플레이 빔 + END_ROD) ─────────
 	public static void beam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb) {
 		pose(b, CAST, warn - 1, fire, 11);
-		spawnBeam(b, origin, dir0, len, warn, fire, dmg, look, rgb);
+		spawnBeam(b, origin, dir0, len, warn, fire, dmg, look, rgb, true, true);
 	}
 
-	private static void spawnBeam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb) {
+	private static void spawnBeam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb, boolean playSound) {
+		spawnBeam(b, origin, dir0, len, warn, fire, dmg, look, rgb, playSound, false);
+	}
+
+	private static void spawnBeam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb, boolean playSound, boolean snappy) {
 		World w = b.mob.getWorld();
+		boolean colossus = b.kind == BossKind.PRISM_COLOSSUS;
 		Vector dir = dir0.clone().normalize();
 		Particle.DustOptions dust = BU.dust(rgb, 0.9F);
 		Set<UUID> hit = new HashSet<>();
 		Fx.spawn(w, b.uuid, origin.get(), warn + fire, (fx, world) -> {
 			int t = fx.age;
+			if (snappy && t > warn + fire - Fx.BEAM_RETRACT) return;
 			Vector o = origin.get();
 			Vector end = o.clone().add(dir.clone().multiply(len));
 			if (t < warn) {
@@ -122,13 +128,21 @@ public final class BossPatterns {
 					BU.line(world, Particle.DUST, dust, o, end, 0.9);
 					Fx.beamCharge(world, o, dir, t, b.kind);
 				}
-				if (t == 1) BU.sound(new Location(world, o.getX(), o.getY(), o.getZ()), Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.HOSTILE, 1.5F, 1.6F);
+				if (t == 1 && playSound) {
+					Location at = new Location(world, o.getX(), o.getY(), o.getZ());
+					if (colossus) BU.sound(at, "hobbang:colossus.beam.charge", SoundCategory.HOSTILE, 2.0F, 1.0F);
+					else BU.sound(at, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.HOSTILE, 1.5F, 1.6F);
+				}
 				return;
 			}
 			if (t == Math.max(1, warn)) {
 				Fx.beam(b, origin, dir, (float) len, warn + fire - t + 1, look, rgb);
 				world.spawnParticle(Particle.SONIC_BOOM, o.getX(), o.getY(), o.getZ(), 1, 0, 0, 0, 0);
-				BU.sound(new Location(world, o.getX(), o.getY(), o.getZ()), Sound.ENTITY_GUARDIAN_ATTACK, SoundCategory.HOSTILE, 2F, 1.6F);
+				if (playSound) {
+					Location at = new Location(world, o.getX(), o.getY(), o.getZ());
+					if (colossus) BU.sound(at, "hobbang:colossus.beam.fire", SoundCategory.HOSTILE, 2.5F, 1.0F);
+					else BU.sound(at, Sound.ENTITY_GUARDIAN_ATTACK, SoundCategory.HOSTILE, 2F, 1.6F);
+				}
 			}
 			if (t % 2 == 0) BU.line(world, Particle.END_ROD, null, o, end, 1.4);
 			if ((t - warn) % 10 == 0) hit.clear();
@@ -142,7 +156,7 @@ public final class BossPatterns {
 					if (visibleHits++ < 2) Fx.beamHit(b, pc);
 				}
 			}
-		});
+		}).group(Fx.BEAM_GROUP);
 	}
 
 	/** 지면을 따라 보스 중심에서 n방향으로 뻗는 광선 (십자/엑스) */
@@ -153,7 +167,8 @@ public final class BossPatterns {
 		c.setY(ground(w, c) + 0.6);
 		for (int i = 0; i < n; i++) {
 			double a = angle0 + Math.PI * 2 * i / n;
-			spawnBeam(b, () -> c, new Vector(Math.cos(a), 0, Math.sin(a)), len, warn, fire, dmg, look, rgb);
+			spawnBeam(b, () -> c, new Vector(Math.cos(a), 0, Math.sin(a)), len, warn, fire, dmg, look, rgb,
+				b.kind != BossKind.PRISM_COLOSSUS || i == 0);
 		}
 	}
 

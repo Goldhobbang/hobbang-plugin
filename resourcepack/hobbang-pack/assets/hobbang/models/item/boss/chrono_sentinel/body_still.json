@@ -1,0 +1,7 @@
+{
+  "parent": "hobbang:item/boss/chrono_sentinel/body",
+  "textures": {
+    "t": "hobbang:item/boss/chrono_sentinel/body_still",
+    "particle": "hobbang:item/boss/chrono_sentinel/body_still"
+  }
+}

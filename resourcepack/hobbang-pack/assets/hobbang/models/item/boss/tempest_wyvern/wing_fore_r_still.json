@@ -1,0 +1,7 @@
+{
+  "parent": "hobbang:item/boss/tempest_wyvern/wing_fore_r",
+  "textures": {
+    "t": "hobbang:item/boss/tempest_wyvern/wing_fore_r_still",
+    "particle": "hobbang:item/boss/tempest_wyvern/wing_fore_r_still"
+  }
+}

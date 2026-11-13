@@ -40,6 +40,7 @@ public final class HobbangPlugin extends JavaPlugin {
 		pm.registerEvents(new com.hobbang.enhance.world.EnchantingListener(), this);
 		pm.registerEvents(new com.hobbang.enhance.boss.BossLoot(), this);
 		pm.registerEvents(new WeaponListener(), this);
+		com.hobbang.enhance.weapon.WeaponSkills.init(this);
 		// v1.4.0: 대장장이의 망치를 든 플레이어에게만 용암 불씨 (10틱마다)
 		Bukkit.getScheduler().runTaskTimer(this, () -> {
 			for (org.bukkit.entity.Player p : Bukkit.getOnlinePlayers())
@@ -53,6 +54,7 @@ public final class HobbangPlugin extends JavaPlugin {
 		Recipes.register();
 		EnchantListener.initSmelting();
 		BossManager.init(this);
+		com.hobbang.enhance.boss.TimeStun.init(this);
 		com.hobbang.enhance.arena.Arenas.init(this);
 		com.hobbang.enhance.arena.StormArena.init(this);
 		com.hobbang.enhance.arena.ArenaDress.init(this);
@@ -72,6 +74,8 @@ public final class HobbangPlugin extends JavaPlugin {
 	public void onDisable() {
 		com.hobbang.enhance.forge.ForgeGui.closeAll();
 		BossManager.shutdown();
+		com.hobbang.enhance.boss.TimeStun.shutdown();
+		com.hobbang.enhance.weapon.WeaponSkills.shutdown();
 		com.hobbang.enhance.arena.ArenaDress.shutdown();
 		com.hobbang.enhance.arena.StormArena.saveSync();
 		Recipes.unregister();

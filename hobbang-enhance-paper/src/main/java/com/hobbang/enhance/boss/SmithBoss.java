@@ -56,12 +56,19 @@ public class SmithBoss extends DisplayBoss {
 	private static final int SLAM_TIME = 14, SLAM_HIT = 4;
 	private static final double SLAM_RADIUS = 7.0;
 	private int slamTimer;
+	/** 내려찍기를 시작한 틱 — 어떤 이유로든 타이머가 제때 안 끝나도 자세가 기울어진 채 굳지 않게 하는 안전장치용 */
+	private int slamStart;
+	private int forgeSurgeUntil;
 	private float walkWeight;
 	private Vector slamAt = null;
-	private Rigid headRig, hammerRig;
+	private Rigid headRig, mouthRig, hammerRig;
 	private double lastX = Double.NaN, lastZ, moved = 0;
-	private float slamCd = 100, fireCd = 160, waveCd = 200, vexCd = 240, thunderCd = 80;
-	private float spiralCd = 180, meteorCd = 220, ringCd = 160;
+	private static final int SLAM_CD = 160, SLAM_CD_LATE = 140, FIRE_CD = 240, SPIRAL_CD = 280, WAVE_CD = 360;
+	private static final int VEX_CD = 440, METEOR_CD = 440, RING_CD = 320, THUNDER_CD = 200;
+	private int slamCd = slamCooldown(), fireCd = FIRE_CD, waveCd = WAVE_CD, vexCd = VEX_CD, thunderCd = THUNDER_CD;
+	private int spiralCd = SPIRAL_CD, meteorCd = METEOR_CD, ringCd = RING_CD;
+
+	private int slamCooldown() { return phase >= 2 ? SLAM_CD_LATE : SLAM_CD; }
 	private boolean waveActive = false;
 	private double waveRadius = 0;
 	private Vector waveCenter = new Vector();
@@ -70,6 +77,13 @@ public class SmithBoss extends DisplayBoss {
 
 	public SmithBoss(Mob mob) {
 		super(mob, BossKind.ABYSSAL_SMITH);
+		mob.setGravity(true);   // 점프 도중 서버가 꺼져 무중력이 저장된 경우 복구
+	}
+
+	@Override
+	public void unload() {
+		leapReset(true);   // 청크 언로드·서버 종료 시 무중력 상태가 저장되지 않게
+		super.unload();
 	}
 
 	@Override protected float[] phaseThresholds() { return new float[]{0.66F, 0.33F}; }
@@ -77,6 +91,39 @@ public class SmithBoss extends DisplayBoss {
 	@Override protected int xpReward() { return 500; }
 	@Override protected float legacyScale() { return 1.0F; }
 	@Override protected void bossTick(List<Player> near, LivingEntity target) {}
+
+	// t401: 모델 방향을 바닐라 몸통 yaw 에서 떼어낸다. 바닐라 MoveControl 은 경로 노드마다 yaw 를 틱당 최대 90°씩 꺾고,
+	// 수습생·벡스에게 밀리거나 대상이 발밑에 들어오면 몸통이 옆으로 홱 돌아간다 (2페이즈부터 두드러짐).
+	// 모델은 대상 쪽을 향하되 틱당 FACE_TURN° 까지만 돈다. 내려찍기 도약 중엔 leapYaw 를 따른다.
+	private static final float FACE_TURN = 12F;
+	private float faceYaw = Float.NaN;
+
+	@Override protected float modelYaw() {
+		return Float.isNaN(faceYaw) ? mob.getBodyYaw() : faceYaw;
+	}
+
+	private void tickFace() {
+		if (assembling()) { faceYaw = Float.NaN; return; }
+		if (Float.isNaN(faceYaw)) faceYaw = mob.getBodyYaw();
+		float want = faceYaw;
+		if (leapStage != 0) want = leapYaw;
+		else {
+			LivingEntity t = mob.getTarget();
+			Location l = mob.getLocation();
+			if (isTargetable(t)) {
+				Location tl = t.getLocation();
+				double dx = tl.getX() - l.getX(), dz = tl.getZ() - l.getZ();
+				double near = Math.max(1.5, mob.getWidth() * 0.75);
+				// 대상이 몸 아래로 파고들면 방향이 마구 튀므로 그대로 둔다
+				if (dx * dx + dz * dz > near * near) want = (float) Math.toDegrees(Math.atan2(-dx, dz));
+			} else if (!Double.isNaN(lastX)) {
+				double dx = l.getX() - lastX, dz = l.getZ() - lastZ;
+				if (dx * dx + dz * dz > 0.0025) want = (float) Math.toDegrees(Math.atan2(-dx, dz));
+			}
+		}
+		float diff = BossMotion.wrap(want - faceYaw);
+		faceYaw = BossMotion.wrap(faceYaw + BossMotion.clamp(diff, -FACE_TURN, FACE_TURN));
+	}
 	@Override protected void onPhaseChange(int newPhase) {}
 
 	// ───────── 모델 (v1.3.0) ─────────
@@ -87,7 +134,8 @@ public class SmithBoss extends DisplayBoss {
 		pTorso = pChest = pLegL = pLegR = pShinL = pShinR = pFootL = pFootR = pHead = pArmL = pArmR = pForeL = pForeR = pHandL = pHandR = pHammer = null;
 		if (!modelMode) return;   // 블록 모델 모드: 위더 스켈레톤 자체가 외형
 		// v1.5.0 리그 16파트: 골반(torso)/상체(chest)/머리, 팔 = 상박-전완-손, 다리 = 허벅지-정강이-발, 망치는 오른손에
-		pTorso = model("torso", false); pChest = model("chest", false); pHead = model("head", false);
+		pTorso = energyModel("torso", false, true); pChest = energyModel("chest", false, true); pHead = model("head", false);
+		model("jaw", false);
 		pLegL = model("leg_l", false); pShinL = model("shin_l", false); pFootL = model("foot_l", false);
 		pLegR = model("leg_r", false); pShinR = model("shin_r", false); pFootR = model("foot_r", false);
 		pArmL = model("arm_l", false); pForeL = model("fore_l", false); pHandL = model("hand_l", false);
@@ -141,27 +189,74 @@ public class SmithBoss extends DisplayBoss {
 
 	@Override
 	protected void poseParts(float t) {
+		boolean leaping = leapStage != 0;
+		playFootfall(t * 0.18F, leaping ? 0 : moved, "hobbang:smith.step", 0.70F);
 		if (!modelMode || pTorso == null) return;
 		aimModel(7.7F, 48, 26, 0.34F);
-		walkWeight = BossMotion.mix(walkWeight, Math.min(1, (float) moved * 6), 0.35F);
-		BossMotion.Frame strike = slamTimer > 0
+		walkWeight = BossMotion.mix(walkWeight, leaping ? 0 : Math.min(1, (float) moved * 6), 0.35F);
+		BossMotion.Frame strike = leaping ? leapStrike() : slamTimer > 0
 			? BossMotion.frame(SLAM_TIME - slamTimer, SLAM_TIME - SLAM_HIT, 0, SLAM_HIT + 6)
 			: motion(SLAM);
-		BossMotion.Frame follow = slamTimer > 0
+		BossMotion.Frame follow = leaping ? leapStrike() : slamTimer > 0
 			? BossMotion.frame(SLAM_TIME - slamTimer - 1.5F, SLAM_TIME - SLAM_HIT, 0, SLAM_HIT + 6)
 			: motion(SLAM, 1.5F);
 		BossMotion.Frame cast = motion(CAST).blend(motion(CHANNEL));
 		BossMotion.Frame sweep = motion(SWEEP);
 		if (invulTicks <= 0 && !assembling() && isTargetable(mob.getTarget())) {
-			int rate = phase == 3 ? 2 : 1;
-			cast = cast.blend(BossMotion.forecast(fireCd, rate, 9));
-			if (phase >= 2) cast = cast.blend(BossMotion.forecast(vexCd, rate, 9));
-			if (phase >= 2 && !waveActive) sweep = sweep.blend(BossMotion.forecast(waveCd, rate, 10));
+			cast = cast.blend(BossMotion.forecast(fireCd, 1, 9));
+			if (phase >= 2) cast = cast.blend(BossMotion.forecast(vexCd, 1, 9));
+			if (phase >= 2 && !waveActive) sweep = sweep.blend(BossMotion.forecast(waveCd, 1, 10));
 		}
-		BossPoses.SmithRig rig = BossPoses.smith(this::placeModel, t, modelYaw(), walkWeight, lookYaw, lookPitch,
-			strike, follow, motion(STRIKE), cast, sweep, motion(PHASE));
+		BossPoses.SmithRig rig = BossPoses.smith(this::placeModel, idle, t, modelYaw(), walkWeight, lookYaw, lookPitch,
+			strike, follow, motion(STRIKE), cast, sweep, motion(PHASE), leaping ? leapPose() : BossPoses.Leap.NONE);
 		headRig = rig.head();
+		mouthRig = rig.mouth();
 		hammerRig = rig.hammer();
+	}
+
+	/** t391/t392 숨결: 입 양옆 이빨 사이에서 하얀 김이 "푸슈" 하고 얼굴 정확히 양옆(머리 로컬 ±X)으로 짧게 뿜어진다.
+	 *  타이밍은 BossPoses.smithJetTick — 턱 벌림(smithBreathOpen)과 같은 시계라 턱이 벌어져 있는 동안만 분사 */
+	private static final int BREATH_JET = BossPoses.SMITH_JET_END - BossPoses.SMITH_JET_START;
+
+	@Override
+	protected void idleDetails() {
+		int k = BossPoses.smithJetTick(idle.ticks());   // 0..9, 분사 아니면 -1
+		if (k < 0 || idle.weight() < 0.5F) return;
+		World world = mob.getWorld();
+		Rigid head = modelMode ? headRig : Rigid.yaw(modelYaw()).at(0, (float) (mob.getEyeHeight() / vs), 0);
+		if (head == null) return;
+		// 입꼬리 양옆(옆니 사이) — 머리 리그 기준이라 고개를 돌리면 같이 돈다
+		float width = modelMode ? 0.27F : 0.18F;
+		float front = modelMode ? 0.58F : 0.26F;
+		float height = modelMode ? 0.15F : -0.14F;
+		// 짧게: 처음 0.07 → 끝 0.035 (CLOUD 감속 0.96/틱 → 입꼬리에서 약 0.6~1블록)
+		double speed = 0.08 - 0.04 * k / (double) BREATH_JET;
+		for (int side = -1; side <= 1; side += 2) {
+			Vector mouth = worldPoint(head, side * width, height, front);
+			// 정확히 얼굴 양옆: 머리 로컬 ±X 만 (앞/아래 성분 없음) — 고개를 돌리면 같이 돈다
+			Vector dir = worldPoint(head, side * (width + 1.0F), height, front).subtract(mouth);
+			if (dir.lengthSquared() < 1e-6) continue;
+			dir.normalize();
+			// 입꼬리 바로 바깥에서 시작 → 얼굴(턱)을 가리지 않음
+			Vector from = mouth.clone().add(dir.clone().multiply(0.15));
+			Vector v = dir.clone().add(new Vector((Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.08));
+			world.spawnParticle(Particle.CLOUD, from.getX(), from.getY(), from.getZ(), 0, v.getX(), v.getY(), v.getZ(), speed, null, true);
+			if (k >= 3) {   // 얼굴 옆에서 퍼지며 살짝 위로 흩어진다
+				Vector near = mouth.clone().add(dir.clone().multiply(0.45 + k * 0.04));
+				world.spawnParticle(Particle.WHITE_SMOKE, near.getX(), near.getY(), near.getZ(), 1, 0.05, 0.04, 0.05, 0.004, null, true);
+				if (k % 2 == 1) world.spawnParticle(Particle.POOF, near.getX(), near.getY(), near.getZ(), 0, 0, 1, 0, 0.02, null, true);
+			}
+		}
+		if (k == 0) {
+			org.bukkit.Location at = worldPoint(head, 0, height, front).toLocation(world);
+			BU.sound(at, Sound.BLOCK_FIRE_EXTINGUISH, SoundCategory.HOSTILE, 0.35F, 1.35F);   // 푸슈우
+			BU.sound(at, "hobbang:smith.exhale", SoundCategory.HOSTILE, 0.18F, 1.0F);
+		}
+	}
+
+	@Override
+	protected boolean energySurge(String part) {
+		return tickCount < forgeSurgeUntil;
 	}
 
 	/** 다리 3관절. swing + = 뒤로. 앞으로 나가는 다리는 무릎을 굽혀 발을 든다. kneel 0..1 = 무릎 꿇기 */
@@ -196,7 +291,7 @@ public class SmithBoss extends DisplayBoss {
 
 	/** 화염구 발사 위치: 머리(입) 앞 */
 	private Vector mouth() {
-		if (modelMode && headRig != null) return worldPoint(headRig, 0, 0.5F, 1.1F);
+		if (modelMode && mouthRig != null) return worldPoint(mouthRig, 0, 0.5F, 1.1F);
 		Location l = mob.getLocation();
 		return new Vector(l.getX(), l.getY() + mob.getHeight() * 0.7 + 0.5, l.getZ());
 	}
@@ -216,7 +311,11 @@ public class SmithBoss extends DisplayBoss {
 	protected void serverTick() {
 		if (dead) return;
 		// v1.5.0: 죽음 연출 틱 누락 수정 — 이 분기가 없어서 무릎 꿇기·finishDeath 가 돌지 않았다
-		if (dying) { tickDeath(); return; }
+		if (dying) { leapReset(false); tickDeath(); return; }   // startDeath 가 무중력/AI 를 직접 다룬다
+		// 안전장치: 내려찍기 자세는 조립(소환) 중이거나 정해진 시간(SLAM_TIME)을 넘기면 즉시 풀어, 몸이 다시 곧게 선다
+		if (slamTimer > 0 && (assembling() || tickCount - slamStart > SLAM_TIME + 4)) { slamTimer = 0; slamAt = null; }
+		if (leapStage != 0 && assembling()) leapReset(true);
+		tickFace();
 		tickParts();
 		if (assembling()) return;
 		EntityEquipment eq = mob.getEquipment();
@@ -226,6 +325,7 @@ public class SmithBoss extends DisplayBoss {
 		if (!Double.isNaN(lastX)) moved = Math.hypot(l.getX() - lastX, l.getZ() - lastZ);
 		lastX = l.getX(); lastZ = l.getZ();
 		tickSlam();
+		tickLeap();
 		double hp = health() / maxHealth();
 		if (phase == 1 && hp <= 0.66) enterPhase(2);
 		else if (phase == 2 && hp <= 0.33) enterPhase(3);
@@ -235,6 +335,13 @@ public class SmithBoss extends DisplayBoss {
 			double bh = mob.getHeight(), bw = mob.getWidth();
 			if (invulTicks % 3 == 0) w.spawnParticle(Particle.SOUL_FIRE_FLAME, l.getX(), l.getY() + bh / 2, l.getZ(), 12, bw * 0.6, bh / 3, bw * 0.6, 0.02);
 		}
+
+		int speedUp = phase == 3 ? 2 : 1;
+		slamCd -= speedUp;
+		fireCd -= 1;
+		spiralCd -= 1;
+		if (phase >= 2) { waveCd -= 1; vexCd -= 1; meteorCd -= 1; }
+		if (phase == 3) { ringCd -= 1; thunderCd -= speedUp; }
 
 		List<Player> near = nearbyPlayers(32);
 		if (near.isEmpty()) {
@@ -255,7 +362,7 @@ public class SmithBoss extends DisplayBoss {
 		}
 
 		// 순간이동 (멀어지거나 끼었을 때)
-		if (target != null && (l.distance(target.getLocation()) > 20 || inWall()) && tickCount % 40 == 0) {
+		if (leapStage == 0 && target != null && (l.distance(target.getLocation()) > 20 || inWall()) && tickCount % 40 == 0) {
 			w.spawnParticle(Particle.PORTAL, l.getX(), l.getY() + mob.getHeight() / 2, l.getZ(), 40, mob.getWidth() / 2, mob.getHeight() / 3, mob.getWidth() / 2, 0.5);
 			Location tl = target.getLocation();
 			if (randomTeleport(tl.getX() + random.nextInt(5) - 2, tl.getY(), tl.getZ() + random.nextInt(5) - 2)) {
@@ -263,67 +370,74 @@ public class SmithBoss extends DisplayBoss {
 			}
 		}
 
-		int speedUp = phase == 3 ? 2 : 1;
-		if (invulTicks <= 0) {
-			slamCd -= speedUp;
-			fireCd -= speedUp;
-			if (slamCd <= 0 && slamTimer <= 0 && target != null && l.distance(target.getLocation()) < 9) {
-				startSlam();
-				slamCd = phase == 1 ? 120 : 100;
-			}
-			if (fireCd <= 0 && target != null) {
-				fireVolley(target);
-				fireCd = 200;
-			}
-			if (phase >= 2) {
-				waveCd -= speedUp;
-				vexCd -= speedUp;
-				if (waveCd <= 0 && !waveActive) {
-					startWave();
-					waveCd = 240;
-				}
-				if (vexCd <= 0) {
-					summonVex(2);
-					vexCd = 300;
-				}
-			}
-			int[] col = BossPatterns.colors(kind);
-			spiralCd -= speedUp;
-			if (spiralCd <= 0 && target != null && l.distance(target.getLocation()) < 10) {
-				BossPatterns.warnAll(this, "화염 나선! 불길의 팔 사이로 피하세요!");
-				BossPatterns.spiral(this, phase >= 3 ? 4 : 3, 9, 20, 80, 7, Particle.SOUL_FIRE_FLAME, 0xFF8030);
-				spiralCd = 260;
-			}
-			if (phase >= 2) {
-				meteorCd -= speedUp;
-				if (meteorCd <= 0) {
-					BossPatterns.warnAll(this, "운석 단조! 붉은 원에서 벗어나세요!");
-					BossPatterns.meteorsOnPlayers(this, 24, 2.8, 40, 9, Material.MAGMA_BLOCK, true);
-					meteorCd = 240;
-				}
-			}
-			if (phase == 3) {
-				ringCd -= speedUp;
-				if (ringCd <= 0) {
-					BossPatterns.warnAll(this, "연속 충격파! 고리가 오면 점프!");
-					for (int i = 0; i < 3; i++) BossPatterns.later(this, 1 + i * 18, () -> BossPatterns.shockRing(this, mob.getLocation().toVector(), 12, 0.45, 8, 16, col[0], col[1]));
-					ringCd = 220;
-				}
-			}
-			if (phase == 3) {
-				if (--thunderCd <= 0) {
-					cue(CAST, 19, 0, 10);
-					for (Player p : near) {
-						if (!BU.valid(p)) continue;
-						Location pl = p.getLocation();
-						strikes.add(new double[]{pl.getX(), pl.getY(), pl.getZ(), 20});
-					}
-					thunderCd = 80;
-				}
-			}
-		}
+		if (invulTicks <= 0 && leapStage == 0 && !tickWindup()) pickSkill(target, l);
 		tickWave();
 		tickStrikes();
+	}
+
+	/** 스킬 전 전역 대기: 쿨이 끝난 스킬 하나를 골라 1페 30 / 2페 20 / 3페 12틱 뒤 발동. 대기 중엔 다른 스킬 없음. */
+	private Runnable queued;
+	private int windup;
+
+	private void queue(Runnable skill) {
+		queued = skill;
+		windup = phase == 1 ? 30 : phase == 2 ? 20 : 12;
+	}
+
+	/** 대기 중이면 true (발동 틱 포함 — 같은 틱에 다른 스킬을 고르지 않는다) */
+	private boolean tickWindup() {
+		if (queued == null) return false;
+		if (--windup <= 0) {
+			Runnable r = queued;
+			queued = null;
+			r.run();
+		}
+		return true;
+	}
+
+	private void pickSkill(LivingEntity target, Location l) {
+		double dist = target != null ? l.distance(target.getLocation()) : Double.MAX_VALUE;
+		if (slamCd <= 0 && slamTimer <= 0 && dist < 9) {
+			queue(() -> { startSlam(); slamCd = slamCooldown(); });
+		} else if (fireCd <= 0 && target != null) {
+			queue(() -> {
+				LivingEntity t = mob.getTarget();
+				if (t != null && !t.isDead()) fireVolley(t);
+				fireCd = FIRE_CD;
+			});
+		} else if (phase >= 2 && waveCd <= 0 && !waveActive) {
+			queue(() -> { startWave(); waveCd = WAVE_CD; });
+		} else if (phase >= 2 && vexCd <= 0) {
+			queue(() -> { summonVex(2); vexCd = VEX_CD; });
+		} else if (spiralCd <= 0 && dist < 10) {
+			queue(() -> {
+				BossPatterns.warnAll(this, "화염 나선! 불길의 팔 사이로 피하세요!");
+				BossPatterns.spiral(this, phase >= 3 ? 4 : 3, 9, 20, 80, 7, Particle.SOUL_FIRE_FLAME, 0xFF8030);
+				spiralCd = SPIRAL_CD;
+			});
+		} else if (phase >= 2 && meteorCd <= 0) {
+			queue(() -> {
+				BossPatterns.warnAll(this, "운석 단조! 붉은 원에서 벗어나세요!");
+				forgeSurgeUntil = tickCount + 24;
+				BossPatterns.meteorsOnPlayers(this, 24, 2.8, 40, 9, Material.MAGMA_BLOCK, true);
+				meteorCd = METEOR_CD;
+			});
+		} else if (phase == 3 && ringCd <= 0 && target != null && dist < 30) {
+			queue(() -> {
+				if (leapStage == 0) startLeap();
+				ringCd = RING_CD;
+			});
+		} else if (phase == 3 && thunderCd <= 0) {
+			queue(() -> {
+				cue(CAST, 19, 0, 10);
+				for (Player p : nearbyPlayers(32)) {
+					if (!BU.valid(p)) continue;
+					Location pl = p.getLocation();
+					strikes.add(new double[]{pl.getX(), pl.getY(), pl.getZ(), 20});
+				}
+				thunderCd = THUNDER_CD;
+			});
+		}
 	}
 
 	private boolean inWall() {
@@ -357,10 +471,12 @@ public class SmithBoss extends DisplayBoss {
 
 	private void enterPhase(int newPhase) {
 		setPhase(newPhase);
+		forgeSurgeUntil = tickCount + 24;
 		invulTicks = 60;
 		Location l = mob.getLocation();
 		Fx.puff(l.getWorld(), Particle.SOUL_FIRE_FLAME, l.toVector().add(new Vector(0, 1.5, 0)), 10, 0.8, 0.06);
-		BU.sound(l, Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 3.0F, newPhase == 3 ? 0.6F : 0.9F);
+		BU.sound(l, "hobbang:smith.scrape", SoundCategory.HOSTILE, 2.0F, 0.95F);
+		BU.sound(l, "hobbang:smith.slam", SoundCategory.HOSTILE, 2.0F, 1.0F);
 		mob.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, l.getX(), l.getY() + 1, l.getZ(), 1, 0, 0, 0, 0);
 		if (newPhase == 2) {
 			bar.color(BossBar.Color.RED);
@@ -378,9 +494,10 @@ public class SmithBoss extends DisplayBoss {
 	/** v1.3.0: 망치를 머리 위로 들어올리는 예고(붉은 원) 뒤 내려찍기 */
 	private void startSlam() {
 		slamTimer = SLAM_TIME;
+		slamStart = tickCount;
 		slamAt = null;
 		Fx.burst(mob.getWorld(), hammerHead(), kind, 8, 0.45);
-		BU.sound(mob.getLocation(), Sound.ENTITY_WITHER_SKELETON_AMBIENT, SoundCategory.HOSTILE, 2.0F, 0.5F);
+		BU.sound(mob.getLocation(), "hobbang:smith.scrape", SoundCategory.HOSTILE, 2.0F, 0.95F);
 	}
 
 	private void tickSlam() {
@@ -406,6 +523,7 @@ public class SmithBoss extends DisplayBoss {
 		World w = mob.getWorld();
 		BU.sound(l, Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.HOSTILE, 2.0F, 0.5F);
 		BU.sound(l, Sound.BLOCK_ANVIL_LAND, SoundCategory.HOSTILE, 2.0F, 0.5F);
+		BU.sound(l, "hobbang:smith.slam", SoundCategory.HOSTILE, 2.0F, 1.0F);
 		w.spawnParticle(Particle.EXPLOSION, c.getX(), c.getY() + 0.3, c.getZ(), 8, 3.0, 0.2, 3.0, 0.0);
 		w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, c.getX(), c.getY() + 0.3, c.getZ(), 30, 3.0, 0.1, 3.0, 0.02);
 		Fx.slam(this, c, SLAM_RADIUS);
@@ -420,10 +538,309 @@ public class SmithBoss extends DisplayBoss {
 		}
 	}
 
+	// ───────── 점프 내려찍기 (3페이즈): 웅크림 → 도약 → 체공 → 가속 낙하 → 착지·내려찍기 → 숨 고르기 ─────────
+	private static final int ST_CROUCH = 1, ST_RISE = 2, ST_HANG = 3, ST_FALL = 4, ST_SMASH = 5, ST_RECOVER = 6;
+	/** 단계별 틱 수. 착지 후 LEAP_HIT 틱에 충격파(발 닿음 → 3틱 뒤 내려찍기 시작 → 모델이 바닥에 닿는 시점), 이후 LEAP_RECOVER 틱 경직 */
+	private static final int LEAP_CROUCH = 15, LEAP_RISE = 14, LEAP_HANG = 7, LEAP_FALL_MAX = 40, LEAP_HIT = 8, LEAP_RECOVER = 20;
+	private static final int LEAP_MAX = 150;   // 패턴 전체 안전 타임아웃
+	private static final double LEAP_HEIGHT = 9.0, LEAP_RADIUS = 15.0, LEAP_DAMAGE = 40.0;
+	private static final int LEAP_RING_TICKS = 14;   // 충격파가 반경 끝까지 퍼지는 틱 (Fx.slam 의 땅 요동과 같은 속도)
+	private int leapStage, leapTick, leapStart;
+	private float leapYaw;
+	private double leapPeak;
+	private Vector leapPin, leapTo;
+	private boolean leapRingOn;
+	private int leapRingAge;
+	private Vector leapRingC;
+	private final Set<UUID> leapHit = new HashSet<>();
+
+	private void startLeap() {
+		leapStage = ST_CROUCH;
+		leapTick = 0;
+		leapStart = tickCount;
+		leapPin = mob.getLocation().toVector();
+		leapTo = leapPin.clone();
+		leapYaw = modelYaw();   // t401: 보이는 모델 방향에서 출발 (머리 yaw 로 시작하면 몸이 홱 돈다)
+		BossPatterns.warnAll(this, "대지 분쇄! 착지 지점에서 멀리 벗어나세요!");
+		BU.sound(mob.getLocation(), "hobbang:smith.scrape", SoundCategory.HOSTILE, 2.0F, 0.8F);
+	}
+
+	/** 상태 해제. restore = 무중력 되돌리기 (사망 연출은 startDeath 가 직접 다루므로 false) */
+	private void leapReset(boolean restore) {
+		leapStage = 0;
+		leapTick = 0;
+		leapPin = leapTo = null;
+		leapRingOn = false;
+		if (restore && mob.isValid()) mob.setGravity(true);
+	}
+
+	private void tickLeap() {
+		tickLeapRing();
+		if (leapStage == 0) return;
+		World w = mob.getWorld();
+		Location cur = mob.getLocation();
+		if (!mob.isValid() || !w.isChunkLoaded(cur.getBlockX() >> 4, cur.getBlockZ() >> 4) || tickCount - leapStart > LEAP_MAX) {
+			leapReset(true);   // 타임아웃: 중력이 돌아와 그 자리에서 떨어진다
+			return;
+		}
+		mob.setVelocity(new Vector());
+		mob.setFallDistance(0);
+		mob.getPathfinder().stopPathfinding();
+		int k = leapTick;
+		switch (leapStage) {
+			case ST_CROUCH -> {
+				LivingEntity t = mob.getTarget();
+				if (k < LEAP_CROUCH - 1 && t != null && t.isValid() && !t.isDead()) {
+					Vector spot = landingSpot(t.getLocation().toVector());
+					if (spot != null) leapTo = spot;   // 확정 직전까지 타깃을 따라간다
+				}
+				leapFace();
+				leapMark();
+				leapHold(leapPin);
+				if (k == 0) Fx.burst(w, leapPin.clone().add(new Vector(0, 0.4, 0)), kind, 12, 1.2);
+				if (++leapTick >= LEAP_CROUCH) {
+					Vector a = leapPin, b = leapTo;
+					// 도약 높이: 출발·중간·착지 지점의 천장 여유 중 가장 작은 값까지만
+					double base = Math.max(a.getY(), b.getY());
+					double h = LEAP_HEIGHT;
+					for (int i = 0; i <= 2; i++) {
+						double f = i / 2.0;
+						double y = a.getY() + (b.getY() - a.getY()) * f;
+						h = Math.min(h, ceilingGap(a.getX() + (b.getX() - a.getX()) * f, y, a.getZ() + (b.getZ() - a.getZ()) * f) - (base - y));
+					}
+					leapPeak = base + Math.max(0, h);
+					mob.setGravity(false);
+					leapStage = ST_RISE;
+					leapTick = 0;
+					BU.sound(cur, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 1.2F, 1.5F);
+					BU.sound(cur, "hobbang:smith.step", SoundCategory.HOSTILE, 2.0F, 0.6F);
+					w.spawnParticle(Particle.EXPLOSION, a.getX(), a.getY() + 0.3, a.getZ(), 4, 1.5, 0.1, 1.5, 0);
+					w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, a.getX(), a.getY() + 0.3, a.getZ(), 20, 1.5, 0.1, 1.5, 0.03);
+				}
+			}
+			case ST_RISE -> {
+				leapMark();
+				double u = (k + 1) / (double) LEAP_RISE;
+				double up = 1 - (1 - u) * (1 - u);   // 꼭대기로 갈수록 감속
+				double hz = u * u * (3 - 2 * u);
+				leapMoveTo(leapPin.getX() + (leapTo.getX() - leapPin.getX()) * hz,
+					leapPin.getY() + (leapPeak - leapPin.getY()) * up,
+					leapPin.getZ() + (leapTo.getZ() - leapPin.getZ()) * hz);
+				w.spawnParticle(Particle.CLOUD, cur.getX(), cur.getY() + 0.3, cur.getZ(), 4, 0.8, 0.1, 0.8, 0.02);
+				if (++leapTick >= LEAP_RISE) { leapStage = ST_HANG; leapTick = 0; }
+			}
+			case ST_HANG -> {
+				leapMark();
+				leapMoveTo(leapTo.getX(), leapPeak + 0.3 * Math.sin((k + 1) * Math.PI / LEAP_HANG), leapTo.getZ());
+				if (++leapTick >= LEAP_HANG) {
+					leapStage = ST_FALL;
+					leapTick = 0;
+					BU.sound(cur, Sound.ITEM_MACE_SMASH_AIR, SoundCategory.HOSTILE, 2.0F, 0.6F);
+				}
+			}
+			case ST_FALL -> {
+				leapMark();
+				double v = Math.min(3.2, 0.4 + 0.35 * k);   // 틱마다 하강 속도 증가 (바닐라 중력보다 훨씬 빠름)
+				double ny = cur.getY() - v;
+				if (ny <= leapTo.getY() || k >= LEAP_FALL_MAX) {   // 착지 (타임아웃이면 강제로 지면에 붙인다)
+					leapMoveTo(leapTo.getX(), leapTo.getY(), leapTo.getZ());
+					mob.setGravity(true);
+					leapPin = leapTo.clone();
+					leapStage = ST_SMASH;
+					leapTick = 0;
+					BU.sound(cur, "hobbang:smith.step", SoundCategory.HOSTILE, 2.0F, 0.5F);
+					BU.sound(cur, Sound.BLOCK_ANVIL_LAND, SoundCategory.HOSTILE, 1.5F, 0.6F);
+					w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, leapTo.getX(), leapTo.getY() + 0.3, leapTo.getZ(), 24, 1.6, 0.1, 1.6, 0.03);
+					Fx.burst(w, leapTo.clone().add(new Vector(0, 0.4, 0)), kind, 12, 1.2);
+					return;
+				}
+				leapMoveTo(leapTo.getX(), ny, leapTo.getZ());
+				for (int i = 0; i < 6; i++) {   // 낙하 중 위로 흐르는 바람 + 머리 위 불티
+					double a = random.nextDouble() * Math.PI * 2, r = 1.0 + random.nextDouble() * 1.3;
+					double py = cur.getY() + 0.5 + random.nextDouble() * mob.getHeight();
+					w.spawnParticle(Particle.CLOUD, cur.getX() + Math.cos(a) * r, py, cur.getZ() + Math.sin(a) * r, 0, 0, 1, 0, 0.9, null, true);
+				}
+				w.spawnParticle(Particle.FLAME, cur.getX(), cur.getY() + mob.getHeight() + 0.5, cur.getZ(), 5, 1.0, 0.4, 1.0, 0.05, null, true);
+				leapTick++;
+			}
+			case ST_SMASH -> {
+				leapHold(leapPin);
+				if (++leapTick >= LEAP_HIT) { leapImpact(); leapStage = ST_RECOVER; leapTick = 0; }
+			}
+			case ST_RECOVER -> {
+				leapHold(leapPin);
+				if (++leapTick >= LEAP_RECOVER) leapReset(true);
+			}
+			default -> leapReset(true);
+		}
+	}
+
+	/** 착지 가능한 지점(지면 + 보스 키만큼 빈 공간)이면 좌표, 아니면 null */
+	private Vector landingSpot(Vector p) {
+		World w = mob.getWorld();
+		int bx = p.getBlockX(), bz = p.getBlockZ();
+		if (!w.isChunkLoaded(bx >> 4, bz >> 4)) return null;
+		double gy = BU.groundY(w, p.getX(), p.getY() + 1, p.getZ());
+		int by = (int) Math.floor(gy + 0.01);
+		int need = Math.max(4, (int) Math.ceil(mob.getHeight()));
+		for (int h = 0; h < need; h++) if (w.getBlockAt(bx, by + h, bz).isCollidable()) return null;
+		return new Vector(p.getX(), gy, p.getZ());
+	}
+
+	/** 보스 머리 위 천장까지 빈 블록 수 (최대 14) */
+	private double ceilingGap(double x, double y, double z) {
+		World w = mob.getWorld();
+		int bx = (int) Math.floor(x), bz = (int) Math.floor(z);
+		if (!w.isChunkLoaded(bx >> 4, bz >> 4)) return 0;
+		double top = y + mob.getHeight();
+		int by = (int) Math.floor(top);
+		for (int i = 0; i < 14; i++) if (w.getBlockAt(bx, by + i, bz).isCollidable()) return Math.max(0, by + i - top);
+		return 14;
+	}
+
+	/** 공중 이동: 몸통 3곳 중 하나가 블록에 막히면 수평 이동은 보류하고 높이만 바꾼다 (파츠는 RETAIN_PASSENGERS 로 같이 이동) */
+	private void leapMoveTo(double x, double y, double z) {
+		World w = mob.getWorld();
+		Location cur = mob.getLocation();
+		if (leapBlocked(w, x, y, z)) { x = cur.getX(); z = cur.getZ(); }
+		mob.teleport(new Location(w, x, y, z, leapYaw, 0), io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+	}
+
+	private boolean leapBlocked(World w, double x, double y, double z) {
+		int bx = (int) Math.floor(x), bz = (int) Math.floor(z);
+		if (!w.isChunkLoaded(bx >> 4, bz >> 4)) return true;
+		double h = mob.getHeight();
+		for (double dy : new double[]{0.5, h * 0.5, h - 0.2}) {
+			if (w.getBlockAt(bx, (int) Math.floor(y + dy), bz).isCollidable()) return true;
+		}
+		return false;
+	}
+
+	/** 지상 고정 (웅크림·착지·경직): 바닐라 AI 가 밀어내도 제자리 */
+	private void leapHold(Vector p) {
+		Location cur = mob.getLocation();
+		mob.setBodyYaw(leapYaw);
+		if (cur.toVector().distanceSquared(p) > 0.0025) {
+			mob.teleport(new Location(mob.getWorld(), p.getX(), p.getY(), p.getZ(), leapYaw, 0), io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+		}
+	}
+
+	private void leapFace() {
+		double dx = leapTo.getX() - leapPin.getX(), dz = leapTo.getZ() - leapPin.getZ();
+		if (dx * dx + dz * dz > 1.0) leapYaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+	}
+
+	/** 착지 예고: 충격파 최대 반경의 붉은 원 (도약~낙하 내내 유지, 시간이 갈수록 안쪽 표시가 수렴) */
+	private void leapMark() {
+		if (tickCount % 2 != 0) return;
+		World w = mob.getWorld();
+		Vector c = new Vector(leapTo.getX(), leapTo.getY(), leapTo.getZ());
+		BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.6F), c, LEAP_RADIUS, 60);
+		double total = LEAP_CROUCH + LEAP_RISE + LEAP_HANG + 8;
+		Fx.groundMark(w, c, LEAP_RADIUS, Math.min(1, (tickCount - leapStart) / total), kind);
+	}
+
+	/** 낙하 스테이지의 포즈 보조 값 — 크게 웅크림 / 착지 때 살짝 굽힘 + 두 손 잡기 */
+	private BossPoses.Leap leapPose() {
+		float k = leapTick;
+		float crouch = switch (leapStage) {
+			case ST_CROUCH -> BossMotion.ease(k / 12F);
+			case ST_RISE -> 1 - BossMotion.ease(k / 3F);
+			case ST_SMASH -> 0.4F * (1 - BossMotion.ease((k - 3) / 2F));
+			default -> 0F;
+		};
+		float grip = switch (leapStage) {
+			case ST_RISE -> BossMotion.ease((k - 3) / 8F);
+			case ST_HANG, ST_FALL, ST_SMASH -> 1F;
+			case ST_RECOVER -> 1 - BossMotion.ease((k - 8) / 12F);
+			default -> 0F;
+		};
+		return new BossPoses.Leap(crouch, grip);
+	}
+
+	/** 망치 프레임: prepare = 머리 위로 치켜듦, release = 바닥 내려찍기 */
+	private BossMotion.Frame leapStrike() {
+		float k = leapTick;
+		return switch (leapStage) {
+			case ST_RISE -> new BossMotion.Frame(BossMotion.ease(k / 10F), 0);
+			case ST_HANG, ST_FALL -> new BossMotion.Frame(1, 0);
+			case ST_SMASH -> {
+				float s = BossMotion.ease((k - 3) / 2F);   // 발이 닿고 3틱 뒤부터 2틱 만에 내려찍는다
+				yield new BossMotion.Frame(1 - s, s);
+			}
+			case ST_RECOVER -> new BossMotion.Frame(0, 1 - BossMotion.ease((k - 8) / 12F));   // 8틱 박은 채 버틴 뒤 12틱에 걸쳐 복귀
+			default -> BossMotion.Frame.REST;
+		};
+	}
+
+	/** 망치 머리가 닿은 지점(지면 높이)에서 초거대 충격파 시작 */
+	private void leapImpact() {
+		World w = mob.getWorld();
+		Vector base = mob.getLocation().toVector();
+		Vector hh = hammerHead();
+		if (!modelMode || hammerRig == null || Math.hypot(hh.getX() - base.getX(), hh.getZ() - base.getZ()) > 9) hh = slamPoint();
+		Vector c = new Vector(hh.getX(), BU.groundY(w, hh.getX(), base.getY() + 2, hh.getZ()), hh.getZ());
+		Location at = new Location(w, c.getX(), c.getY(), c.getZ());
+		forgeSurgeUntil = tickCount + 20;
+		BU.sound(at, Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.HOSTILE, 3.0F, 0.5F);
+		BU.sound(at, Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.HOSTILE, 3.0F, 0.7F);
+		BU.sound(at, Sound.BLOCK_ANVIL_LAND, SoundCategory.HOSTILE, 3.0F, 0.5F);
+		BU.sound(at, "hobbang:smith.slam", SoundCategory.HOSTILE, 3.0F, 0.6F);
+		BU.sound(at, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 2.0F, 0.5F);
+		w.spawnParticle(Particle.EXPLOSION_EMITTER, c.getX(), c.getY() + 0.5, c.getZ(), 3, 3.0, 0.2, 3.0, 0);
+		w.spawnParticle(Particle.EXPLOSION, c.getX(), c.getY() + 0.4, c.getZ(), 16, 6.0, 0.3, 6.0, 0);
+		w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, c.getX(), c.getY() + 0.3, c.getZ(), 70, 6.0, 0.2, 6.0, 0.04, null, true);
+		w.spawnParticle(Particle.LAVA, c.getX(), c.getY() + 0.5, c.getZ(), 40, 5.0, 0.3, 5.0, 0);
+		w.spawnParticle(Particle.FLAME, c.getX(), c.getY() + 0.4, c.getZ(), 60, 5.0, 0.3, 5.0, 0.25, null, true);
+		Fx.slam(this, c, LEAP_RADIUS);
+		leapRingOn = true;
+		leapRingAge = 0;
+		leapRingC = c;
+		leapHit.clear();
+		shake(c, 0.45);
+	}
+
+	/** 화면 흔들림 느낌: 근처 지상 플레이어를 위로 살짝 튕긴다 */
+	private void shake(Vector c, double power) {
+		for (Player p : BU.victims(mob.getWorld(), BU.box(c, LEAP_RADIUS + 14, 6, LEAP_RADIUS + 14))) {
+			if (p.isOnGround()) p.setVelocity(p.getVelocity().add(new Vector((random.nextDouble() - 0.5) * 0.1, power, (random.nextDouble() - 0.5) * 0.1)));
+		}
+	}
+
+	/** 퍼져 나가는 충격파: 링이 지나가는 순간 지면에 있는 플레이어만 1회 40 피해 (점프로 회피). 플레이어만 판정하므로 수습생·벡스는 제외 */
+	private void tickLeapRing() {
+		if (!leapRingOn) return;
+		World w = mob.getWorld();
+		Vector c = leapRingC;
+		leapRingAge++;
+		double r = LEAP_RADIUS * leapRingAge / LEAP_RING_TICKS;
+		int pts = Math.max(12, Math.min(48, (int) (r * 4)));
+		for (int i = 0; i < pts; i++) {
+			double a = Math.PI * 2 * i / pts;
+			w.spawnParticle(Particle.FLAME, c.getX() + Math.cos(a) * r, c.getY() + 0.25, c.getZ() + Math.sin(a) * r, 0, 0, 0.12, 0, 1, null, true);
+		}
+		if (leapRingAge % 2 == 0 && leapRingAge <= 8) shake(c, 0.2);
+		for (Player p : BU.victims(w, BU.box(c, LEAP_RADIUS + 2, 4, LEAP_RADIUS + 2))) {
+			Location pl = p.getLocation();
+			double dx = pl.getX() - c.getX(), dz = pl.getZ() - c.getZ();
+			double d = Math.hypot(dx, dz);
+			if (d > r + 0.4 || d < r - 1.8 || leapHit.contains(p.getUniqueId())) continue;   // 링 두께 2.2 > 틱당 이동 ~1.07 이라 건너뛰지 않는다
+			double air = pl.getY() - BU.groundY(w, pl.getX(), pl.getY() + 0.5, pl.getZ());
+			if (air > 0.7 && !p.isOnGround()) continue;   // 점프로 링을 넘는 중
+			leapHit.add(p.getUniqueId());
+			p.damage(LEAP_DAMAGE, BU.mob(mob));
+			Vector push = new Vector(dx, 0, dz);
+			if (push.lengthSquared() > 1e-6) push.normalize().multiply(0.9);
+			p.setVelocity(new Vector(push.getX(), 1.25, push.getZ()));
+		}
+		if (leapRingAge >= LEAP_RING_TICKS) leapRingOn = false;
+	}
+
 	private void fireVolley(LivingEntity target) {
 		cue(CAST, 0, 0, 12);
 		World w = mob.getWorld();
 		BU.sound(mob.getLocation(), Sound.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, 1.5F, 0.7F);
+		BU.sound(mob.getLocation(), "hobbang:smith.ping", SoundCategory.HOSTILE, 0.7F, 1.0F);
 		int n = phase == 3 ? 5 : 3;
 		Vector m = mouth();
 		Fx.burst(w, m, kind, 16, 0.52);
@@ -449,6 +866,7 @@ public class SmithBoss extends DisplayBoss {
 
 	private void startWave() {
 		cue(SWEEP, 0, 6, 12);
+		forgeSurgeUntil = tickCount + 18;
 		waveActive = true;
 		waveRadius = 1.0;
 		waveCenter = mob.getLocation().toVector();
@@ -531,6 +949,7 @@ public class SmithBoss extends DisplayBoss {
 		World w = mob.getWorld();
 		long existing = w.getNearbyEntitiesByType(Vex.class, mob.getLocation(), 32 + mob.getWidth() / 2, 32 + mob.getHeight() / 2).size();
 		if (existing >= 6) return;
+		BU.sound(mob.getLocation(), "hobbang:smith.grind", SoundCategory.HOSTILE, 1.5F, 1.0F);
 		BU.sound(mob.getLocation(), Sound.ENTITY_EVOKER_PREPARE_SUMMON, SoundCategory.HOSTILE, 1.5F, 0.8F);
 		Location l = mob.getLocation();
 		LivingEntity tgt = mob.getTarget();
@@ -599,6 +1018,7 @@ public class SmithBoss extends DisplayBoss {
 		Fx.burst(at.getWorld(), hammerHead(), kind, 24, 1.2);
 		Fx.puff(at.getWorld(), Particle.SOUL_FIRE_FLAME, at.toVector().add(new Vector(0, 1.3, 0)), 18, 1.2, 0.11);
 		BU.sound(mob.getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.HOSTILE, 2.0F, 1.5F);
+		BU.sound(mob.getLocation(), "hobbang:smith.slam", SoundCategory.HOSTILE, 2.0F, 1.0F);
 	}
 
 	@Override
@@ -624,6 +1044,7 @@ public class SmithBoss extends DisplayBoss {
 		poseLeg(base, "_r", pLegR, pShinR, pFootR, 0, kneel * 0.92F, sc);
 		headRig = child(chest, "chest", "head").rotX(28 * slump);
 		place(pHead, headRig, sc);
+		placeModel("jaw", child(headRig, "head", "jaw").rotX(5 * slump), sc);
 		Rigid armL = child(chest, "chest", "arm_l").rotX(20 * slump).rotZ(-12 * slump);
 		place(pArmL, armL, sc);
 		Rigid foreL = child(armL, "arm_l", "fore_l").rotX(-25 * slump);

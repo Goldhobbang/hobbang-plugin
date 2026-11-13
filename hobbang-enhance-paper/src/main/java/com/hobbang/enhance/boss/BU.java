@@ -55,6 +55,11 @@ public final class BU {
 		at.getWorld().playSound(at, s, c, v, p);
 	}
 
+	public static void sound(Location at, String key, SoundCategory c, float v, float p) {
+		if (at == null || at.getWorld() == null) return;
+		at.getWorld().playSound(at, key, c, v, p);
+	}
+
 	public static double distToSegment(Vector p, Vector a, Vector b) {
 		Vector ab = b.clone().subtract(a);
 		double t = ab.lengthSquared() < 1e-6 ? 0 : Math.max(0, Math.min(1, p.clone().subtract(a).dot(ab) / ab.lengthSquared()));

@@ -75,10 +75,35 @@
       "scale": 3.764705882352941,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 50,
-      "cuboids_voxel": 13,
-      "cuboids_obb": 37,
-      "faces": 300,
+      "cuboids": 43,
+      "cuboids_voxel": 11,
+      "cuboids_obb": 32,
+      "faces": 258,
+      "texture_px": 128,
+      "texture_pages": 3,
+      "voxels": 0
+    },
+    {
+      "name": "jaw",
+      "item_model": "hobbang:boss/abyssal_smith/jaw",
+      "parent": "head",
+      "pivot_blocks": [
+        0.0,
+        7.479412,
+        0.059412
+      ],
+      "translation": [
+        0.0,
+        7.479412,
+        0.059412
+      ],
+      "scale": 3.764705882352941,
+      "spin_axis": null,
+      "mode": "box",
+      "cuboids": 7,
+      "cuboids_voxel": 2,
+      "cuboids_obb": 5,
+      "faces": 42,
       "texture_px": 128,
       "texture_pages": 3,
       "voxels": 0

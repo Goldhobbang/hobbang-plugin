@@ -301,15 +301,15 @@ public final class Altar implements Listener {
 
 	public static void stormHelp(Player p) {
 		NamedTextColor g = NamedTextColor.GRAY, y = NamedTextColor.YELLOW, a = NamedTextColor.AQUA;
-		p.sendMessage(Component.text("⚡ 폭풍 제단 (위에서 본 모습, 5×5)", a, TextDecoration.BOLD));
-		p.sendMessage(Component.text("  W · · · W     W = 조약돌 심층암 담장 2단", y));
-		p.sendMessage(Component.text("  · · X · ·     X = 깎인 구리 (산화·밀랍 무관) ×4", y));
-		p.sendMessage(Component.text("  · X C X ·     C = 구리 블록 + 그 위에 피뢰침", y));
-		p.sendMessage(Component.text("  · · X · ·", y));
-		p.sendMessage(Component.text("  W · · · W", y));
-		p.sendMessage(Component.text(" 재료: 구리 블록 1, 깎인 구리 4, 피뢰침 1, 조약돌 심층암 담장 8", g));
+		p.sendMessage(Component.text("✦ 폭풍 제단 (위에서 본 모습, 5×5)", a, TextDecoration.BOLD));
+		p.sendMessage(Component.text("  P · D · P     P = 심층암(아무 종류) + 촛불(아무 색)", y));
+		p.sendMessage(Component.text("  · D C D ·     C = 구리 블록 (산화·밀랍 무관), 가운데 위에 피뢰침", y));
+		p.sendMessage(Component.text("  D C C C D     D = 다이아몬드 블록", y));
+		p.sendMessage(Component.text("  · D C D ·", y));
+		p.sendMessage(Component.text("  P · D · P", y));
+		p.sendMessage(Component.text(" 재료: 구리 블록 5, 다이아몬드 블록 8, 피뢰침 1, 심층암 4, 촛불 4 (종류·색 무관)", g));
 		p.sendMessage(Component.text(" 오버월드에 천둥번개가 칠 때 폭풍의 핵을 들고 피뢰침을 우클릭.", g));
-		p.sendMessage(Component.text(" 제단 위 하늘(반지름 20칸, 높이 15칸)이 비어 있어야 하며, 전투가 끝나면 투기장은 무너지고 원래대로 돌아갑니다.", g));
+		p.sendMessage(Component.text(" 제단 위 하늘(반지름 약 33칸)에 가운데 섬·나선 점프맵·바깥 섬 고리가 솟고, 15초 번개 세례 → 엔드 수정 빔 → 와이번. 전투가 끝나면 무너지고 원래대로 돌아갑니다.", g));
 	}
 
 	@EventHandler(priority = EventPriority.LOWEST)

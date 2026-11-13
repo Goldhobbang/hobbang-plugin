@@ -41,8 +41,14 @@ public class WyvernBoss extends DisplayBoss {
 	private double circleAngle = 0;
 	private float flyYaw, flyPitch = 0, flyRoll = 0, flap = 0;
 	private Vector diveTarget = new Vector();
-	private float orbCd = 60, diveCd = 160, gustCd = 100, tornadoCd = 120, stormCd = 100;
-	private float breathCd = 160, vortexCd = 260;
+	private static final int ORB_CD = 160, GUST_CD = 200, BREATH_CD = 280, BREATH_CD_LATE = 240;
+	private static final int DIVE_CD = 320, DIVE_CD_LATE = 280, TORNADO_CD = 400, VORTEX_CD = 440, STORM_CD = 560;
+	private float orbCd = ORB_CD, gustCd = GUST_CD;
+	private int diveCd = diveCooldown(), breathCd = breathCooldown();
+	private int tornadoCd = TORNADO_CD, vortexCd = VORTEX_CD, stormCd = STORM_CD;
+
+	private int breathCooldown() { return phase >= 3 ? BREATH_CD_LATE : BREATH_CD; }
+	private int diveCooldown() { return phase >= 3 ? DIVE_CD_LATE : DIVE_CD; }
 	private Vector home = null;
 
 	private Part body, belly, neck, head, jaw, eyeL, eyeR, hornL, hornR, fin;
@@ -110,7 +116,13 @@ public class WyvernBoss extends DisplayBoss {
 		java.util.Arrays.fill(tail, null);
 		java.util.Arrays.fill(wing, null);
 		if (modelMode) {
-			for (String n : W_PARTS) model(n, false);
+			for (String n : W_PARTS) {
+				if (n.equals("body") || n.equals("head") || n.equals("waist") || n.startsWith("wing_")) {
+					energyModel(n, false, false);
+				} else {
+					model(n, false);
+				}
+			}
 			return;
 		}
 		BlockData dp = bd(Material.DARK_PRISMARINE), pb = bd(Material.PRISMARINE_BRICKS), q = bd(Material.SMOOTH_QUARTZ), lan = bd(Material.SEA_LANTERN);
@@ -150,15 +162,18 @@ public class WyvernBoss extends DisplayBoss {
 		else { amp = 35; base = 0; flapSpeed = phase >= 3 ? 0.45F : 0.32F; }
 		flap += flapSpeed * ANIM_INTERVAL;
 		Rigid root = Rigid.yaw(modelYaw());
-		float bob = mode == M_REST ? 0 : sin(flap) * -0.15F;
+		float bob = idle.wave(0.06F, 0) * 0.06F + (mode == M_REST ? 0 : sin(flap) * -0.15F);
+		float wingMotion = mode == M_REST ? amp * idle.weight() : amp;
 		Rigid b = root.at(0, 0.8F + bob, 0).rotX(-flyPitch).rotZ(flyRoll);
 		place(body, b);
 		place(belly, b);
-		Rigid nk = b.at(0, 0.1F, 1.15F).rotX(-15 + sin(t * 0.07F) * 6);
+		Rigid nk = b.at(0, 0.1F, 1.15F).rotX(-15 + idle.wave(0.07F, 0) * 6);
 		place(neck, nk);
-		float jawOpen = (mode == M_DIVE_AIM || mode == M_DIVE) ? 35 : Math.max(0, sin(t * 0.05F)) * 10;
-		Rigid hd = nk.at(0, 0, 0.95F).rotX(20 + sin(t * 0.07F + 1) * 6);
-		headRig = hd.at(0, -0.1F, 1.0F);
+		float jawOpen = (mode == M_DIVE_AIM || mode == M_DIVE) ? 35 : (idle.weight() + idle.wave(0.11F, 0.9F)) * 2;
+		Rigid hd = nk.at(0, 0, 0.95F).rotX(20 + idle.wave(0.07F, -1) * 6);
+		headRig = root.at(0, 0.8F + (mode == M_REST ? 0 : sin(flap) * -0.15F), 0)
+			.rotX(-flyPitch).rotZ(flyRoll).at(0, 0.1F, 1.15F).rotX(-15 + sin(t * 0.07F) * 6)
+			.at(0, 0, 0.95F).rotX(20 + sin(t * 0.07F + 1) * 6).at(0, -0.1F, 1.0F);
 		place(head, hd);
 		place(jaw, hd.at(0, -0.35F, 0.1F).rotX(jawOpen));
 		place(eyeL, hd.at(0.46F, 0.1F, 0.65F));
@@ -168,16 +183,16 @@ public class WyvernBoss extends DisplayBoss {
 		Rigid tl = b.at(0, 0, -1.15F);
 		float[] lens = {1.1F, 1.0F, 1.0F};
 		for (int i = 0; i < 3; i++) {
-			tl = tl.rotY(sin(t * 0.12F - i * 0.8F) * 16).rotX(sin(t * 0.09F - i) * 6 + 4);
+			tl = tl.rotY(idle.wave(0.08F, i * 0.8F) * 11).rotX(idle.wave(0.09F, i) * 6 + 4);
 			place(tail[i], tl);
 			tl = tl.at(0, 0, -lens[i]);
 		}
-		place(fin, tl.rotY(sin(t * 0.12F - 3) * 20));
+		place(fin, tl.rotY(idle.wave(0.08F, 3) * 14));
 		BossMotion.Frame stormPose = motion(CHANNEL).blend(motion(PHASE));
 		for (int s = 0; s < 2; s++) {
 			float sx = s == 0 ? 1 : -1;
-			float a1 = base + sin(flap) * amp + 22 * stormPose.prepare() - 34 * stormPose.release();
-			float a2 = base * 0.5F + sin(flap - 0.7F) * amp * 0.8F;
+			float a1 = base + sin(flap) * wingMotion + 22 * stormPose.prepare() - 34 * stormPose.release();
+			float a2 = base * 0.5F + sin(flap - 0.7F) * wingMotion * 0.8F;
 			Rigid sh = b.at(sx * 0.6F, 0.3F, 0.3F).rotZ(sx * a1).rotY(sx * -8);
 			place(wing[s * 4], sh);
 			place(wing[s * 4 + 1], sh);
@@ -204,7 +219,7 @@ public class WyvernBoss extends DisplayBoss {
 		tuck = lerp(0.42F, tuck, dying || rest ? 0 : 1 - extend * 0.86F);
 		diveWeight = lerp(0.38F, diveWeight, aiming || diving ? 1 : 0);
 		wingAngle = lerp(0.40F, wingAngle, rest ? -32 : diving ? -34 : aiming ? -12 : -21);
-		wingPower = lerp(0.38F, wingPower, dying ? 0 : rest ? 2 : diving ? 6 : aiming ? 42 : 35);
+		wingPower = lerp(0.38F, wingPower, dying ? 0 : rest ? 2 * idle.weight() : diving ? 6 : aiming ? 42 : 35);
 		visualPitch = lerp(0.33F, visualPitch, dying || rest ? 0 : -flyPitch);
 		bank = lerp(0.40F, bank, dying || rest ? 0 : flyRoll);
 		aimModel(2.6F, 48, 33, 0.29F);
@@ -218,9 +233,9 @@ public class WyvernBoss extends DisplayBoss {
 			float rate = phase >= 3 ? 1.4F : 1;
 			cast = cast.blend(BossMotion.forecast(orbCd, rate, 9));
 			sweep = sweep.blend(BossMotion.forecast(gustCd, rate, 10));
-			if (phase >= 2) sweep = sweep.blend(BossMotion.forecast(tornadoCd, rate, 10));
+			if (phase >= 2) sweep = sweep.blend(BossMotion.forecast(tornadoCd, 1, 10));
 		}
-		headRig = BossPoses.wyvern(this::placeModel, t, modelYaw(), flight, cast, sweep, motion(CHANNEL), motion(PHASE));
+		headRig = BossPoses.wyvern(this::placeModel, idle, t, modelYaw(), flight, cast, sweep, motion(CHANNEL), motion(PHASE));
 	}
 
 	private Vector pos() {
@@ -232,11 +247,26 @@ public class WyvernBoss extends DisplayBoss {
 	 * 히트박스가 높이 고정이었다 → XZ 는 속도로, Y 는 승객(파츠)을 유지한 채 텔레포트로 옮긴다.
 	 */
 	private final Vector vel = new Vector();
+	/** 상승·하강·고도 변경 속도 배율 (수평 비행 속도는 그대로, 상하만 절반) */
+	private static final double VERT = 0.5;
+	/** 급강하 중에는 경로의 블록을 무시한다 (지형에 걸려 멈추지 않음) */
+	private boolean noClip;
 
 	private void drive(Vector v) {
+		drive(v, true);
+	}
+
+	private void drive(Vector v, boolean slowVertical) {
 		vel.copy(v);
+		double dy = v.getY() * (slowVertical ? VERT : 1);
+		if (noClip) {
+			// 블록 충돌 없이 통째로 이동 (XZ 도 텔레포트: 속도로 밀면 벽에 막힌다)
+			mob.setVelocity(new Vector());
+			Location at = mob.getLocation().add(v.getX(), dy, v.getZ());
+			mob.teleport(at, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+			return;
+		}
 		mob.setVelocity(new Vector(v.getX(), 0, v.getZ()));
-		double dy = v.getY();
 		if (Math.abs(dy) < 1e-4) return;
 		Location l = mob.getLocation();
 		l.add(0, dy, 0);
@@ -254,6 +284,20 @@ public class WyvernBoss extends DisplayBoss {
 		drive(v);
 	}
 
+	/** t385: 플레이어 추격(선회) 중 수평(XZ) 속도 배율. 상하 속도·다른 이동은 그대로 */
+	private static final double CHASE_H = 1.5;
+
+	/** steer 와 같은 계산(관성·가속·최대 속도 그대로)에, 실제 이동만 XZ ×CHASE_H. 내부 속도 상태는 원래 값으로 유지해 누적되지 않는다 */
+	private void steerChase(Vector desired, double accel, double maxSpeed) {
+		Vector d = desired.clone().subtract(pos());
+		double len = d.length();
+		Vector v = vel.clone().multiply(0.88);
+		if (len > 1e-6) v.add(d.multiply(1 / len).multiply(Math.min(len, 6) * accel));
+		if (v.length() > maxSpeed) v.normalize().multiply(maxSpeed);
+		drive(new Vector(v.getX() * CHASE_H, v.getY(), v.getZ() * CHASE_H));
+		vel.copy(v);
+	}
+
 	private void faceVelocity(float maxTurn) {
 		Vector v = vel;
 		double hz = v.getX() * v.getX() + v.getZ() * v.getZ();
@@ -264,7 +308,7 @@ public class WyvernBoss extends DisplayBoss {
 			flyYaw += turn;
 			flyRoll = lerp(0.2F, flyRoll, clamp(-diff * 0.6F, -35, 35));
 		}
-		float wantPitch = (float) Math.toDegrees(Math.atan2(v.getY(), Math.sqrt(hz) + 1e-3));
+		float wantPitch = (float) Math.toDegrees(Math.atan2(v.getY() * VERT, Math.sqrt(hz) + 1e-3));
 		flyPitch = lerp(0.25F, flyPitch, clamp(wantPitch, -60, 45));
 		if (tickCount % 5 == 0) {
 			mob.setRotation(flyYaw, 0);
@@ -288,62 +332,63 @@ public class WyvernBoss extends DisplayBoss {
 		refreshGlow();
 	}
 
-	private boolean collided(Vector dir) {
-		World w = mob.getWorld();
-		Vector p = pos().add(new Vector(0, mob.getHeight() * 0.5, 0));
-		return BU.solidAt(w, p.clone().add(dir.clone().multiply(mob.getWidth() * 0.6 + 0.4))) || BU.solidAt(w, pos().add(new Vector(0, -0.2, 0)));
-	}
-
 	@Override
 	protected void bossTick(List<Player> near, LivingEntity target) {
 		World w = mob.getWorld();
 		if (home == null) home = pos();
+		noClip = mode == M_DIVE;
 		modeTimer--;
+		float spd = phase >= 3 ? 1.4F : 1.0F;
+		orbCd -= spd;
+		gustCd -= spd;
+		diveCd -= 1;
+		breathCd -= 1;
+		if (phase >= 2) { tornadoCd -= 1; vortexCd -= 1; }
+		if (phase >= 3) stormCd -= 1;
+
 		if (target == null) {
+			if (mode == M_DIVE || mode == M_DIVE_AIM) { mode = M_CIRCLE; noClip = false; }
 			steer(home.clone().add(new Vector(Math.cos(tickCount * 0.02) * 6, 2, Math.sin(tickCount * 0.02) * 6)), 0.02, 0.35);
 			faceVelocity(6);
 			return;
 		}
-		float spd = phase >= 3 ? 1.4F : 1.0F;
 		Location here = mob.getLocation();
 		switch (mode) {
 			case M_CIRCLE -> {
 				circleAngle += 0.025 * spd;
 				double r = 12.5;
 				Vector desired = target.getLocation().toVector().add(new Vector(Math.cos(circleAngle) * r, 8.5 + Math.sin(tickCount * 0.05) * 1.5, Math.sin(circleAngle) * r));
-				steer(desired, 0.03, 0.65);
+				steerChase(desired, 0.03, 0.65);   // t385: 추격 수평 속도 ×1.5 (최대 0.65 → XZ 0.975)
 				faceVelocity(8);
 				if (tickCount % 8 == 0 && !near.isEmpty()) Fx.windWake(w, pos(), flyYaw, 3.1, false);
 				if (invulTicks > 0) break;
-				orbCd -= spd; diveCd -= spd; gustCd -= spd;
-				if (phase >= 2) tornadoCd -= spd;
-				if (phase >= 3) stormCd -= spd;
-				if (orbCd <= 0) { orbs(target, phase >= 2 ? 5 : 3); orbCd = 80; }
-				if (gustCd <= 0) { gust(target); gustCd = 120; }
-				if (phase >= 2 && tornadoCd <= 0) { tornado(target); tornadoCd = 300; }
-				if (phase >= 3 && stormCd <= 0) { storm(); stormCd = 120; }
+				if (orbCd <= 0) { orbs(target, phase >= 2 ? 5 : 3); orbCd = ORB_CD; }
+				if (gustCd <= 0) { gust(target); gustCd = GUST_CD; }
+				if (phase >= 2 && tornadoCd <= 0) { tornado(target); tornadoCd = TORNADO_CD; }
+				if (phase >= 3 && stormCd <= 0) { storm(); stormCd = STORM_CD; }
 				// v1.2.0: 번개 브레스 / 폭풍 소용돌이
-				breathCd -= spd;
-				if (phase >= 2) vortexCd -= spd;
 				if (breathCd <= 0) {
 					Vector o = mouth();
 					Vector aim = target.getLocation().toVector().add(new Vector(0, 0.8, 0)).subtract(o);
 					double blen = Math.min(34, aim.length() + 8);
-					BU.sound(here, Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 2F, 1.6F);
-					BossPatterns.beam(this, () -> o, aim, blen, 26, 22, 9, Material.LIGHT_BLUE_STAINED_GLASS, 0x9FE8FF);
-					breathCd = phase >= 3 ? 150 : 190;
+					BU.sound(here, "hobbang:wyvern.roar", SoundCategory.HOSTILE, 2.0F, 1.0F);
+					BossPatterns.beam(this, () -> o, aim, blen, 26, 16, 9, Material.LIGHT_BLUE_STAINED_GLASS, 0x9FE8FF);
+					breathCd = breathCooldown();
 				}
 				if (phase >= 2 && vortexCd <= 0) {
 					int[] col = BossPatterns.colors(kind);
 					BossPatterns.warnAll(this, "폭풍 소용돌이! 원 밖으로 달리세요!");
 					BossPatterns.vortex(this, target.getLocation().toVector(), 8, 70, 11, col[0], col[1]);
-					vortexCd = 300;
+					vortexCd = VORTEX_CD;
 				}
 				if (diveCd <= 0) {
-					mode = M_DIVE_AIM; modeTimer = 30; diveCd = phase >= 3 ? 150 : 220;
+					mode = M_DIVE_AIM; modeTimer = 30; diveCd = diveCooldown();
+					Fx.discardBeams(uuid);
 					Location tl = target.getLocation();
 					diveTarget = new Vector(tl.getX(), BU.groundY(w, tl.getX(), tl.getY() + 1, tl.getZ()), tl.getZ());
 					BU.sound(here, Sound.ENTITY_PHANTOM_SWOOP, SoundCategory.HOSTILE, 3F, 0.5F);
+					BU.sound(here, "hobbang:wyvern.flap", SoundCategory.HOSTILE, 1.5F, 1.0F);
+					BU.sound(here, "hobbang:wyvern.roar", SoundCategory.HOSTILE, 2.0F, 1.05F);
 					BU.say(mob, Component.text("⚠ 와이번이 급강하를 준비합니다! 붉은 원에서 벗어나세요!", NamedTextColor.RED));
 				}
 			}
@@ -353,21 +398,30 @@ public class WyvernBoss extends DisplayBoss {
 				double radius = 5.5 + mob.getWidth() / 2;
 				if (modeTimer % 2 == 0) BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.6F), diveTarget, radius, 44);
 				if (modeTimer % 4 == 0) Fx.groundMark(w, diveTarget, radius, 1 - modeTimer / 30.0, kind);
-				if (modeTimer <= 0) { mode = M_DIVE; modeTimer = 40; }
+				if (modeTimer <= 0) { mode = M_DIVE; modeTimer = 70; Fx.discardBeams(uuid); }
 			}
 			case M_DIVE -> {
+				// 급강하: 블록을 무시하고 빨간 원 한가운데로 곧장 내려꽂힌다. 원 위치가 어긋나 있어도 원 중심에 정확히 붙는다
 				Vector d = diveTarget.clone().subtract(pos());
 				double len = d.length();
 				Vector dir = len > 1e-6 ? d.clone().multiply(1 / len) : new Vector(0, -1, 0);
-				drive(dir.clone().multiply(phase >= 3 ? 2.0 : 1.6));
+				double speed = phase >= 3 ? 2.0 : 1.6;
+				drive(dir.clone().multiply(Math.min(speed, len)));
 				faceVelocity(30);
 				w.spawnParticle(Particle.CLOUD, here.getX(), here.getY() + 0.5, here.getZ(), 3, 0.5, 0.3, 0.5, 0.01);
 				if (modeTimer % 3 == 0) Fx.windWake(w, here.toVector(), flyYaw, 1.25, false);
-				if (len < 2.0 || modeTimer <= 0 || (modeTimer < 38 && collided(dir))) {
-					drive(new Vector());
-					BU.sound(here, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 2.5F, 0.7F);
-					w.spawnParticle(Particle.EXPLOSION_EMITTER, here.getX(), here.getY(), here.getZ(), 1, 0, 0, 0, 0);
-					w.spawnParticle(Particle.GUST_EMITTER_LARGE, here.getX(), here.getY(), here.getZ(), 1, 0, 0, 0, 0);
+				// 상하 속도가 절반이라 수직 성분이 남으면 계속 내려온다. 원 중심에 닿거나 시간이 다 되면 착지
+				boolean arrived = Math.hypot(pos().getX() - diveTarget.getX(), pos().getZ() - diveTarget.getZ()) < 0.6 && pos().getY() - diveTarget.getY() < 0.8;
+				if (arrived || modeTimer <= 0) {
+					noClip = false;
+					Location land = new Location(w, diveTarget.getX(), diveTarget.getY(), diveTarget.getZ(), mob.getLocation().getYaw(), 0);
+					mob.setVelocity(new Vector());
+					mob.teleport(land, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+					vel.zero();
+					Location at = mob.getLocation();
+					BU.sound(at, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 2.5F, 0.7F);
+					w.spawnParticle(Particle.EXPLOSION_EMITTER, at.getX(), at.getY(), at.getZ(), 1, 0, 0, 0, 0);
+					w.spawnParticle(Particle.GUST_EMITTER_LARGE, at.getX(), at.getY(), at.getZ(), 1, 0, 0, 0, 0);
 					Fx.slam(this, pos(), 5.5 + mob.getWidth() / 2);
 					for (Player p : BU.victims(w, mob.getBoundingBox().expand(5.5, 3, 5.5))) BU.hit(p, mob, 12, pos(), 1.2, 0.8);
 					mode = M_REST; modeTimer = 60;
@@ -386,7 +440,7 @@ public class WyvernBoss extends DisplayBoss {
 					if (tickCount - landingAt > 5) landingAt = tickCount;
 				}
 				if (modeTimer % 10 == 0) w.spawnParticle(Particle.CLOUD, here.getX(), here.getY() + 1, here.getZ(), 4, 0.6, 0.3, 0.6, 0.01);
-				if (modeTimer <= 0) { mode = M_CLIMB; modeTimer = 30; BU.sound(here, Sound.ENTITY_ENDER_DRAGON_FLAP, SoundCategory.HOSTILE, 3F, 0.8F); }
+				if (modeTimer <= 0) { mode = M_CLIMB; modeTimer = 30; BU.sound(here, "hobbang:wyvern.flap", SoundCategory.HOSTILE, 3.0F, 1.0F); }
 			}
 			case M_CLIMB -> {
 				double yr = Math.toRadians(flyYaw);
@@ -398,7 +452,7 @@ public class WyvernBoss extends DisplayBoss {
 			}
 			default -> mode = M_CIRCLE;
 		}
-		if (tickCount % 20 == 0 && mode != M_REST) BU.sound(here, Sound.ENTITY_ENDER_DRAGON_FLAP, SoundCategory.HOSTILE, 1.2F, 1.3F);
+		if (idle.active() && tickCount % 20 == 0 && mode != M_REST) BU.sound(here, "hobbang:wyvern.flap", SoundCategory.HOSTILE, 1.2F, 1.0F);
 	}
 
 	private Vector mouth() {
@@ -412,6 +466,7 @@ public class WyvernBoss extends DisplayBoss {
 		cue(CAST, 0, 0, 13);
 		World world = mob.getWorld();
 		BU.sound(mob.getLocation(), Sound.ENTITY_BREEZE_SHOOT, SoundCategory.HOSTILE, 2F, 0.6F);
+		BU.sound(mob.getLocation(), "hobbang:wyvern.breath", SoundCategory.HOSTILE, 1.5F, 1.0F);
 		Vector m = mouth();
 		Fx.burst(world, m, kind, 13, 0.46);
 		for (int i = 0; i < n; i++) {
@@ -567,17 +622,18 @@ public class WyvernBoss extends DisplayBoss {
 	@Override
 	protected void onDeathStart() {
 		deathU = 0;
+		noClip = false;
 		mob.setGravity(false);   // v1.5.0: 낙하는 drive() 로 직접 (중력/속도 Y 가 안 먹는다)
 		Fx.burst(mob.getWorld(), mouth(), kind, 24, 1.25);
-		BU.sound(mob.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 3F, 0.5F);
+		BU.sound(mob.getLocation(), "hobbang:wyvern.roar.awaken", SoundCategory.HOSTILE, 3.0F, 1.0F);
 	}
 
 	@Override
 	protected void poseDeath(float u) {
 		deathU = u;
 		// 처음 0.32 구간엔 땅에 닿을 때까지 떨어진다 (3틱마다 호출되므로 틱당 0.55 × 3)
-		if (u < 0.32F && mode != M_REST) drive(new Vector(vel.getX() * 0.7, -1.65, vel.getZ() * 0.7));
-		else drive(new Vector());
+		if (u < 0.32F && mode != M_REST) drive(new Vector(vel.getX() * 0.7, -1.65, vel.getZ() * 0.7), false);   // 죽을 때 추락은 상하 감속 없이
+		else drive(new Vector(), false);
 		if (modelMode) poseModel(animTick);
 		else poseParts(animTick); // 레거시 블록 모델: 기존 목/꼬리 + 기울어짐은 poseParts가 flyRoll을 씀
 	}

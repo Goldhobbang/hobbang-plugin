@@ -3,6 +3,7 @@ package com.hobbang.enhance.weapon;
 import com.hobbang.enhance.boss.BU;
 import com.hobbang.enhance.boss.ColossusBoss;
 import com.hobbang.enhance.boss.Fx;
+import com.hobbang.enhance.boss.TimeStun;
 import com.hobbang.enhance.item.HItem;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -49,7 +50,23 @@ public final class WeaponListener implements Listener {
 		}
 	}
 
-	private static List<LivingEntity> around(Player p, double r) {
+	/** 스킬 피해 + 무적 시간을 풀어 연속 타격이 다 들어가게 (이중 낙뢰·심판·톱니 일격 용) */
+	public static void skillHit(LivingEntity e, Player p, double dmg) {
+		e.setNoDamageTicks(0);
+		skillDamage(e, p, dmg);
+	}
+
+	/** 중심 c 에서 가로 hr · 세로 vr 안의 적 (플레이어·마커 제외) */
+	static List<LivingEntity> enemiesAt(World w, Vector c, double hr, double vr, Player self) {
+		List<LivingEntity> out = new ArrayList<>();
+		for (Entity e : w.getNearbyEntities(BoundingBox.of(c, hr, vr, hr))) {
+			if (e instanceof LivingEntity le && e != self && !(e instanceof Player) && !le.isDead() && !(e instanceof org.bukkit.entity.ArmorStand as && as.isMarker())
+				&& Math.hypot(le.getLocation().getX() - c.getX(), le.getLocation().getZ() - c.getZ()) <= hr + le.getWidth() / 2) out.add(le);
+		}
+		return out;
+	}
+
+	static List<LivingEntity> around(Player p, double r) {
 		List<LivingEntity> out = new ArrayList<>();
 		BoundingBox box = p.getBoundingBox().expand(r);
 		for (Entity e : p.getWorld().getNearbyEntities(box)) {
@@ -59,6 +76,29 @@ public final class WeaponListener implements Listener {
 		return out;
 	}
 
+	/** 이동 방향(거의 정지면 시선)에서 coneDeg 이내·거리 r 안의 적. 바로 옆(0.5칸)은 포함한다. */
+	static List<LivingEntity> ahead(Player p, double r, Vector dir, double coneDeg) {
+		Vector move = dir == null ? new Vector() : dir.clone();
+		if (move.lengthSquared() < 1e-6) {
+			move = p.getVelocity();
+			if (move.lengthSquared() < 0.04) move = p.getLocation().getDirection();
+		}
+		if (move.lengthSquared() < 1e-6) move = new Vector(0, 0, 1);
+		else move.normalize();
+		Vector origin = p.getLocation().toVector().add(new Vector(0, p.getHeight() * 0.5, 0));
+		List<LivingEntity> out = new ArrayList<>();
+		for (LivingEntity t : around(p, r)) {
+			Vector to = t.getLocation().toVector().add(new Vector(0, t.getHeight() * 0.5, 0)).subtract(origin);
+			if (to.lengthSquared() < 0.25) { out.add(t); continue; }
+			if (Math.toDegrees(to.angle(move)) <= coneDeg) out.add(t);
+		}
+		return out;
+	}
+
+	static final double AHEAD_CONE = 55;
+	/** 공격 대상 범위를 약 40% 줄일 때 쓰는 배율 */
+	static final double RANGE_CUT = 0.6;
+
 	@EventHandler(priority = EventPriority.HIGH)
 	public void onUse(PlayerInteractEvent e) {
 		if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
@@ -67,6 +107,7 @@ public final class WeaponListener implements Listener {
 		HItem h = HItem.of(stack);
 		if (h == null) return;
 		Player p = e.getPlayer();
+		if (TimeStun.isActive(p)) return;
 		if (stack.getType() == Material.KNOWLEDGE_BOOK) {   // 재료 아이템: 지식의 책 사용(소모) 방지
 			e.setUseItemInHand(Event.Result.DENY);
 			return;
@@ -84,113 +125,37 @@ public final class WeaponListener implements Listener {
 		World sl = p.getWorld();
 		int tier = WeaponFx.tierOf(stack);
 		final int lv = com.hobbang.enhance.item.ItemUtil.getLevel(stack);
+		if (!com.hobbang.enhance.item.EnhanceTier.bossSkillUnlocked(lv)) {   // t384: 모든 보스 무기 기본 스킬은 3강 해금
+			p.sendActionBar(Component.text("✖ 스킬은 +" + com.hobbang.enhance.item.EnhanceTier.BOSS_SKILL_UNLOCK + "강부터 쓸 수 있습니다 (현재 +" + lv + ")", NamedTextColor.RED));
+			return;
+		}
 		final double mult = com.hobbang.enhance.item.EnhanceTier.bossDamageMult(lv), rad = com.hobbang.enhance.item.EnhanceTier.bossRadiusAdd(lv);
+			int cdMult = 1;
 		switch (h) {
 			case SMITH_HAMMER -> {
-				Vector c = p.getLocation().toVector();
-				WeaponFx.hammerCast(sl, p);
-				WeaponFx.earthquake(sl, p, c, tier);
-				for (LivingEntity t : around(p, 5.0 + rad)) {
-					skillDamage(t, p, 8.0 * mult);
-					Vector push = t.getLocation().toVector().subtract(c);
-					if (push.lengthSquared() > 1e-6) push.normalize().multiply(0.6);
-					t.setVelocity(t.getVelocity().add(new Vector(push.getX(), 0.8, push.getZ())));
-				}
-				// +10 여진 1회 / +15 여진 2회 + 구속
-				int shocks = lv >= 15 ? 2 : lv >= 10 ? 1 : 0;
-				for (int k = 1; k <= shocks; k++) {
-					Fx.later(12 * k, () -> {
-						if (!p.isOnline() || p.isDead()) return;
-						WeaponFx.earthquake(p.getWorld(), p, c, 0);
-						for (LivingEntity t : around(p, (5.0 + rad) * 0.8)) {
-							skillDamage(t, p, 4.0 * mult);
-							if (lv >= 15) t.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 1));
-						}
-					});
-				}
+				HammerSkill.cast(p, stack, lv, mult, rad, tier);
 				damage(p, slot, 2);
 			}
 			case CRYSTAL_GREATSWORD -> {
-				Vector look = p.getLocation().getDirection();
-				Vector dir = new Vector(look.getX(), 0, look.getZ());
-				if (dir.lengthSquared() < 1e-6) dir = new Vector(0, 0, 1);
-				dir.normalize();
-				int spikes = 8 + lv / 5;
-				for (int i = 1; i <= spikes; i++) {
-					Vector at = p.getLocation().toVector().add(dir.clone().multiply(i * 1.2));
-					ColossusBoss.spike(sl, at, i, (tier >= 1 ? 1.35F : 1.1F) + i * 0.04F, p.getUniqueId(), p, 10 * mult);
-				}
-				WeaponFx.crystalCast(sl, p, tier);
+				if (p.isSneaking() && lv >= 15) CrystalSkill.spikes(p, lv, mult, tier);   // 15강~ 웅크리고 우클릭: 수정 가시
+				else if (CrystalSkill.pierce(p, lv, mult, tier)) cdMult = 0;   // 3강~ 우클릭: 관통 베기 (거리 10 + 강화당 1칸) — 처치 시 쿨 즉시 초기화
 				damage(p, slot, 2);
 			}
 			case STORMCALLER -> {
-				Vector look = p.getLocation().getDirection();
-				p.setVelocity(new Vector(look.getX() * 2.4, Math.max(0.25, look.getY() * 1.2), look.getZ() * 2.4));
-				p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 30, 0, false, false));
-				Location pl = p.getLocation();
-				BU.sound(pl, Sound.ENTITY_BREEZE_JUMP, SoundCategory.PLAYERS, 1.5F, 1.2F);
-				BU.sound(pl, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, SoundCategory.PLAYERS, 0.6F, 1.6F);
-				WeaponFx.stormTrail(sl, p, 7);
-				sl.spawnParticle(Particle.GUST, pl.getX(), pl.getY() + 0.5, pl.getZ(), 3, 0.3, 0.3, 0.3, 0);
-				Fx.later(7, () -> {
-					if (p.isDead() || !p.isOnline()) return;
-					Location l = p.getLocation();
-					WeaponFx.stormImpact(p.getWorld(), p, l.toVector(), tier);
-					BU.lightning(p.getWorld(), l.getX(), l.getY(), l.getZ());
-					List<LivingEntity> hit = around(p, 3.5 + rad);
-					for (LivingEntity t : hit) skillDamage(t, p, 9 * mult);
-					// +10/+15 낙뢰 연쇄: 범위 밖 가장 가까운 적 1/2마리
-					int chain = lv >= 15 ? 2 : lv >= 10 ? 1 : 0;
-					if (chain > 0) {
-						List<LivingEntity> far = around(p, 10);
-						far.removeAll(hit);
-						far.sort(java.util.Comparator.comparingDouble(t -> t.getLocation().distanceSquared(l)));
-						for (int k = 0; k < Math.min(chain, far.size()); k++) {
-							LivingEntity t = far.get(k);
-							Location tl = t.getLocation();
-							BU.lightning(p.getWorld(), tl.getX(), tl.getY(), tl.getZ());
-							skillDamage(t, p, 6 * mult);
-						}
-					}
-				});
+				if (p.isSneaking() && lv >= 10) {   // 10강~: 심판 (낙뢰가 쏟아지므로 재사용 시간 2배)
+					StormSkill.judgment(p, lv, mult, rad, tier);
+					cdMult = 2;
+				} else StormSkill.dash(p, lv, mult, rad, tier);
 				damage(p, slot, 1);
 			}
 			case CHRONO_DAGGER -> {
-				// 크로노 낫: 전방 150° 부채꼴 베기 → 이어서 시간 정지
-				Vector look = p.getLocation().getDirection();
-				Vector fw = new Vector(look.getX(), 0, look.getZ());
-				if (fw.lengthSquared() < 1e-6) fw = new Vector(0, 0, 1);
-				fw.normalize();
-				double reach = 5.5 + rad;
-				Vector pc = p.getLocation().toVector();
-				int cut = 0;
-				for (LivingEntity t : around(p, reach)) {
-					Vector to = t.getLocation().toVector().subtract(pc).setY(0);
-					if (to.lengthSquared() > reach * reach) continue;
-					if (to.lengthSquared() > 0.5 && Math.toDegrees(to.angle(fw)) > 75) continue;
-					skillDamage(t, p, 7.0 * mult);
-					t.setVelocity(t.getVelocity().add(fw.clone().multiply(0.35).setY(0.15)));
-					cut++;
-				}
-				WeaponFx.scytheArc(sl, p, fw, reach, tier);
-				int n = 0;
-				int dur = 80 + 4 * lv;
-				for (LivingEntity t : around(p, 8 + rad * 2)) {
-					t.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, dur, 9));
-					t.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, dur, 2));
-					t.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, dur, 0));
-					if (lv >= 10) skillDamage(t, p, 4 * mult);
-					Location tl = t.getLocation();
-					sl.spawnParticle(Particle.REVERSE_PORTAL, tl.getX(), tl.getY() + 1, tl.getZ(), 15, 0.3, 0.6, 0.3, 0.02);
-					n++;
-				}
-				WeaponFx.clockField(sl, p, p.getLocation().toVector(), tier);
-				p.sendActionBar(Component.text("☽ 낫 베기 " + cut + "마리 · ⏸ 시간 정지 " + n + "마리", NamedTextColor.AQUA));
+				if (p.isSneaking() && lv >= 15) ChronoSkill.timer(p, tier);   // 풀강: 5초 타이머
+				else ChronoSkill.slashAndStop(p, lv, mult, tier);
 				damage(p, slot, 2);
 			}
 			default -> { return; }
 		}
-		p.setCooldown(h.cooldownGroup(), (int) Math.round(h.cooldown * com.hobbang.enhance.item.EnhanceTier.bossCooldownMult(lv)));
+		p.setCooldown(h.cooldownGroup(), (int) Math.round(h.cooldown * com.hobbang.enhance.item.EnhanceTier.bossCooldownMult(lv)) * cdMult);
 		p.swingHand(slot);
 	}
 
@@ -204,6 +169,7 @@ public final class WeaponListener implements Listener {
 	public void onMelee(EntityDamageByEntityEvent e) {
 		if (skill || e.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) return;
 		if (!(e.getDamager() instanceof Player p) || !(e.getEntity() instanceof LivingEntity target)) return;
+		if (TimeStun.isActive(p)) return;
 		ItemStack w = p.getInventory().getItemInMainHand();
 		HItem h = HItem.of(w);
 		if (h == null || !h.isWeapon()) return;
