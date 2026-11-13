@@ -17,7 +17,15 @@ def view_matrix(yaw_deg, pitch_deg):
     return rx @ ry
 
 
-def rasterize(tris_cam, W, H, uvs=None, alpha=None):
+def texture_coordinates(uv, shape, nearest):
+    h, w = shape
+    xy = uv * [w, h]
+    if not nearest:
+        xy = np.round(xy - 0.5)
+    return np.clip(xy.astype(int), 0, [w - 1, h - 1]).T
+
+
+def rasterize(tris_cam, W, H, *, uvs=None, alpha=None, nearest=True):
     """tris_cam: (N,3,3) in pixel coords (x right, y down, z = depth, larger = nearer).
     With uvs (N,3,2) and an alpha map, texels below 128 are discarded (Minecraft cutout).
     Returns tri id per pixel (-1 none) and barycentrics (H,W,3)."""
@@ -54,10 +62,16 @@ def rasterize(tris_cam, W, H, uvs=None, alpha=None):
         m &= z > sub
         if not m.any():
             continue
+        weights = np.stack([w0[m], w1[m], w2[m]], axis=-1)
+        if alpha is not None:
+            u, v = texture_coordinates(weights @ uvs[i], alpha.shape, nearest)
+            opaque = alpha[v, u] >= 128
+            m[m] = opaque
+            weights = weights[opaque]
         sub[m] = z[m]
         tid[iy0:iy1 + 1, ix0:ix1 + 1][m] = i
         bsub = bary[iy0:iy1 + 1, ix0:ix1 + 1]
-        bsub[m] = np.stack([w0[m], w1[m], w2[m]], -1)
+        bsub[m] = weights
     return tid, bary
 
 
@@ -82,21 +96,16 @@ def render(tris, uvs, tex, yaw, pitch, size=512, center=None, extent=None,
     if cull_back:
         keep = n_cam[:, 2] > 0
     idx = np.nonzero(keep)[0]
-    cutout = alpha_test and tex.shape[2] == 4
-    tid, bary = rasterize(px[idx], size, size, uvs[idx] if cutout else None, tex[..., 3] if cutout else None)
+    alpha = tex[:, :, 3] if alpha_test and tex.shape[2] == 4 else None
+    tid, bary = rasterize(px[idx], size, size, uvs=uvs[idx] if alpha is not None else None,
+                          alpha=alpha, nearest=nearest)
     img = np.zeros((size, size, 3), np.float64)
     img[:] = bg
     hit = tid >= 0
     t = idx[tid[hit]]
     b = bary[hit]
     uv = (uvs[t] * b[:, :, None]).sum(1)
-    th, tw = tex.shape[:2]
-    if nearest:
-        u = np.clip((uv[:, 0] * tw).astype(int), 0, tw - 1)
-        v = np.clip((uv[:, 1] * th).astype(int), 0, th - 1)
-    else:
-        u = np.clip(np.round(uv[:, 0] * tw - 0.5).astype(int), 0, tw - 1)
-        v = np.clip(np.round(uv[:, 1] * th - 0.5).astype(int), 0, th - 1)
+    u, v = texture_coordinates(uv, tex.shape[:2], nearest)
     col = tex[v, u, :3].astype(np.float64)
     nw = n_world[t]
     nw /= np.linalg.norm(nw, axis=1, keepdims=True) + 1e-12

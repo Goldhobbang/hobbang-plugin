@@ -15,8 +15,44 @@ final class BossMotion {
 		Frame blend(Frame other) {
 			float p = Math.max(prepare, other.prepare);
 			float r = Math.max(release, other.release);
-			float sum = Math.max(1, p + r);
+			float sum = Math.max(1, p + Math.min(1, r));   // an overshooting release (> 1) must survive the blend
 			return new Frame(p / sum, r / sum);
+		}
+	}
+
+	/** Idle runs on its own distance-gated clock. Combat frames never scale these offsets. */
+	static final class Idle {
+		private static final int FADE_TICKS = 18;
+		private boolean nearby;
+		private int ticks;
+		private int fadeTicks;
+		private float weight;
+
+		double radiusSquared() { return nearby ? 56 * 56 : 50 * 50; }
+
+		void tick(boolean nearby) {
+			this.nearby = nearby;
+			if (nearby) ticks++;
+			// Advance one step on entry and twice as fast on exit.
+			fadeTicks = nearby ? Math.min(FADE_TICKS, fadeTicks + 1) : Math.max(0, fadeTicks - 2);
+			weight = ease(fadeTicks / (float) FADE_TICKS);
+		}
+
+		boolean active() { return nearby; }
+		int ticks() { return ticks; }
+		float weight() { return weight; }
+
+		float wave(float rate, float lag) {
+			return weight == 0 ? 0 : sin(ticks * rate - lag) * weight;
+		}
+
+		static Idle preview(float time) {
+			Idle idle = new Idle();
+			idle.ticks = (int) time;
+			idle.fadeTicks = FADE_TICKS;
+			idle.weight = 1;
+			idle.nearby = true;
+			return idle;
 		}
 	}
 
@@ -53,9 +89,14 @@ final class BossMotion {
 			return new Frame(wind * (1 - follow), wind * follow);
 		}
 		float after = -before;
-		if (after < live) return new Frame(0, 1 - 0.35F * ease(after / Math.min(live, 12)));
+		if (after < live) return new Frame(0, 1 - 0.35F * ease(after / Math.min(live, 12)) + recoil(after));
 		float endWeight = live == 0 ? 1 : 1 - 0.35F * ease(live / Math.min(live, 12F));
-		return new Frame(0, endWeight * (1 - ease((after - live) / recovery)));
+		return new Frame(0, Math.max(0, endWeight * (1 - ease((after - live) / recovery)) + recoil(after)));
+	}
+
+	/** Impact overshoot: the strike carries ~16 % past its pose on the hit tick, rebounds slightly and settles within ~8 ticks. */
+	static float recoil(float after) {
+		return 0.16F * (float) (Math.exp(-after / 2.5F) * Math.cos(after * 1.1F));
 	}
 
 	static Frame forecast(float cooldown, float rate, int lead) {

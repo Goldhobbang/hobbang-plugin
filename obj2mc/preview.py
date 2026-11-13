@@ -22,11 +22,21 @@ def pack_tris(pack, man, attachments=(), *, model_paths=None):
             path = model_paths.get((model_id, name), path)
         with open(path, encoding='utf-8') as source:
             model = json.load(source)
-        tref = model['textures']['t']
-        tns, tpath = tref.split(':')
-        tex = np.array(Image.open(os.path.join(pack, 'assets', tns, 'textures', tpath + '.png')).convert('RGBA'))
-        if tex.shape[0] > tex.shape[1]:
-            tex = tex[:tex.shape[1]]
+        # one or more texture pages (#t, #t1, ...): stacked vertically into one image, v remapped per face below
+        refs = [k for k in model['textures'] if k == 't' or (k.startswith('t') and k[1:].isdigit())]
+        refs.sort(key=lambda k: 0 if k == 't' else int(k[1:]))
+        pages = []
+        for k in refs:
+            tns, tpath = model['textures'][k].split(':')
+            im = np.array(Image.open(os.path.join(pack, 'assets', tns, 'textures', tpath + '.png')).convert('RGBA'))
+            pages.append(im[:im.shape[1]] if im.shape[0] > im.shape[1] else im)
+        pw = max(t.shape[1] for t in pages)
+        tex = np.zeros((sum(t.shape[0] for t in pages), pw, 4), np.uint8)
+        page_y, page_h, yy = {}, {}, 0
+        for k, t in zip(refs, pages):
+            tex[yy:yy + t.shape[0], :t.shape[1]] = t
+            page_y['#' + k], page_h['#' + k] = yy, t.shape[0]
+            yy += t.shape[0]
         piv = np.array(p['translation']); s = p['scale']
         tris, uvs = [], []
         for el in model['elements']:
@@ -41,6 +51,8 @@ def pack_tris(pack, man, attachments=(), *, model_paths=None):
                     P = o_ + (P - o_) @ Rm.T
                     nrm = Rm @ nrm
                 UV = np.array([[u1 if i in (0, 1) else u2, v1 if i in (0, 3) else v2] for i in range(4)]) / 16.0
+                ref = fd.get('texture', '#t')
+                UV[:, 1] = (UV[:, 1] * page_h.get(ref, page_h['#t']) + page_y.get(ref, 0)) / tex.shape[0]
                 # item_display: translation + scale * Ry(180) * (m/16 - 0.5)
                 q = (P / 16.0 - 0.5) * s
                 q = np.stack([-q[:, 0], q[:, 1], -q[:, 2]], 1) + piv

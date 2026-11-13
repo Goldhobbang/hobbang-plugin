@@ -1,0 +1,13 @@
+{
+  "parent": "hobbang:item/boss/abyssal_smith/chest",
+  "textures": {
+    "t": "hobbang:item/boss/abyssal_smith/chest_still",
+    "particle": "hobbang:item/boss/abyssal_smith/chest_still",
+    "t1": "hobbang:item/boss/abyssal_smith/chest_1_still",
+    "t2": "hobbang:item/boss/abyssal_smith/chest_2_still",
+    "t3": "hobbang:item/boss/abyssal_smith/chest_3_still",
+    "t4": "hobbang:item/boss/abyssal_smith/chest_4_still",
+    "t5": "hobbang:item/boss/abyssal_smith/chest_5_still",
+    "t6": "hobbang:item/boss/abyssal_smith/chest_6_still"
+  }
+}

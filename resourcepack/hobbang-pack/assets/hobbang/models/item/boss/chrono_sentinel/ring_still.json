@@ -1,0 +1,7 @@
+{
+  "parent": "hobbang:item/boss/chrono_sentinel/ring",
+  "textures": {
+    "t": "hobbang:item/boss/chrono_sentinel/ring_still",
+    "particle": "hobbang:item/boss/chrono_sentinel/ring_still"
+  }
+}

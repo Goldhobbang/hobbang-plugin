@@ -22,14 +22,6 @@ import java.util.List;
 public final class BossWarmup {
 	private BossWarmup() {}
 
-	/** 워밍업 더미 (3틱 뒤 제거 예약). 그 전에 플러그인이 꺼지면 shutdown() 이 지운다 */
-	private static final List<org.bukkit.entity.Entity> PENDING = new ArrayList<>();
-
-	public static void shutdown() {
-		for (org.bukkit.entity.Entity e : PENDING) if (e.isValid()) e.remove();
-		PENDING.clear();
-	}
-
 	public static void start() {
 		List<World> worlds = Bukkit.getWorlds();
 		if (worlds.isEmpty()) return;
@@ -50,6 +42,10 @@ public final class BossWarmup {
 		blocks.add(Material.MAGMA_BLOCK);
 		blocks.add(Material.AMETHYST_BLOCK);
 		blocks.add(Material.CUT_COPPER);
+		for (Material m : List.of(Material.POLISHED_DEEPSLATE, Material.WAXED_CUT_COPPER, Material.WAXED_OXIDIZED_CUT_COPPER,
+			Material.GOLD_BLOCK, Material.SEA_LANTERN, Material.WHITE_STAINED_GLASS)) {
+			if (!blocks.contains(m)) blocks.add(m);
+		}
 		int[] i = {0};
 		final int itemN = items.size();
 		final int blockN = blocks.size();
@@ -97,7 +93,7 @@ public final class BossWarmup {
 	 */
 	private static void heavy(World w, Location at, List<ItemStack> items) {
 		try {
-			for (String c : new String[]{"SmithBoss", "ColossusBoss", "SentinelBoss", "WyvernBoss", "AssembleAnim", "BossPatterns", "BU", "Fx", "Rigid", "BossModels", "BossPoses", "BossMotion"})
+			for (String c : new String[]{"SmithBoss", "ColossusBoss", "SentinelBoss", "WyvernBoss", "AssembleAnim", "BossPatterns", "BU", "Fx", "Rigid", "BossModels"})
 				Class.forName("com.hobbang.enhance.boss." + c);
 			Class.forName("com.hobbang.enhance.arena.ArenaDress");
 			if (!w.isChunkLoaded(at.getBlockX() >> 4, at.getBlockZ() >> 4)) return;
@@ -129,11 +125,12 @@ public final class BossWarmup {
 				});
 				ws.addPassenger(d);
 				ds.add(d);
-				PENDING.add(d);
 				if (ds.size() >= 8) break;
 			}
-			PENDING.add(ws);
-			Bukkit.getScheduler().runTaskLater(HobbangPlugin.get(), BossWarmup::shutdown, 3L);
+			Bukkit.getScheduler().runTaskLater(HobbangPlugin.get(), () -> {
+				for (var d : ds) d.remove();
+				ws.remove();
+			}, 3L);
 		} catch (Exception ex) {
 			HobbangPlugin.get().getLogger().warning("보스 워밍업(히트박스 경로) 실패: " + ex);
 		}

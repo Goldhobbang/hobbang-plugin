@@ -57,6 +57,15 @@ public final class BossPatterns {
 		}
 	}
 
+	static void shockRing(World world, Vector center, double radius, Particle.DustTransition dust, Particle wake) {
+		circle(world, center, radius, dust, Particle.DUST_COLOR_TRANSITION);
+		for (int i = 0; i < 8; i++) {
+			double a = i * Math.PI / 4 + radius * 0.19;
+			Vector point = center.clone().add(new Vector(Math.cos(a) * radius, 0.22, Math.sin(a) * radius));
+			Fx.puff(world, wake, point, 1, 0.11, 0.025);
+		}
+	}
+
 	// ───────── 1. 충격파 고리: 퍼져 나가는 고리. 점프로 피한다 ─────────
 	public static void shockRing(Boss b, Vector center0, double maxR, double speed, double dmg, int warnTicks, int from, int to) {
 		pose(b, SWEEP, warnTicks, 5, 10);
@@ -73,13 +82,14 @@ public final class BossPatterns {
 					world.spawnParticle(Particle.END_ROD, c.getX(), c.getY() + 0.3, c.getZ(), 2, 0.4, 0.1, 0.4, 0.02);
 				}
 				if (t == warnTicks) {
+					Fx.burst(world, c.clone().add(new Vector(0, 0.4, 0)), b.kind, 12, 0.65);
 					BU.sound(new Location(world, c.getX(), c.getY(), c.getZ()), Sound.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.HOSTILE, 1.5F, 1.4F);
 					world.spawnParticle(Particle.SONIC_BOOM, c.getX(), c.getY() + 0.5, c.getZ(), 1, 0, 0, 0, 0);
 				}
 				return;
 			}
 			double r = (t - warnTicks) * speed;
-			if (t % 2 == 0) circle(world, c, r, data, Particle.DUST_COLOR_TRANSITION);
+			if (t % 2 == 0) shockRing(world, c, r, data, Fx.ringWake(b.kind));
 			for (Player p : BU.victims(world, BU.box(c, r + 1, 2.5, r + 1))) {
 				if (hit.contains(p.getUniqueId())) continue;
 				Location pl = p.getLocation();
@@ -95,45 +105,58 @@ public final class BossPatterns {
 	// ───────── 2. 광선: 예고선 → 발사 (디스플레이 빔 + END_ROD) ─────────
 	public static void beam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb) {
 		pose(b, CAST, warn - 1, fire, 11);
-		spawnBeam(b, origin, dir0, len, warn, fire, dmg, look, rgb);
+		spawnBeam(b, origin, dir0, len, warn, fire, dmg, look, rgb, true, true);
 	}
 
-	private static void spawnBeam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb) {
+	private static void spawnBeam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb, boolean playSound) {
+		spawnBeam(b, origin, dir0, len, warn, fire, dmg, look, rgb, playSound, false);
+	}
+
+	private static void spawnBeam(Boss b, Supplier<Vector> origin, Vector dir0, double len, int warn, int fire, double dmg, Material look, int rgb, boolean playSound, boolean snappy) {
 		World w = b.mob.getWorld();
+		boolean colossus = b.kind == BossKind.PRISM_COLOSSUS;
 		Vector dir = dir0.clone().normalize();
 		Particle.DustOptions dust = BU.dust(rgb, 0.9F);
-		final BlockDisplay[] beam = {null};
 		Set<UUID> hit = new HashSet<>();
 		Fx.spawn(w, b.uuid, origin.get(), warn + fire, (fx, world) -> {
 			int t = fx.age;
+			if (snappy && t > warn + fire - Fx.BEAM_RETRACT) return;
 			Vector o = origin.get();
 			Vector end = o.clone().add(dir.clone().multiply(len));
 			if (t < warn) {
-				if (t % 3 == 0) BU.line(world, Particle.DUST, dust, o, end, 0.9);
-				if (t == 1) BU.sound(new Location(world, o.getX(), o.getY(), o.getZ()), Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.HOSTILE, 1.5F, 1.6F);
+				if (t % 3 == 0) {
+					BU.line(world, Particle.DUST, dust, o, end, 0.9);
+					Fx.beamCharge(world, o, dir, t, b.kind);
+				}
+				if (t == 1 && playSound) {
+					Location at = new Location(world, o.getX(), o.getY(), o.getZ());
+					if (colossus) BU.sound(at, "hobbang:colossus.beam.charge", SoundCategory.HOSTILE, 2.0F, 1.0F);
+					else BU.sound(at, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.HOSTILE, 1.5F, 1.6F);
+				}
 				return;
 			}
-			if (beam[0] == null) {
-				fx.pos = o.clone();
-				beam[0] = fx.addBlock(look.createBlockData(), true);
-				Quaternionf rot = new Quaternionf().rotationTo(new Vector3f(0, 0, 1), new Vector3f((float) dir.getX(), (float) dir.getY(), (float) dir.getZ()));
-				float wdt = 0.5F;
-				Vector3f tr = rot.transform(new Vector3f(-wdt / 2, -wdt / 2, 0));
-				Fx.shape(beam[0], tr, rot, new Vector3f(wdt, wdt, (float) len), 2);
+			if (t == Math.max(1, warn)) {
+				Fx.beam(b, origin, dir, (float) len, warn + fire - t + 1, look, rgb);
 				world.spawnParticle(Particle.SONIC_BOOM, o.getX(), o.getY(), o.getZ(), 1, 0, 0, 0, 0);
-				BU.sound(new Location(world, o.getX(), o.getY(), o.getZ()), Sound.ENTITY_GUARDIAN_ATTACK, SoundCategory.HOSTILE, 2F, 1.6F);
+				if (playSound) {
+					Location at = new Location(world, o.getX(), o.getY(), o.getZ());
+					if (colossus) BU.sound(at, "hobbang:colossus.beam.fire", SoundCategory.HOSTILE, 2.5F, 1.0F);
+					else BU.sound(at, Sound.ENTITY_GUARDIAN_ATTACK, SoundCategory.HOSTILE, 2F, 1.6F);
+				}
 			}
 			if (t % 2 == 0) BU.line(world, Particle.END_ROD, null, o, end, 1.4);
 			if ((t - warn) % 10 == 0) hit.clear();
+			int visibleHits = 0;
 			for (Player p : BU.victims(world, BU.box(o.clone().add(end).multiply(0.5), len / 2 + 1, len / 2 + 2, len / 2 + 1))) {
 				if (hit.contains(p.getUniqueId())) continue;
 				Vector pc = p.getLocation().toVector().add(new Vector(0, 0.9, 0));
 				if (BU.distToSegment(pc, o, end) < 1.1) {
 					hit.add(p.getUniqueId());
 					BU.hit(p, b.mob, dmg, o, 0.6, 0.2);
+					if (visibleHits++ < 2) Fx.beamHit(b, pc);
 				}
 			}
-		});
+		}).group(Fx.BEAM_GROUP);
 	}
 
 	/** 지면을 따라 보스 중심에서 n방향으로 뻗는 광선 (십자/엑스) */
@@ -144,7 +167,8 @@ public final class BossPatterns {
 		c.setY(ground(w, c) + 0.6);
 		for (int i = 0; i < n; i++) {
 			double a = angle0 + Math.PI * 2 * i / n;
-			spawnBeam(b, () -> c, new Vector(Math.cos(a), 0, Math.sin(a)), len, warn, fire, dmg, look, rgb);
+			spawnBeam(b, () -> c, new Vector(Math.cos(a), 0, Math.sin(a)), len, warn, fire, dmg, look, rgb,
+				b.kind != BossKind.PRISM_COLOSSUS || i == 0);
 		}
 	}
 
@@ -167,11 +191,14 @@ public final class BossPatterns {
 			if (rockD[0] != null && t % 2 == 0) {
 				Vector rp = fxm.pos;
 				world.spawnParticle(fire ? Particle.FLAME : Particle.END_ROD, rp.getX(), rp.getY() + 0.5, rp.getZ(), 3, 0.2, 0.3, 0.2, 0.01);
+				Fx.puff(world, fire ? Particle.ASH : Particle.WAX_ON, rp.clone().add(new Vector(0, 1.0, 0)), 3, 0.22, 0.03);
 			}
 			if (t == warn) {
 				Location l = new Location(world, at.getX(), at.getY(), at.getZ());
 				world.spawnParticle(Particle.EXPLOSION, l, 2, 0.4, 0.2, 0.4, 0);
 				world.spawnParticle(fire ? Particle.LAVA : Particle.END_ROD, l, 10, radius / 2, 0.2, radius / 2, 0.1);
+				Fx.burst(world, at.clone().add(new Vector(0, 0.35, 0)), b.kind, 10, radius * 0.4);
+				Fx.ripple(b, at, radius, 8);
 				BU.sound(l, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 1.4F, 0.9F);
 				for (Player p : BU.victims(world, BU.box(at, radius, 2.5, radius))) {
 					if (p.getLocation().toVector().setY(at.getY()).distance(at) > radius) continue;
@@ -207,6 +234,10 @@ public final class BossPatterns {
 				for (double r = 1.2; r <= radius; r += live ? 0.9 : 1.6) {
 					double sa = ang + r * 0.18;
 					world.spawnParticle(live ? armParticle : Particle.DUST, c.getX() + Math.cos(sa) * r, c.getY(), c.getZ() + Math.sin(sa) * r, 1, 0, 0, 0, 0, live ? null : d);
+					if (live && t % 4 == 0 && r > radius - 2) {
+						Vector tip = c.clone().add(new Vector(Math.cos(sa) * r, 0.42, Math.sin(sa) * r));
+						Fx.puff(world, Particle.LAVA, tip, 1, 0.15, 0.025);
+					}
 				}
 			}
 			if (!live) return;
@@ -248,6 +279,7 @@ public final class BossPatterns {
 				double r = radius * (1 - (t % 20) / 20.0);
 				world.spawnParticle(Particle.REVERSE_PORTAL, c.getX() + Math.cos(a) * r, c.getY() + 0.5 + (t % 20) * 0.08, c.getZ() + Math.sin(a) * r, 1, 0, 0, 0, 0);
 			}
+			if (t % 5 == 1) Fx.groundMark(world, c, radius, t / (double) pull, b.kind);
 			if (t > 10 && t < pull) {
 				for (Player p : BU.victims(world, BU.box(c, radius, 3, radius))) {
 					Vector to2 = c.clone().subtract(p.getLocation().toVector()).setY(0);
@@ -261,6 +293,8 @@ public final class BossPatterns {
 				Location l = new Location(world, c.getX(), c.getY() + 0.5, c.getZ());
 				world.spawnParticle(Particle.EXPLOSION_EMITTER, l, 1, 0, 0, 0, 0);
 				world.spawnParticle(Particle.END_ROD, l, 30, 1.5, 0.6, 1.5, 0.25);
+				Fx.burst(world, c.clone().add(new Vector(0, 0.5, 0)), b.kind, 20, 1.2);
+				Fx.ripple(b, c, radius, 12);
 				BU.sound(l, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 2F, 0.7F);
 				for (Player p : BU.victims(world, BU.box(c, 3.5, 3, 3.5)))
 					if (p.getLocation().toVector().setY(c.getY()).distance(c) < 3.5) BU.hit(p, b.mob, dmg, c, 1.3, 0.7);
@@ -270,7 +304,7 @@ public final class BossPatterns {
 
 	// ───────── 페이즈 전환 연출 (피해 없이 밀쳐내기) ─────────
 	public static void phaseBurst(Boss b, int from, int to) {
-		pose(b, PHASE, 8, 7, 17);
+		if (b instanceof DisplayBoss display) Fx.awaken(display, PHASE, 8, 7, 17);
 		World w = b.mob.getWorld();
 		Vector c = b.mob.getLocation().toVector();
 		c.setY(ground(w, c));

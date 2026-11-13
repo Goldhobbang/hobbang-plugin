@@ -11,3 +11,4 @@ work/
 # experimental pack snapshots (only release packs are kept in dist/)
 dist/hobbang-pack-*-*.zip
 hobbang-skill-sounds.zip
+*.bak

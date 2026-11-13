@@ -22,6 +22,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Transformation;
+import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -39,14 +40,35 @@ import java.util.Random;
  */
 public abstract class DisplayBoss extends Boss {
 	public static final int ANIM_INTERVAL = 3;
-	/** 사망 연출이 시작된 히트박스 표시 (엔티티와 함께 저장됨). 연출 도중 청크가 언로드됐다가 다시 로드되면 BossManager 가 지운다 */
-	public static final String DYING_TAG = "hobbang_dying";
 
 	protected int hurtFlash = 0;
 	protected int animTick = 0;
 	protected final List<Part> parts = new ArrayList<>();
 	private final Map<String, Part> modelParts = new HashMap<>();
+	private final List<EnergyPart> energyParts = new ArrayList<>();
+
+	private static final class EnergyPart {
+		final ItemDisplay display;
+		final String name;
+		final ItemStack still, idle, surge;
+		ItemStack current;
+
+		EnergyPart(ItemDisplay display, String name, String key, ItemStack idle, boolean canSurge) {
+			this.display = display;
+			this.name = name;
+			this.idle = idle;
+			still = modelItem(key + "_still");
+			surge = canSurge ? modelItem(key + "_surge") : null;
+		}
+
+		void show(ItemStack stack) {
+			if (current == stack) return;
+			display.setItemStack(stack);
+			current = stack;
+		}
+	}
 	private final BossMotion motion = new BossMotion();
+	protected final BossMotion.Idle idle = new BossMotion.Idle();
 	protected float lookYaw, lookPitch;
 	private boolean partsBuilt = false;
 	private final Vector3f riderOff = new Vector3f();
@@ -109,8 +131,16 @@ public abstract class DisplayBoss extends Boss {
 		if (m != null && m.equalsIgnoreCase("on")) return true;
 		if (m != null && m.equalsIgnoreCase("off")) return false;
 		String rp = org.bukkit.Bukkit.getResourcePack();
-		return rp != null && !rp.isBlank();
+		boolean pack = rp != null && !rp.isBlank();
+		if (!pack && !autoFallbackLogged) {
+			autoFallbackLogged = true;
+			com.hobbang.enhance.HobbangPlugin.get().getLogger().info("bossModels=auto: server.properties resource-pack is empty, "
+				+ "bosses use the legacy block models. Set bossModels: on when testing with a locally applied pack.");
+		}
+		return pack;
 	}
+
+	private static boolean autoFallbackLogged;
 
 	/** 예전 블록 모델의 배율 (보스 크기 / v1.2.0 크기) */
 	protected abstract float legacyScale();
@@ -129,6 +159,18 @@ public abstract class DisplayBoss extends Boss {
 	protected float damageMultiplier() { return 1.0F; }
 	protected void onHurtBy(EntityDamageEvent e, double amount) {}
 	protected void onPartsRebuilt() {}
+	protected void idleDetails() {}
+	protected boolean energySurge(String part) { return false; }
+
+	protected void playFootfall(float stride, double movement, String event, float volume) {
+		int plant = (int) Math.floor(stride / Math.PI);
+		if (idle.active() && lastPlant != Integer.MIN_VALUE && plant != lastPlant && movement > 0.035) {
+			BU.sound(mob.getLocation(), event, SoundCategory.HOSTILE, volume, plant % 2 == 0 ? 0.96F : 1.04F);
+		}
+		lastPlant = plant;
+	}
+
+	private int lastPlant = Integer.MIN_VALUE;
 
 	final void cue(BossMotion.Move move, int hit, int live, int recovery) {
 		if (!dying && !dead) motion.play(move, tickCount, hit, live, recovery);
@@ -187,12 +229,41 @@ public abstract class DisplayBoss extends Boss {
 	/** v1.3.0: 리소스팩 모델 파츠 (hobbang:boss/<boss>/<part>). 모델 원점 = 피벗, 크기 = 매니페스트의 item_display_scale */
 	protected Part model(String part, boolean bright) {
 		BossModels.Spec sp = BossModels.get(kind.id, part);
-		ItemStack st = new ItemStack(org.bukkit.Material.PAPER);
-		st.editMeta(m -> m.setItemModel(new org.bukkit.NamespacedKey("hobbang", sp.key())));
+		ItemStack st = modelItem(sp.key());
 		Part p = item(st, 0, 0, 0, sp.scale(), bright);
 		p.id = part;
 		modelParts.put(part, p);
 		return p;
+	}
+
+	private static ItemStack modelItem(String key) {
+		ItemStack stack = new ItemStack(org.bukkit.Material.PAPER);
+		stack.editMeta(m -> m.setItemModel(new org.bukkit.NamespacedKey("hobbang", key)));
+		return stack;
+	}
+
+	protected Part energyModel(String part, boolean bright, boolean canSurge) {
+		Part model = model(part, bright);
+		ItemDisplay display = (ItemDisplay) model.display;
+		EnergyPart energy = new EnergyPart(display, part, BossModels.get(kind.id, part).key(), display.getItemStack(), canSurge);
+		energyParts.add(energy);
+		energy.show(energy.still);
+		return model;
+	}
+
+	private void updateEnergyModels() {
+		for (EnergyPart part : energyParts) {
+			boolean surge = part.surge != null && energySurge(part.name);
+			part.show(surge ? part.surge : idle.active() ? part.idle : part.still);
+		}
+	}
+
+	protected Vector modelPoint(String id, float x, float y, float z) {
+		Part part = modelParts.get(id);
+		if (part == null || part.last == null) return null;
+		Vector3f local = new Vector3f(x, y, z).rotate(part.last.getLeftRotation())
+			.add(part.last.getTranslation()).add(riderOff);
+		return mob.getLocation().toVector().add(new Vector(local.x, local.y, local.z));
 	}
 
 	protected void placeModel(String id, Rigid rig, float scale) {
@@ -234,7 +305,7 @@ public abstract class DisplayBoss extends Boss {
 	}
 
 	private Part attach(Display d, Vector3f offset, Vector3f size, boolean bright) {
-		d.setViewRange(2.0F);
+		d.setViewRange(2.0F); // 128 blocks at the default client entity distance
 		mob.addPassenger(d);
 		Part p = new Part(d, offset, size, bright);
 		parts.add(p);
@@ -270,11 +341,19 @@ public abstract class DisplayBoss extends Boss {
 	}
 
 	private void discardParts() {
-		for (Part p : parts) { Fx.forget(p.display); p.display.remove(); Fx.LIVE--; }
+		// Snapshot and clear first: removing a display fires EntityRemoveFromWorldEvent, which must never see (or re-enter on)
+		// a half-discarded part list. Already-removed displays are skipped so a second call is a no-op.
+		List<Part> old = new ArrayList<>(parts);
 		parts.clear();
 		modelParts.clear();
+		energyParts.clear();
+		for (Part p : old) {
+			Fx.forget(p.display);
+			Fx.LIVE--;
+			if (p.display.isValid()) p.display.remove();
+		}
 		for (Entity e : new ArrayList<>(mob.getPassengers())) {
-			if (e.getScoreboardTags().contains(Fx.PART_TAG)) e.remove();
+			if (e.isValid() && e.getScoreboardTags().contains(Fx.PART_TAG)) e.remove();
 		}
 	}
 
@@ -304,10 +383,18 @@ public abstract class DisplayBoss extends Boss {
 
 	@Override
 	public void unload() {
-		super.unload();
-		cancelAssemble(false);
-		discardParts();
+		if (unloading) return;      // idempotent: part removal events fired from here must not unload again
+		unloading = true;
+		try {
+			super.unload();
+			cancelAssemble(false);
+			discardParts();
+		} finally {
+			unloading = false;
+		}
 	}
+
+	private boolean unloading;
 
 	// ───────── 틱 ─────────
 	@Override
@@ -328,14 +415,31 @@ public abstract class DisplayBoss extends Boss {
 			return;
 		}
 		animTick++;
+		updateIdle();
+		if (idle.active() && idle.ticks() % 8 == 0) Fx.ambient(this);
 		if (animTick % ANIM_INTERVAL == 0) {
 			motion.expire(tickCount);
 			updateRiderOffset();
 			poseParts(animTick);
+			updateEnergyModels();
 		}
+		if (idle.active()) idleDetails();
 		if (hurtFlash > 0 && --hurtFlash == 0) setFlash(false);
 	}
 
+
+	private void updateIdle() {
+		Location origin = mob.getLocation();
+		double radiusSquared = idle.radiusSquared();
+		boolean nearby = false;
+		for (Player player : origin.getWorld().getPlayers()) {
+			if (player.getLocation().distanceSquared(origin) <= radiusSquared) {
+				nearby = true;
+				break;
+			}
+		}
+		idle.tick(nearby);
+	}
 
 	// ───────── v1.4.2 소환 조립 ─────────
 	public boolean assembling() {
@@ -429,7 +533,7 @@ public abstract class DisplayBoss extends Boss {
 			w.spawnParticle(Particle.ELECTRIC_SPARK, l.getX(), hy, l.getZ(), 8, 0.6, 0.5, 0.6, 0.05);
 		}
 		if (assembleTick == AssembleAnim.DIVE_HANG && assembleRest != null) {
-			BU.sound(l, Sound.ENTITY_ENDER_DRAGON_FLAP, SoundCategory.HOSTILE, 2.2F, 0.7F);
+			BU.sound(l, AssembleAnim.WYVERN_FLAP, SoundCategory.HOSTILE, 2.2F, 1.0F);
 			BU.sound(l, Sound.ENTITY_WIND_CHARGE_WIND_BURST, SoundCategory.HOSTILE, 1.6F, 0.6F);
 			for (int i = 0; i < parts.size() && i < assembleRest.length; i++) {
 				Part p = parts.get(i);
@@ -513,6 +617,7 @@ public abstract class DisplayBoss extends Boss {
 		}
 		if (assembleTick == outAt && assembleRest != null) {
 			BU.sound(l, Sound.BLOCK_BELL_USE, SoundCategory.HOSTILE, 1.8F, 0.85F);
+			BU.sound(l, "hobbang:sentinel.gears", SoundCategory.HOSTILE, 1.5F, 1.0F);
 			BU.sound(l, Sound.BLOCK_NOTE_BLOCK_IRON_XYLOPHONE, SoundCategory.HOSTILE, 1.4F, 0.9F);
 			for (int i = 0; i < parts.size() && i < assembleRest.length; i++) {
 				Part p = parts.get(i);
@@ -869,13 +974,15 @@ public abstract class DisplayBoss extends Boss {
 		AssembleAnim.burst(w, l.getX(), l.getY() + bh * 0.5, l.getZ(), kind, 16);
 		BU.sound(l, theme.finish(), SoundCategory.HOSTILE, 2.2F, 0.75F);
 		if (kind == BossKind.TEMPEST_WYVERN) {
-			BU.sound(l, Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 2.0F, 0.9F);
+			BU.sound(l, "hobbang:wyvern.roar.awaken", SoundCategory.HOSTILE, 2.0F, 0.95F);
 		} else if (kind == BossKind.ABYSSAL_SMITH) {
-			BU.sound(l, Sound.ENTITY_WITHER_AMBIENT, SoundCategory.HOSTILE, 2.0F, 0.6F);
+			BU.sound(l, "hobbang:smith.scrape", SoundCategory.HOSTILE, 2.0F, 0.95F);
+			BU.sound(l, "hobbang:smith.slam", SoundCategory.HOSTILE, 2.0F, 1.0F);
 		} else if (kind == BossKind.PRISM_COLOSSUS) {
 			w.spawnParticle(Particle.END_ROD, l.getX(), l.getY() + bh * 0.6, l.getZ(), 24, 1.0, 1.2, 1.0, 0.08);
 		} else if (kind == BossKind.CHRONO_SENTINEL) {
 			BU.sound(l, Sound.BLOCK_BELL_RESONATE, SoundCategory.HOSTILE, 1.6F, 0.8F);
+			BU.sound(l, "hobbang:sentinel.clockwork", SoundCategory.HOSTILE, 2.0F, 1.0F);
 		}
 		if (assembleRest != null) {
 			for (int i = 0; i < parts.size() && i < assembleRest.length; i++) {
@@ -964,8 +1071,16 @@ public abstract class DisplayBoss extends Boss {
 			invulTicks = 50;
 			bar.color(phaseColor(phase));
 			if (phase == th.length + 1) bar.addFlag(BossBar.Flag.DARKEN_SCREEN);
-			BU.sound(mob.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 3.0F, 0.6F + phase * 0.15F);
 			Location l = mob.getLocation();
+			switch (kind) {
+				case TEMPEST_WYVERN -> BU.sound(l, "hobbang:wyvern.roar.awaken", SoundCategory.HOSTILE, 3.0F, 1.0F);
+				case ABYSSAL_SMITH -> {
+					BU.sound(l, "hobbang:smith.scrape", SoundCategory.HOSTILE, 2.0F, 0.95F);
+					BU.sound(l, "hobbang:smith.slam", SoundCategory.HOSTILE, 2.0F, 1.0F);
+				}
+				case CHRONO_SENTINEL -> BU.sound(l, "hobbang:sentinel.clockwork", SoundCategory.HOSTILE, 2.0F, 1.0F);
+				case PRISM_COLOSSUS -> BU.sound(l, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.HOSTILE, 3.0F, 0.75F);
+			}
 			w.spawnParticle(Particle.EXPLOSION_EMITTER, l.getX(), l.getY() + 1, l.getZ(), 1, 0, 0, 0, 0);
 			onPhaseChange(phase);
 		}
@@ -1046,7 +1161,7 @@ public abstract class DisplayBoss extends Boss {
 	protected void startDeath() {
 		if (dying || dead) return;
 		dying = true;
-		mob.addScoreboardTag(DYING_TAG);
+		Fx.discardOwned(uuid, true);
 		deathTick = 0;
 		deathLen = Math.max(1, deathDuration());
 		deathAt = mob.getLocation().clone();

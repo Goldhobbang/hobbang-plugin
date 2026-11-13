@@ -68,20 +68,12 @@ public final class HobbangCommand {
 				return 1;
 			}))
 			.then(Commands.literal("set").requires(OP)
-				.then(Commands.argument("level", IntegerArgumentType.integer(0, 15)).executes(ctx -> {
-					Player p = player(ctx);
-					if (p == null) return 0;
-					ItemStack s = p.getInventory().getItemInMainHand();
-					if (!ItemUtil.canEnhance(s)) {
-						ok(ctx, Component.text("강화 가능한 장비를 주 손에 드세요.", NamedTextColor.RED));
-						return 0;
-					}
-					int lv = IntegerArgumentType.getInteger(ctx, "level");
-					ItemUtil.setLevel(s, lv);
-					p.getInventory().setItemInMainHand(s);
-					ok(ctx, Component.text("강화 단계를 ").append(ItemUtil.levelTag(lv)).append(Component.text("로 설정했습니다.")));
-					return 1;
-				})))
+				.then(Commands.argument("level", IntegerArgumentType.integer(0, 15)).executes(ctx -> enhanceLevel(ctx, false))))
+			.then(Commands.literal("enhance").requires(OP)
+				.then(Commands.literal("set")
+					.then(Commands.argument("level", IntegerArgumentType.integer(0, 15)).executes(ctx -> enhanceLevel(ctx, false))))
+				.then(Commands.literal("add")
+					.then(Commands.argument("amount", IntegerArgumentType.integer()).executes(ctx -> enhanceLevel(ctx, true)))))
 			.then(Commands.literal("kit").requires(OP).executes(ctx -> {
 				Player p = player(ctx);
 				if (p == null) return 0;
@@ -229,6 +221,25 @@ public final class HobbangCommand {
 		return 1;
 	}
 
+	private static int enhanceLevel(CommandContext<CommandSourceStack> ctx, boolean add) {
+		Player p = player(ctx);
+		if (p == null) return 0;
+		ItemStack s = p.getInventory().getItemInMainHand();
+		if (!ItemUtil.canEnhance(s)) {
+			ok(ctx, Component.text("강화 가능한 장비를 주 손에 드세요.", NamedTextColor.RED));
+			return 0;
+		}
+		int arg = IntegerArgumentType.getInteger(ctx, add ? "amount" : "level");
+		int want = add ? ItemUtil.getLevel(s) + arg : arg;
+		int lv = Math.max(0, Math.min(ItemUtil.MAX_LEVEL, want));
+		ItemUtil.setLevel(s, lv);
+		p.getInventory().setItemInMainHand(s);
+		String tail = "로 설정했습니다.";
+		if (add) tail = (lv != want) ? "로 바꿨습니다. (0~15로 제한)" : "로 바꿨습니다.";
+		ok(ctx, Component.text("강화 단계를 ").append(ItemUtil.levelTag(lv)).append(Component.text(tail)));
+		return 1;
+	}
+
 	private static Component cmd(String c, String desc) {
 		return Component.text("  " + c, NamedTextColor.AQUA).clickEvent(ClickEvent.suggestCommand(c))
 			.append(Component.text(" - " + desc, NamedTextColor.GRAY));
@@ -257,7 +268,9 @@ public final class HobbangCommand {
 		s.sendMessage(cmd("/hobbang storm", "폭풍 제단 설계도"));
 		if (s.hasPermission("hobbang.admin")) {
 			s.sendMessage(cmd("/hobbang kit", "(OP) 테스트 재료"));
-			s.sendMessage(cmd("/hobbang set 10", "(OP) 강화 단계 설정"));
+			s.sendMessage(cmd("/hobbang enhance set 10", "(OP) 든 장비 강화 단계 설정"));
+			s.sendMessage(cmd("/hobbang enhance add 1", "(OP) 든 장비 강화 단계 추가"));
+			s.sendMessage(cmd("/hobbang set 10", "(OP) enhance set 과 같음"));
 			s.sendMessage(cmd("/hobbang kit2", "(OP) 신규 보스 핵/주문서/무기"));
 			s.sendMessage(cmd("/hobbang give enhance_stone 64", "(OP) 홉방 아이템 지급"));
 			s.sendMessage(cmd("/hobbang book superior_sharpness 3", "(OP) 홉방 인첸트 책 지급"));

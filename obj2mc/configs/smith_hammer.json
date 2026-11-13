@@ -1,8 +1,8 @@
 {
  "id": "boss/smith_hammer",
  "namespace": "hobbang",
- "obj": "/workspace/mc/models/forge_hammer/Meshy_AI_magma_forge_hammer_20261110_texture_obj/Meshy_AI_magma_forge_hammer_20261110_texture.obj",
- "texture": "/workspace/mc/models/forge_hammer/Meshy_AI_magma_forge_hammer_20261110_texture_obj/Meshy_AI_magma_forge_hammer_20261110_texture.png",
+ "obj": "../source/abyssal_smith/forge_hammer/Meshy_AI_magma_forge_hammer_20261110_texture_obj/Meshy_AI_magma_forge_hammer_20261110_texture.obj",
+ "texture": "../source/abyssal_smith/forge_hammer/Meshy_AI_magma_forge_hammer_20261110_texture_obj/Meshy_AI_magma_forge_hammer_20261110_texture.png",
  "height_blocks": 4.2,
  "source_rot": [
   [

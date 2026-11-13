@@ -81,39 +81,104 @@ public final class WeaponFx {
 		return b.getBlockData();
 	}
 
-	/** 망치 지진: 땅이 들썩이는 원형 충격파 3겹 + 혼불 고리 */
-	public static void earthquake(World sl, Entity owner, Vector c, int tier) {
-		BlockData gs = ground(sl, c);
-		Block lb = sl.getBlockAt((int) Math.floor(c.getX()), (int) Math.floor(c.getY() + 0.5), (int) Math.floor(c.getZ()));
-		Display.Brightness gl = new Display.Brightness(lb.getLightFromBlocks(), lb.getLightFromSky());
+	/** 지진 타일 키프레임: {틱 오프셋, 올라간 비율, 기울어진 비율, 보간 틱} */
+	private static final float[][] QUAKE_KEYS = {
+		{0, 0.82F, 0.70F, 2}, {2, 1.00F, 1.00F, 2}, {4, 1.04F, 1.00F, 2}, {6, 0.80F, 0.60F, 2}, {8, 0.00F, 0.00F, 2}, {10, 0.07F, 0.00F, 2}, {12, 0.00F, 0.00F, 2}
+	};
+	private static final int QUAKE_WAVE = 8, QUAKE_TILE_TICKS = 14, QUAKE_MAX_TILES = 150;
+
+	private record QuakeTile(org.bukkit.entity.BlockDisplay d, Vector3f base, int delay, float lift, Quaternionf tilt, Vector3f scale, Vector land, BlockData data) {}
+
+	/**
+	 * 망치 지진: 반경 안 땅이 안쪽 → 바깥쪽 순서로 들썩인다.
+	 * 타일은 촘촘하게 겹쳐 빈 틈이 보이지 않고(칸 수가 많으면 타일을 키움), 위치·높이·기울기만 조금씩 무작위로 어긋난다.
+	 */
+	public static void earthquake(World sl, Entity owner, Vector c, int tier, double radius) {
+		final double R = Math.max(2.5, radius);
 		Location cl = loc(sl, c);
 		BU.sound(cl, Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.PLAYERS, 1.4F, 0.6F);
 		BU.sound(cl, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.9F, 0.5F);
 		BU.sound(cl, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 0.6F, 0.7F);
 		sl.spawnParticle(Particle.EXPLOSION, c.getX(), c.getY() + 0.3, c.getZ(), 3, 0.6, 0.1, 0.6, 0);
-		float[] radii = {1.6F, 3.2F, 4.8F};
-		for (int r = 0; r < radii.length; r++) {
-			final float rad = radii[r];
-			final int n = 6 + r * 4;
+		BlockData gs = ground(sl, c);
+		// 바깥으로 퍼지는 혼불 고리 (반경에 비례)
+		for (int r = 0; r < 3; r++) {
+			final float rad = (float) (R * (r + 1) / 3.0);
+			final int n = (int) Math.max(8, Math.round(Math.PI * 2 * rad / 1.1));
 			Fx.later(1 + r * 3, () -> {
-				BU.sound(cl, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.35F, 0.6F + rad * 0.1F);
+				BU.sound(cl, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.35F, 0.6F + rad * 0.05F);
 				for (int i = 0; i < n; i++) {
 					double ang = Math.PI * 2 * i / n;
-					Vector at = new Vector(c.getX() + Math.cos(ang) * rad, c.getY(), c.getZ() + Math.sin(ang) * rad);
-					sl.spawnParticle(Particle.BLOCK, at.getX(), at.getY() + 0.1, at.getZ(), 4, 0.2, 0.05, 0.2, 0.15, gs);
-					sl.spawnParticle(Particle.SOUL_FIRE_FLAME, at.getX(), at.getY() + 0.2, at.getZ(), 2, 0.1, 0.2, 0.1, 0.03);
-					if (tier >= 1) sl.spawnParticle(Particle.LAVA, at.getX(), at.getY() + 0.2, at.getZ(), 1, 0, 0, 0, 0);
-					final float yaw = (float) -ang;
-					Fx.spawn(sl, owner.getUniqueId(), at.clone().add(new Vector(0, -0.15, 0)), 14, (fx, lv) -> {
-						if (fx.age == 1) fx.addBlock(gs, false).setBrightness(gl);
-						else if (fx.age % 2 == 1) return;
-						float h = fx.age <= 4 ? fx.age / 4F : Math.max(0, 1 - (fx.age - 4) / 8F);
-						Quaternionf q = new Quaternionf().rotationY(yaw).rotateX((float) Math.toRadians(-18 * h));
-						for (Display d : fx.displays)
-							Fx.shape(d, new Vector3f(-0.45F, -0.35F, -0.45F).rotate(q).add(0, h * 0.55F, 0), q, new Vector3f(0.9F, 0.9F, 0.9F), 2);
-					});
+					double x = c.getX() + Math.cos(ang) * rad, z = c.getZ() + Math.sin(ang) * rad;
+					sl.spawnParticle(Particle.SOUL_FIRE_FLAME, x, c.getY() + 0.2, z, 1, 0.1, 0.2, 0.1, 0.03);
+					if (i % 2 == 0) sl.spawnParticle(Particle.BLOCK, x, c.getY() + 0.1, z, 2, 0.2, 0.05, 0.2, 0.15, gs);
+					if (tier >= 1 && i % 3 == 0) sl.spawnParticle(Particle.LAVA, x, c.getY() + 0.2, z, 1, 0, 0, 0, 0);
 				}
 			});
+		}
+		final int life = 2 + QUAKE_WAVE + QUAKE_TILE_TICKS + 1;
+		final java.util.List<QuakeTile> tiles = new java.util.ArrayList<>();
+		Fx.spawn(sl, owner.getUniqueId(), c, life, (fx, w) -> {
+			if (fx.age == 1) { buildQuake(fx, w, c, R, tiles); return; }
+			for (QuakeTile t : tiles) {
+				int local = fx.age - 2 - t.delay();
+				if (local < 0 || local >= QUAKE_TILE_TICKS || !t.d().isValid()) continue;
+				for (float[] k : QUAKE_KEYS) {
+					if ((int) k[0] != local) continue;
+					Quaternionf rot = new Quaternionf().slerp(t.tilt(), k[2]);
+					Vector3f pivot = new Vector3f(t.scale()).mul(0.5F);
+					Vector3f tr = new Vector3f(t.base()).add(0, t.lift() * k[1], 0).add(pivot.sub(rot.transform(new Vector3f(pivot))));
+					if (k[1] == 0 && k[2] == 0) { tr.set(t.base()); rot.identity(); }
+					Fx.shape(t.d(), tr, rot, t.scale(), (int) k[3]);
+					if (local == 8) w.spawnParticle(Particle.BLOCK, t.land().getX(), t.land().getY(), t.land().getZ(), 1, 0.3, 0.05, 0.3, 0.06, t.data());
+					break;
+				}
+			}
+		});
+	}
+
+	private static void buildQuake(Fx fx, World w, Vector c, double R, java.util.List<QuakeTile> out) {
+		ThreadLocalRandom rnd = ThreadLocalRandom.current();
+		double area = Math.PI * R * R;
+		double step = Math.max(1.0, Math.sqrt(area / QUAKE_MAX_TILES));   // 타일 한 칸 간격 (칸 수가 많으면 넓힘)
+		float size = (float) (step * 1.3);                                 // 간격보다 크게 → 서로 겹쳐서 틈이 안 보임
+		Display.Brightness gl = new Display.Brightness(
+			w.getBlockAt((int) Math.floor(c.getX()), (int) Math.floor(c.getY() + 0.5), (int) Math.floor(c.getZ())).getLightFromBlocks(),
+			w.getBlockAt((int) Math.floor(c.getX()), (int) Math.floor(c.getY() + 0.5), (int) Math.floor(c.getZ())).getLightFromSky());
+		int n = (int) Math.ceil(R / step);
+		for (int i = -n; i <= n; i++) {
+			for (int j = -n; j <= n; j++) {
+				if (out.size() >= QUAKE_MAX_TILES + 40) return;
+				double px = c.getX() + i * step + rnd.nextDouble(-0.22, 0.22) * step;
+				double pz = c.getZ() + j * step + rnd.nextDouble(-0.22, 0.22) * step;
+				double dx = px - c.getX(), dz = pz - c.getZ();
+				double dist = Math.hypot(dx, dz);
+				if (dist > R) continue;
+				int bx = (int) Math.floor(px), bz = (int) Math.floor(pz);
+				if (!w.isChunkLoaded(bx >> 4, bz >> 4)) continue;
+				int by = (int) BU.groundY(w, px, c.getY() + 2.0, pz) - 1;
+				if (by < w.getMinHeight() || Math.abs(by + 1 - c.getY()) > 2.5) continue;
+				Block b = w.getBlockAt(bx, by, bz);
+				if (!b.getType().isSolid() || w.getBlockAt(bx, by + 1, bz).isCollidable()) continue;
+				double f = Math.min(1.0, dist / R);
+				float lift = (float) (1.15 - 0.55 * f + rnd.nextDouble(-0.18, 0.18));
+				lift = Math.max(0.35F, Math.min(1.5F, lift));
+				int delay = (int) Math.round(f * QUAKE_WAVE);   // 안쪽부터 바깥쪽으로
+				Vector3f tiltAxis = new Vector3f((float) rnd.nextDouble(-1, 1), 0, (float) rnd.nextDouble(-1, 1));
+				if (tiltAxis.lengthSquared() < 1e-3) tiltAxis.set(1, 0, 0);
+				tiltAxis.normalize();
+				Quaternionf tilt = new Quaternionf().rotateAxis((float) Math.toRadians(4 + 9 * rnd.nextDouble()), tiltAxis.x, 0, tiltAxis.z)
+					.rotateY((float) Math.toRadians(rnd.nextDouble(-18, 18)));
+				float h = 1.0F;
+				Vector3f scale = new Vector3f(size, h, size);
+				// 윗면이 땅 위(+0.02~0.05, 타일끼리 겹쳐도 깜빡이지 않게 약간씩 다르게)에 오도록
+				Vector3f base = new Vector3f((float) (px - c.getX()) - size / 2, (float) (by + 1 - c.getY()) - h + 0.02F + rnd.nextFloat() * 0.03F, (float) (pz - c.getZ()) - size / 2);
+				BlockData data = b.getBlockData();
+				org.bukkit.entity.BlockDisplay d = fx.addBlock(data, false);
+				d.setBrightness(gl);
+				Fx.shape(d, base, new Quaternionf(), scale, 0);
+				out.add(new QuakeTile(d, base, delay, lift, tilt, scale, new Vector(px, by + 1.05, pz), data));
+			}
 		}
 	}
 
@@ -214,11 +279,12 @@ public final class WeaponFx {
 		}
 	}
 
-	public static void clockField(World sl, Entity owner, Vector c, int tier) {
+	public static void clockField(World sl, Entity owner, Vector c, int tier, float radius) {
 		Location cl = loc(sl, c);
 		BU.sound(cl, Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 1.2F, 0.7F);
 		BU.sound(cl, Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 1.4F, 1.5F);
-		final float R = 3.6F;
+		final float R = Math.max(3.6F, radius);   // 법진 = 시간 정지 범위
+		final float k = R / 3.6F;
 		Fx.spawn(sl, owner.getUniqueId(), c.clone().add(new Vector(0, 0.05, 0)), 44, (fx, lv) -> {
 			if (fx.age == 1) {
 				for (int i = 0; i < 12; i++) fx.addBlock((i % 3 == 0 ? Material.GOLD_BLOCK : Material.WAXED_CUT_COPPER).createBlockData(), true);
@@ -232,14 +298,14 @@ public final class WeaponFx {
 			for (int i = 0; i < 12; i++) {
 				float ang = (float) (Math.PI * 2 * i / 12) + fx.age * 0.02F;
 				Quaternionf q = new Quaternionf().rotationY(-ang);
-				float sz = (i % 3 == 0 ? 0.5F : 0.3F) * open;
+				float sz = (i % 3 == 0 ? 0.5F : 0.3F) * (float) Math.sqrt(k) * open;
 				Vector3f t = new Vector3f(-sz / 2, 0, R * open - sz / 2).rotate(q);
 				Fx.shape(fx.displays.get(i), t, q, new Vector3f(sz, 0.08F, sz), 2);
 			}
 			float hour = fx.age * 0.15F, minute = fx.age * 0.6F;
 			Quaternionf qh = new Quaternionf().rotationY(-hour), qm = new Quaternionf().rotationY(-minute);
-			Fx.shape(fx.displays.get(12), new Vector3f(-0.08F, 0.02F, 0).rotate(qh), qh, new Vector3f(0.16F, 0.06F, 2.0F * open), 2);
-			Fx.shape(fx.displays.get(13), new Vector3f(-0.06F, 0.04F, 0).rotate(qm), qm, new Vector3f(0.12F, 0.06F, 3.0F * open), 2);
+			Fx.shape(fx.displays.get(12), new Vector3f(-0.08F * (float) Math.sqrt(k), 0.02F, 0).rotate(qh), qh, new Vector3f(0.16F * (float) Math.sqrt(k), 0.06F, 2.0F * k * open), 2);
+			Fx.shape(fx.displays.get(13), new Vector3f(-0.06F * (float) Math.sqrt(k), 0.04F, 0).rotate(qm), qm, new Vector3f(0.12F * (float) Math.sqrt(k), 0.06F, 3.0F * k * open), 2);
 			if (fx.age % 10 == 0) BU.sound(cl, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.PLAYERS, 0.9F, 1.4F);
 			if (fx.age % 4 == 0) {
 				ThreadLocalRandom rnd = ThreadLocalRandom.current();

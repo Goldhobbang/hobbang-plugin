@@ -62,14 +62,14 @@ public enum HItem {
 		"우클릭: 장인의 기록을 펼친다", null),
 	// ── 유물 무기 (네더라이트 기반, 공격력/속도는 Fabric 판과 동일) ──
 	SMITH_HAMMER("smith_hammer", "대장장이의 망치", Material.NETHERITE_AXE, "mace", ItemRarity.EPIC, 1, true, true,
-		"우클릭: 지진 - 반경 5 적에게 피해, 밀쳐냄 (쿨타임 8초)", "심연에 남은 장인의 망치", NamedTextColor.DARK_PURPLE, 12.0, -3.0, 160),
+		"3강~ 우클릭: 지진 - 반경 5 적에게 피해, 밀쳐냄 (쿨타임 8초) · 공중에서 우클릭: 급강하 내려찍기", "심연에 남은 장인의 망치 — 10강부터 영혼을 모은다", NamedTextColor.DARK_PURPLE, 12.0, -3.0, 160),
 	CRYSTAL_GREATSWORD("crystal_greatsword", "수정 대검", Material.NETHERITE_SWORD, "diamond_sword", ItemRarity.EPIC, 1, true, true,
-		"우클릭: 전방으로 수정 가시 8연발 (쿨타임 10초)", "완벽한 형태를 담은 수정 검", NamedTextColor.LIGHT_PURPLE, 13.0, -3.2, 200),
+		"3강~ 우클릭: 관통 베기 — 시선 방향 10칸(+강화당 1칸) 돌파 (쿨타임 10초, 처치 시 초기화) · 7강~ 대검 낙하 · 15강 웅크리고 우클릭: 바라보는 방향으로 수정 가시", "완벽한 형태를 담은 수정 검", NamedTextColor.LIGHT_PURPLE, 13.0, -3.2, 200),
 	// v1.4.0: id 는 그대로(기존 아이템 호환), 모양·이름·기반 아이템만 바뀜 → ItemUtil.migrateIdentity
 	STORMCALLER("stormcaller", "뇌운 전투도끼", Material.NETHERITE_AXE, "netherite_axe", ItemRarity.EPIC, 1, true, true,
-		"우클릭: 바라보는 쪽으로 돌진 후 낙뢰 폭발 (쿨타임 6초)", "폭풍 와이번의 날개로 벼린 전투도끼", NamedTextColor.AQUA, 11.0, -2.9, 120),
+		"3강~ 우클릭: 돌진 — 지나간 적에게 낙뢰 폭발 (쿨타임 6초) · 10강~ 웅크리고 우클릭: 심판", "폭풍 와이번의 날개로 벼린 전투도끼", NamedTextColor.AQUA, 11.0, -2.9, 120),
 	CHRONO_DAGGER("chrono_dagger", "크로노 낫", Material.NETHERITE_SWORD, "netherite_hoe", ItemRarity.EPIC, 1, true, true,
-		"우클릭: 전방 낫 베기 + 반경 8 시간 정지 (쿨타임 20초)", "휩쓸기 · 사거리 +1 · 타격 시 구속 — 시간을 거두는 거대한 낫", NamedTextColor.GOLD, 9.0, -2.7, 400);
+		"3강~ 우클릭: 전방 낫 베기 + 반경 8 시간 정지 (쿨타임 20초) · 15강 웅크리고 우클릭: 5초 타이머", "휩쓸기 · 사거리 +1 · 타격 시 구속 — 시간을 거두는 거대한 낫", NamedTextColor.GOLD, 9.0, -2.7, 400);
 
 	public final String id;
 	public final String name;

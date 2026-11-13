@@ -48,11 +48,13 @@ public final class ArenaDress {
 	});
 	private static final java.util.concurrent.atomic.AtomicLong SEQ = new java.util.concurrent.atomic.AtomicLong();
 
-	enum Theme { FORGE, TEMPLE }
+	enum Theme { FORGE, TEMPLE, GROTTO }
 
 	static final class Cell {
 		int x, y, z;
 		String data;
+		/** true = 보스 제단 블록 (아레나가 펼쳐질 때 테마 블록으로 덮이고, 복구 때 제단 표식까지 되살린다) */
+		boolean altar;
 	}
 
 	static final class Job {
@@ -125,8 +127,8 @@ public final class ArenaDress {
 	public static void start(Boss boss) {
 		if (boss == null || boss.mob == null || !boss.mob.isValid()) return;
 		BossKind k = boss.kind;
-		if (k != BossKind.ABYSSAL_SMITH && k != BossKind.CHRONO_SENTINEL) return;
-		Theme theme = k == BossKind.ABYSSAL_SMITH ? Theme.FORGE : Theme.TEMPLE;
+		if (k != BossKind.ABYSSAL_SMITH && k != BossKind.CHRONO_SENTINEL && k != BossKind.PRISM_COLOSSUS) return;
+		Theme theme = k == BossKind.ABYSSAL_SMITH ? Theme.FORGE : k == BossKind.CHRONO_SENTINEL ? Theme.TEMPLE : Theme.GROTTO;
 		Location at = boss.mob.getLocation();
 		World w = at.getWorld();
 		int cx, cz, cy;
@@ -139,6 +141,9 @@ public final class ArenaDress {
 			cz = at.getBlockZ();
 			cy = floorY(w, cx, at.getBlockY(), cz);
 		}
+		// 제단 위에서 소환되므로 소환 위치 바로 아래(또는 아레나 기록)에서 제단 블록을 찾는다
+		Block altar = findAltar(boss, w, cx, cz, at.getBlockY());
+		if (altar != null && theme != Theme.GROTTO) cy = floorAround(w, altar);   // 바닥 무늬는 제단 옆 실제 바닥 높이에
 		// 같은 자리에 남은 작업이 있으면 먼저 되돌린 뒤 새로 입힌다
 		for (Iterator<Job> it = JOBS.iterator(); it.hasNext(); ) {
 			Job old = it.next();
@@ -156,8 +161,17 @@ public final class ArenaDress {
 		job.theme = theme;
 		job.cursor = 0;
 		job.restoring = false;
+		if (altar != null) {   // 0번 칸 = 제단: 펼쳐질 때 가장 먼저 테마 블록으로 바뀜
+			Cell c = new Cell();
+			c.x = altar.getX();
+			c.y = altar.getY();
+			c.z = altar.getZ();
+			c.data = altar.getBlockData().getAsString();
+			c.altar = true;
+			job.cells.add(c);
+		}
 		List<int[]> order = new ArrayList<>();
-		for (int dx = -RADIUS; dx <= RADIUS; dx++) {
+		for (int dx = -RADIUS; dx <= RADIUS && theme != Theme.GROTTO; dx++) {   // 정동은 바닥 무늬 없이 제단만
 			for (int dz = -RADIUS; dz <= RADIUS; dz++) {
 				if (dx * dx + dz * dz > RADIUS * RADIUS) continue;
 				order.add(new int[]{dx, dz, dx * dx + dz * dz});
@@ -210,6 +224,13 @@ public final class ArenaDress {
 		while (j.cursor < j.cells.size() && n < APPLY_BATCH) {
 			Cell c = j.cells.get(j.cursor++);
 			Block b = w.getBlockAt(c.x, c.y, c.z);
+			if (c.altar) {   // 보스 제단: 사라지고 아레나 테마 블록으로 덮임
+				b.setType(altarFloor(j.theme), false);
+				fx(w, c, j.theme, false);
+				BU.sound(new Location(w, c.x + 0.5, c.y + 0.5, c.z + 0.5), Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.AMBIENT, 1.2F, 0.7F);
+				n++;
+				continue;
+			}
 			if (!replaceable(b) && b.getType() != Material.AIR) { n++; continue; }
 			int dx = c.x - j.cx, dz = c.z - j.cz;
 			Material want = pattern(j.theme, dx, dz, dx * dx + dz * dz);
@@ -245,6 +266,7 @@ public final class ArenaDress {
 						Block b = w.getBlockAt(c.x, c.y, c.z);
 						if (!(b.getState(false) instanceof TileState)) {
 							b.setBlockData(data, false);
+							if (c.altar) Arenas.markAltar(b, siteOf(j.theme));   // 제단 복구: 소환 표식(PDC)까지
 							fx(w, c, j.theme, true);
 						}
 					} catch (Exception ignored) {}
@@ -265,7 +287,10 @@ public final class ArenaDress {
 			try {
 				BlockData data = Bukkit.createBlockData(c.data);
 				Block b = w.getBlockAt(c.x, c.y, c.z);
-				if (!(b.getState(false) instanceof TileState)) b.setBlockData(data, false);
+				if (!(b.getState(false) instanceof TileState)) {
+					b.setBlockData(data, false);
+					if (c.altar) Arenas.markAltar(b, siteOf(j.theme));
+				}
 			} catch (Exception ignored) {}
 		}
 		j.cursor = 0;
@@ -354,6 +379,47 @@ public final class ArenaDress {
 			case 2 -> Material.WAXED_EXPOSED_CUT_COPPER;
 			default -> Material.OXIDIZED_CUT_COPPER;
 		};
+	}
+
+	private static Site siteOf(Theme t) {
+		return t == Theme.FORGE ? Site.FORGE : t == Theme.TEMPLE ? Site.TEMPLE : Site.GROTTO;
+	}
+
+	/** 제단 블록이 사라진 자리를 덮는 아레나 테마 블록 (대장간 = 금박 흑암, 신전 = 시계 한가운데 금, 정동 = 자수정) */
+	private static Material altarFloor(Theme t) {
+		return switch (t) {
+			case FORGE -> Material.GILDED_BLACKSTONE;
+			case TEMPLE -> Material.GOLD_BLOCK;
+			case GROTTO -> Material.AMETHYST_BLOCK;
+		};
+	}
+
+	/** 보스 발밑 근처(최대 4칸 아래)에서 보스 제단 블록을 찾는다 */
+	private static Block findAltar(Boss boss, World w, int cx, int cz, int feetY) {
+		if (boss.arena != null && boss.arena.world() == w) {
+			Block b = w.getBlockAt(boss.arena.x(), boss.arena.y(), boss.arena.z());
+			if (Arenas.altarId(b) != null) return b;
+		}
+		for (int i = 0; i <= 4; i++) {
+			Block b = w.getBlockAt(cx, feetY - i, cz);
+			if (Arenas.altarId(b) != null) return b;
+		}
+		return null;
+	}
+
+	/** 제단 둘레(3칸 밖) 여섯 곳의 바닥 높이 중 가장 흔한 값 = 아레나 바닥 층 */
+	private static int floorAround(World w, Block altar) {
+		int[][] off = {{3, 0}, {-3, 0}, {0, 3}, {0, -3}, {3, 3}, {-3, -3}};
+		java.util.Map<Integer, Integer> count = new java.util.HashMap<>();
+		int best = altar.getY() - 1, bestN = 0;
+		for (int[] o : off) {
+			int x = altar.getX() + o[0], z = altar.getZ() + o[1];
+			if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
+			int y = floorY(w, x, altar.getY(), z);
+			int n = count.merge(y, 1, Integer::sum);
+			if (n > bestN) { bestN = n; best = y; }
+		}
+		return best;
 	}
 
 	private static Boss living(Job j) {

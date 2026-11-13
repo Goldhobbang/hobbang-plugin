@@ -65,9 +65,6 @@ public final class BossManager implements Listener {
 		DYING.clear();
 		Fx.clearAll();
 		Ritual.clear();
-		BossWarmup.shutdown();
-		// 예약된 제거 작업(조립 파편, 흩어진 파츠)은 플러그인이 꺼지면 실행되지 않는다 → 남은 표식 디스플레이를 한 번 쓸어낸다
-		try { cleanDisplays(); } catch (Exception ex) { HobbangPlugin.get().getLogger().warning("display cleanup: " + ex); }
 	}
 
 	private static void tick() {
@@ -162,12 +159,6 @@ public final class BossManager implements Listener {
 		if (existing != null) return existing;
 		BossKind kind = kindOf(m);
 		if (kind == null || m.isDead()) return null;
-		// 사망 연출 도중 언로드됐던 히트박스: 정산은 DYING 목록이 이미 끝냈다. 다시 붙이면 체력 1 · 무적 상태의 보스가 되살아난다.
-		if (m.getScoreboardTags().contains(DisplayBoss.DYING_TAG)) {
-			HobbangPlugin.get().getLogger().info("사망 연출 중 언로드됐던 보스 히트박스 정리: " + kind.id);
-			m.remove();
-			return null;
-		}
 		configure(m, kind);
 		Boss b = create(m, kind);
 		b.arena = com.hobbang.enhance.arena.ArenaRef.read(m);
@@ -255,7 +246,12 @@ public final class BossManager implements Listener {
 			DYING.add(b);
 			return; // 사망 연출 동안 파츠를 유지한다
 		}
-		if (b != null) b.unload();
+		if (b == null) return;     // a boss's own part displays are not in BOSSES: their removal never unloads anything
+		// Entities cannot be removed from inside the removal callback of another entity ("prevented from being removed"),
+		// and removing the parts here re-entered this handler. Unload on the next tick; parts that left with the chunk are
+		// already invalid by then and tagged leftovers are cleared when the boss re-attaches.
+		if (HobbangPlugin.get().isEnabled()) Bukkit.getScheduler().runTask(HobbangPlugin.get(), b::unload);
+		else b.unload();
 	}
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
