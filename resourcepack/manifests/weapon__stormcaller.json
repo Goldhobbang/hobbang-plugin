@@ -1,12 +1,12 @@
 {
   "id": "hobbang:weapon/stormcaller",
   "height_blocks": 2.2,
-  "resolution": 16,
+  "resolution": 96,
   "texels_per_voxel": 1,
   "model_units_per_block": 14.5,
   "item_display_scale": 1.103448275862069,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "Hand-designed weapons-detail geometry with v2 pixel textures from the original palette.",
+  "note": "weapons-texture-v3: long plates and bars, detail painted into large faces.",
   "parts": [
     {
       "name": "held",
@@ -25,13 +25,13 @@
       "scale": 1.103448275862069,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 333,
-      "cuboids_voxel": 183,
-      "cuboids_obb": 150,
-      "faces": 1998,
-      "texture_px": 128,
+      "cuboids": 36,
+      "cuboids_voxel": 18,
+      "cuboids_obb": 18,
+      "faces": 216,
+      "texture_px": 512,
       "voxels": 0
     }
   ],
-  "total_cuboids": 333
+  "total_cuboids": 36
 }

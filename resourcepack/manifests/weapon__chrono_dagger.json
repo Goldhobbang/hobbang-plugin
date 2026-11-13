@@ -1,12 +1,12 @@
 {
   "id": "hobbang:weapon/chrono_dagger",
   "height_blocks": 2.5,
-  "resolution": 16,
+  "resolution": 128,
   "texels_per_voxel": 1,
   "model_units_per_block": 11.75,
   "item_display_scale": 1.3617021276595744,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "Hand-designed weapons-detail geometry with v2 pixel textures from the original palette.",
+  "note": "weapons-texture-v3: long plates and bars, detail painted into large faces.",
   "parts": [
     {
       "name": "held",
@@ -25,13 +25,13 @@
       "scale": 1.3617021276595744,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 273,
-      "cuboids_voxel": 116,
-      "cuboids_obb": 157,
-      "faces": 1638,
-      "texture_px": 128,
+      "cuboids": 26,
+      "cuboids_voxel": 14,
+      "cuboids_obb": 12,
+      "faces": 156,
+      "texture_px": 512,
       "voxels": 0
     }
   ],
-  "total_cuboids": 273
+  "total_cuboids": 26
 }

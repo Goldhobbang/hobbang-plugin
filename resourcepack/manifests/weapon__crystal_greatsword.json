@@ -1,12 +1,12 @@
 {
   "id": "hobbang:weapon/crystal_greatsword",
   "height_blocks": 2.3,
-  "resolution": 16,
+  "resolution": 128,
   "texels_per_voxel": 1,
   "model_units_per_block": 13.0,
   "item_display_scale": 1.2307692307692308,
   "front": "+Z (boss local, yaw 0 = south)",
-  "note": "Hand-designed weapons-detail geometry with v2 pixel textures from the original palette.",
+  "note": "weapons-texture-v3: long plates and bars, detail painted into large faces.",
   "parts": [
     {
       "name": "held",
@@ -25,13 +25,13 @@
       "scale": 1.2307692307692308,
       "spin_axis": null,
       "mode": "box",
-      "cuboids": 151,
-      "cuboids_voxel": 33,
-      "cuboids_obb": 118,
-      "faces": 906,
-      "texture_px": 64,
+      "cuboids": 63,
+      "cuboids_voxel": 31,
+      "cuboids_obb": 32,
+      "faces": 378,
+      "texture_px": 512,
       "voxels": 0
     }
   ],
-  "total_cuboids": 151
+  "total_cuboids": 63
 }

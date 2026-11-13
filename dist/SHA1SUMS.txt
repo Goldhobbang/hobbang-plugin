@@ -1,2 +1,5 @@
 ea0dd16de18ccdcf2acc89d34fda38f1fcfa4375  hobbang-enhance-paper-1.5.2.jar
 d3ef0026a8509d5acbdf8bff2da86633c9e057e3  hobbang-pack-1.5.2.zip
+4535e0e978397faf251a8d1bf275b9e53edee375  hobbang-pack-1.5.2-weapons-v3.zip
+197f3f21231285ffd6c9ea08ba9f9e4c2e76c1ed  hobbang-pack-1.5.2-scythe-curve.zip
+c143d9923835f5bb1fa73e7cd781638e9dca52e4  hobbang-pack-1.5.2-weapons-3d.zip

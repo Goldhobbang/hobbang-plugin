@@ -17,8 +17,9 @@ def view_matrix(yaw_deg, pitch_deg):
     return rx @ ry
 
 
-def rasterize(tris_cam, W, H):
+def rasterize(tris_cam, W, H, uvs=None, alpha=None):
     """tris_cam: (N,3,3) in pixel coords (x right, y down, z = depth, larger = nearer).
+    With uvs (N,3,2) and an alpha map, texels below 128 are discarded (Minecraft cutout).
     Returns tri id per pixel (-1 none) and barycentrics (H,W,3)."""
     depth = np.full((H, W), -np.inf, dtype=np.float64)
     tid = np.full((H, W), -1, dtype=np.int64)
@@ -41,6 +42,11 @@ def rasterize(tris_cam, W, H):
         w1 = ((cy - ay) * (X - cx) + (ax - cx) * (Y - cy)) / den
         w2 = 1 - w0 - w1
         m = (w0 >= -1e-6) & (w1 >= -1e-6) & (w2 >= -1e-6)
+        if alpha is not None and m.any():
+            uv = w0[..., None] * uvs[i, 0] + w1[..., None] * uvs[i, 1] + w2[..., None] * uvs[i, 2]
+            ah, aw = alpha.shape
+            m &= alpha[np.clip((uv[..., 1] * ah).astype(int), 0, ah - 1),
+                       np.clip((uv[..., 0] * aw).astype(int), 0, aw - 1)] >= 128
         if not m.any():
             continue
         z = w0 * az + w1 * bz + w2 * cz
@@ -56,7 +62,7 @@ def rasterize(tris_cam, W, H):
 
 
 def render(tris, uvs, tex, yaw, pitch, size=512, center=None, extent=None,
-           bg=(40, 44, 52), cull_back=True, nearest=True):
+           bg=(40, 44, 52), cull_back=True, nearest=True, alpha_test=False, shade=True):
     """tris: (N,3,3) world coords (Y up). uvs: (N,3,2) in [0,1] (v down = image row).
     tex: HxWx3/4 uint8 array. Returns PIL image."""
     R = view_matrix(yaw, pitch)
@@ -76,7 +82,8 @@ def render(tris, uvs, tex, yaw, pitch, size=512, center=None, extent=None,
     if cull_back:
         keep = n_cam[:, 2] > 0
     idx = np.nonzero(keep)[0]
-    tid, bary = rasterize(px[idx], size, size)
+    cutout = alpha_test and tex.shape[2] == 4
+    tid, bary = rasterize(px[idx], size, size, uvs[idx] if cutout else None, tex[..., 3] if cutout else None)
     img = np.zeros((size, size, 3), np.float64)
     img[:] = bg
     hit = tid >= 0
@@ -94,8 +101,8 @@ def render(tris, uvs, tex, yaw, pitch, size=512, center=None, extent=None,
     nw = n_world[t]
     nw /= np.linalg.norm(nw, axis=1, keepdims=True) + 1e-12
     light = np.array([0.35, 0.8, 0.5]); light /= np.linalg.norm(light)
-    shade = 0.45 + 0.55 * np.clip(np.abs(nw @ light) if not cull_back else nw @ light, 0, 1)
-    img[hit] = col * shade[:, None]
+    lit = 0.45 + 0.55 * np.clip(np.abs(nw @ light) if not cull_back else nw @ light, 0, 1)
+    img[hit] = col * (lit[:, None] if shade else 1)
     return Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)), (center, extent)
 
 
