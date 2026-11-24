@@ -12,3 +12,9 @@ work/
 dist/hobbang-pack-*-*.zip
 hobbang-skill-sounds.zip
 *.bak
+
+# local agent backup folders (do not publish)
+/_t559-backup*/
+
+# root pack build artifact (canonical pack is under resourcepack/)
+/hobbang-pack.zip

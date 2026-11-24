@@ -224,7 +224,7 @@ public final class ForgeGui implements InventoryHolder, EnhanceLogic.Source {
 		ItemStack s = inv.getItem(EQUIP);
 		if (!ItemUtil.canEnhance(s)) return "장비 칸에 무기/방어구/도구를 넣으세요.";
 		int l = ItemUtil.getLevel(s);
-		if (l >= EnhanceLogic.MAX_LEVEL) return "이미 최대 강화(+15)입니다!";
+		if (l >= EnhanceLogic.MAX_LEVEL) return "이미 최대 강화(+" + EnhanceLogic.MAX_LEVEL + ")입니다!";
 		if (player.getGameMode() == GameMode.CREATIVE) return null;
 		EnhanceLogic.Odds o = EnhanceLogic.odds(this, s);
 		int have = EnhanceLogic.count(player, o.stone());
@@ -284,10 +284,10 @@ public final class ForgeGui implements InventoryHolder, EnhanceLogic.Source {
 		}
 		int l = ItemUtil.getLevel(s);
 		if (l >= EnhanceLogic.MAX_LEVEL) {
-			inv.setItem(INFO, icon(Material.NETHER_STAR, 1, plain("+15 최대 강화", NamedTextColor.LIGHT_PURPLE), List.of(plain("더 강화할 수 없습니다.", NamedTextColor.GRAY))));
+			inv.setItem(INFO, icon(Material.NETHER_STAR, 1, plain("+" + EnhanceLogic.MAX_LEVEL + " 최대 강화", NamedTextColor.LIGHT_PURPLE), List.of(plain("더 강화할 수 없습니다.", NamedTextColor.GRAY))));
 			inv.setItem(MAT, icon(Material.PRISMARINE_CRYSTALS, 1, plain("필요 재료", NamedTextColor.YELLOW), List.of(plain("-", NamedTextColor.GRAY))));
 			inv.setItem(XP, icon(Material.EXPERIENCE_BOTTLE, 1, plain("필요 경험치", NamedTextColor.YELLOW), List.of(plain("-", NamedTextColor.GRAY))));
-			inv.setItem(BUTTON, icon(Material.BARRIER, 1, plain("강화하기", NamedTextColor.DARK_GRAY), List.of(plain("이미 최대 강화(+15)입니다!", NamedTextColor.RED))));
+			inv.setItem(BUTTON, icon(Material.BARRIER, 1, plain("강화하기", NamedTextColor.DARK_GRAY), List.of(plain("이미 최대 강화(+" + EnhanceLogic.MAX_LEVEL + ")입니다!", NamedTextColor.RED))));
 			return;
 		}
 		EnhanceLogic.Odds o = EnhanceLogic.odds(this, s);
@@ -303,7 +303,7 @@ public final class ForgeGui implements InventoryHolder, EnhanceLogic.Source {
 			String nd = nm < 0 ? null : com.hobbang.enhance.item.EnhanceTier.gainAt(s, nm);
 			if (nd != null) lore.add(plain("다음 마일스톤 +" + nm + ": " + nd, NamedTextColor.DARK_PURPLE));
 		}
-		if (ItemUtil.isWeapon(s)) lore.add(plain("공격력 +" + com.hobbang.enhance.item.EnhanceTier.weaponDamage(l) + " → +" + com.hobbang.enhance.item.EnhanceTier.weaponDamage(l + 1), NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false));
+		if (ItemUtil.isWeapon(s)) lore.add(plain("공격력 +" + com.hobbang.enhance.item.EnhanceTier.weaponDamage(s, l) + " → +" + com.hobbang.enhance.item.EnhanceTier.weaponDamage(s, l + 1), NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false));
 		lore.add(plain("─ 결과 확률 (합계 100%) ─", NamedTextColor.GOLD));
 		lore.add(plain("✦ 성공  " + pct(a.success()) + (o.guaranteed() ? "  (장인의 기운 MAX!)" : ""), NamedTextColor.GREEN));
 		lore.add(plain("✖ 실패(유지)  " + pct(a.keep()), NamedTextColor.GRAY));

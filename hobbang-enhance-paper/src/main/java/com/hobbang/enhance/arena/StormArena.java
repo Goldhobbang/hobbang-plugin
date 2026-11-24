@@ -185,6 +185,9 @@ public final class StormArena implements Listener {
 		String world; int cx, cy, cz;
 		State state = State.BUILDING;
 		String boss;
+		/** 와이번이 나오기 전(CARVING~SUMMONING)에 끊기면 돌려줄 폭풍의 핵과 주인 (저장됨) */
+		boolean refundCore;
+		String refundOwner;
 		List<Change> placed = new ArrayList<>();
 		List<Change> altar = new ArrayList<>();
 		transient List<Plan> plan = new ArrayList<>();
@@ -314,7 +317,11 @@ public final class StormArena implements Listener {
 		}
 		Arena a = new Arena();
 		a.world = w.getName(); a.cx = c.getX(); a.cy = c.getY(); a.cz = c.getZ();
-		if (p.getGameMode() != GameMode.CREATIVE) core.setAmount(core.getAmount() - 1);
+		if (p.getGameMode() != GameMode.CREATIVE) {
+			core.setAmount(core.getAmount() - 1);
+			a.refundCore = true;
+			a.refundOwner = p.getUniqueId().toString();
+		}
 		transformAltar(a, w);
 		a.plan = carvePlan(a, w);
 		a.state = State.CARVING;
@@ -333,7 +340,7 @@ public final class StormArena implements Listener {
 	}
 
 	/** 잘라내면 안 되는 블록: 기반암·장벽·포탈·명령·상자류 */
-	static boolean keepBlock(Block b) {
+	public static boolean keepBlock(Block b) {
 		Material m = b.getType();
 		if (m.isAir()) return true;
 		if (m == Material.BEDROCK || m == Material.BARRIER || m == Material.STRUCTURE_VOID
@@ -657,7 +664,8 @@ public final class StormArena implements Listener {
 						removeCrystal(a);
 						Location spawn = new Location(w, a.cx + Site.STORM.spawnDx, a.cy + Site.STORM.spawnDy, a.cz + Site.STORM.spawnDz);
 						org.bukkit.entity.Mob m = BossManager.spawn(BossKind.TEMPEST_WYVERN, spawn);
-						if (m == null) { a.state = State.CRUMBLING; a.t = 0; dirty = true; break; }
+						if (m == null) { refund(a); a.state = State.CRUMBLING; a.t = 0; dirty = true; break; }
+						a.refundCore = false;   // 와이번 등장 = 핵 사용 확정
 						ArenaRef ref = a.ref();
 						ref.write(m);
 						Boss bb = BossManager.get(m);
@@ -669,7 +677,7 @@ public final class StormArena implements Listener {
 						w.playSound(spawn, Sound.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 3.0F, 1.3F);
 					}
 				}
-				case COUNTDOWN -> { if (a.t > 400) { a.state = State.CRUMBLING; a.t = 0; dirty = true; } }
+				case COUNTDOWN -> { if (a.t > 400) { refund(a); a.state = State.CRUMBLING; a.t = 0; dirty = true; } }
 				case ACTIVE -> {
 					if (a.t % 20 != 0) break;
 					Entity e = a.boss == null ? null : Bukkit.getEntity(UUID.fromString(a.boss));
@@ -682,12 +690,15 @@ public final class StormArena implements Listener {
 					removeCrystal(a);
 					if (!w.isChunkLoaded(a.cx >> 4, a.cz >> 4)) break;
 					if (a.t < 40) break;   // 2초 뒤부터 (전리품이 떨어질 시간)
+					// 언로드된 청크의 복구 기록은 버리지 않고 뒤로 미룬다 (예전: 지워져서 하늘에 투기장 블록이 영구히 남음)
+					List<Change> deferPlaced = new ArrayList<>(), deferAltar = new ArrayList<>();
 					for (int n = 0; n < CRUMBLE_PER_TICK; n++) {
-						List<Change> list = !a.placed.isEmpty() ? a.placed : a.altar;
+						boolean fromPlaced = !a.placed.isEmpty();
+						List<Change> list = fromPlaced ? a.placed : a.altar;
 						if (list.isEmpty()) break;
 						Change ch = list.remove(list.size() - 1);
+						if (!w.isChunkLoaded(ch.x >> 4, ch.z >> 4)) { (fromPlaced ? deferPlaced : deferAltar).add(ch); continue; }
 						a.keys.remove(Block.getBlockKey(ch.x, ch.y, ch.z));
-						if (!w.isChunkLoaded(ch.x >> 4, ch.z >> 4)) continue;
 						Block b = w.getBlockAt(ch.x, ch.y, ch.z);
 						BlockData now = Bukkit.createBlockData(ch.now);
 						if (b.getType() == now.getMaterial()) {
@@ -696,6 +707,8 @@ public final class StormArena implements Listener {
 						}
 						if (n == 0 && a.t % 4 == 0) w.playSound(b.getLocation(), Sound.BLOCK_DEEPSLATE_BREAK, SoundCategory.BLOCKS, 1.0F, 0.7F);
 					}
+					a.placed.addAll(0, deferPlaced);
+					a.altar.addAll(0, deferAltar);
 					if (a.placed.isEmpty() && a.altar.isEmpty()) { ARENAS.remove(a); dirty = true; }
 					else if (a.t % 100 == 0) dirty = true;
 				}
@@ -708,6 +721,12 @@ public final class StormArena implements Listener {
 	private static void summonTick(Arena a, World w) {
 		Ring ring = a.ring();
 		double top = a.cy + RING_TOP + 1;
+		if (a.t < SPAWN_AT && a.t % 20 == 0) {
+			int left = (SPAWN_AT - a.t) / 20;
+			Component bar = Component.text("⚡ 폭풍이 모여든다… " + left, NamedTextColor.AQUA, TextDecoration.BOLD);
+			Location c = new Location(w, a.cx + 0.5, top, a.cz + 0.5);
+			for (Player sp : w.getPlayers()) if (sp.getLocation().distanceSquared(c) < 64 * 64) sp.sendActionBar(bar);
+		}
 		if (a.t <= STORM_TICKS) {
 			int n = 1 + (RNG.nextBoolean() ? 1 : 0) + (a.t > STORM_TICKS / 2 && RNG.nextInt(3) == 0 ? 1 : 0);
 			for (int i = 0; i < n; i++) {
@@ -718,12 +737,6 @@ public final class StormArena implements Listener {
 				w.strikeLightningEffect(new Location(w, a.cx + cell[0] + 0.5, top, a.cz + cell[1] + 0.5));   // 피해·불 없음
 			}
 			if (a.t % 4 == 0) w.spawnParticle(Particle.ELECTRIC_SPARK, a.cx + 0.5, a.cy + DISC_Y + 2, a.cz + 0.5, 10, 0.4, 1.2, 0.4, 0.1);
-			if (a.t % 20 == 0) {
-				int left = (SPAWN_AT - a.t) / 20;
-				Component bar = Component.text("⚡ 폭풍이 모여든다… " + left, NamedTextColor.AQUA, TextDecoration.BOLD);
-				Location c = new Location(w, a.cx + 0.5, top, a.cz + 0.5);
-				for (Player sp : w.getPlayers()) if (sp.getLocation().distanceSquared(c) < 64 * 64) sp.sendActionBar(bar);
-			}
 			return;
 		}
 		Location rod = new Location(w, a.cx + 0.5, a.cy + DISC_Y + 1, a.cz + 0.5);
@@ -755,8 +768,13 @@ public final class StormArena implements Listener {
 
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void onDeath(EntityDeathEvent e) {
-		if (ARENAS.isEmpty()) return;
-		String id = e.getEntity().getUniqueId().toString();
+		bossFinished(e.getEntity().getUniqueId());
+	}
+
+	/** 보스 처치 확정 (EntityDeathEvent 또는 DisplayBoss 사망 연출 종료 — 후자는 히트박스를 remove() 하므로 죽음 이벤트가 없다) */
+	public static void bossFinished(UUID uuid) {
+		if (ARENAS.isEmpty() || uuid == null) return;
+		String id = uuid.toString();
 		for (Arena a : ARENAS) if (id.equals(a.boss) && a.state == State.ACTIVE) {
 			a.state = State.CRUMBLING; a.t = 0;
 			World w = a.w();
@@ -765,10 +783,36 @@ public final class StormArena implements Listener {
 		}
 	}
 
+	/** 와이번이 나오기 전에 끝난 투기장의 폭풍의 핵 반환: 주인이 접속해 있으면 가방, 아니면 제단 위에 떨군다 (한 번만) */
+	static void refund(Arena a) {
+		if (!a.refundCore) return;
+		World w = a.w();
+		Player owner = null;
+		try { if (a.refundOwner != null) owner = Bukkit.getPlayer(UUID.fromString(a.refundOwner)); } catch (IllegalArgumentException ignored) {}
+		ItemStack core = HItem.STORM_CORE.create();
+		if (owner != null && owner.isOnline()) {
+			for (ItemStack left : owner.getInventory().addItem(core).values()) owner.getWorld().dropItem(owner.getLocation(), left);
+			owner.sendMessage(Component.text("[홉방] 폭풍 투기장이 중단되어 폭풍의 핵을 돌려드렸습니다.", NamedTextColor.AQUA));
+		} else if (w != null) {
+			w.dropItem(new Location(w, a.cx + 0.5, a.cy + 1.2, a.cz + 0.5), core, it -> { it.setUnlimitedLifetime(true); it.setInvulnerable(true); });
+		} else {
+			return;   // 월드가 없으면 다음 로드 때 다시 시도
+		}
+		a.refundCore = false;
+	}
+
+	/** 플러그인 종료: 와이번이 아직 안 나온 투기장의 핵을 돌려주고 저장 (재시작하면 그 투기장은 무너진다) */
+	public static void shutdown() {
+		for (Arena a : ARENAS) if (a.state != State.ACTIVE && a.state != State.CRUMBLING) {
+			try { refund(a); } catch (Exception ex) { HobbangPlugin.get().getLogger().warning("폭풍의 핵 반환 실패: " + ex); }
+		}
+		saveSync();
+	}
+
 	/** 관리자: 진행 중인 폭풍 투기장을 즉시 무너뜨림 */
 	public static int crumbleAll() {
 		int n = 0;
-		for (Arena a : ARENAS) if (a.state != State.CRUMBLING) { a.state = State.CRUMBLING; a.t = 40; n++; }
+		for (Arena a : ARENAS) if (a.state != State.CRUMBLING) { if (a.state != State.ACTIVE) refund(a); a.state = State.CRUMBLING; a.t = 40; n++; }
 		save();
 		return n;
 	}
@@ -823,6 +867,8 @@ public final class StormArena implements Listener {
 				for (Change c : a.placed) a.keys.add(Block.getBlockKey(c.x, c.y, c.z));
 				for (Change c : a.altar) a.keys.add(Block.getBlockKey(c.x, c.y, c.z));
 				if (a.state != State.ACTIVE) { a.state = State.CRUMBLING; a.t = 40; }   // 건설/카운트다운 도중 꺼졌으면 정리
+				// 비정상 종료(크래시)로 종료 시 반환을 못 했으면 다음 틱에 제단 위로 돌려준다
+				if (a.refundCore) Bukkit.getScheduler().runTask(HobbangPlugin.get(), () -> { refund(a); save(); });
 				ARENAS.add(a);
 			}
 			HobbangPlugin.get().getLogger().info("폭풍 투기장 " + ARENAS.size() + "곳 복원 정보 불러옴");

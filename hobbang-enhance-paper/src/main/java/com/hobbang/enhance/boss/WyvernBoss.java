@@ -44,7 +44,7 @@ public class WyvernBoss extends DisplayBoss {
 	private static final int ORB_CD = 160, GUST_CD = 200, BREATH_CD = 280, BREATH_CD_LATE = 240;
 	private static final int DIVE_CD = 320, DIVE_CD_LATE = 280, TORNADO_CD = 400, VORTEX_CD = 440, STORM_CD = 560;
 	private float orbCd = ORB_CD, gustCd = GUST_CD;
-	private int diveCd = diveCooldown(), breathCd = breathCooldown();
+	private int diveCd = diveCooldown(), breathCd = breathCooldown(), diveAimTotal = 30;
 	private int tornadoCd = TORNADO_CD, vortexCd = VORTEX_CD, stormCd = STORM_CD;
 
 	private int breathCooldown() { return phase >= 3 ? BREATH_CD_LATE : BREATH_CD; }
@@ -89,7 +89,8 @@ public class WyvernBoss extends DisplayBoss {
 	@Override protected boolean glowParts() { return phase >= 3; }
 	@Override protected int glowColor() { return 0x60F0FF; }
 	@Override protected float modelYaw() { return flyYaw; }
-	@Override protected float damageMultiplier() { return mode == M_REST ? 1.5F : 1.0F; }
+	@Override protected float damageMultiplier() { return 1.0F; }
+	@Override protected boolean overrideEnergyModels() { return dying; }
 	@Override protected int xpReward() { return 900; }
 	@Override protected float legacyScale() { return LEGACY; }
 
@@ -117,11 +118,17 @@ public class WyvernBoss extends DisplayBoss {
 		java.util.Arrays.fill(wing, null);
 		if (modelMode) {
 			for (String n : W_PARTS) {
+				Part p;
 				if (n.equals("body") || n.equals("head") || n.equals("waist") || n.startsWith("wing_")) {
-					energyModel(n, false, false);
+					p = energyModel(n, false, false);
 				} else {
-					model(n, false);
+					p = model(n, false);
 				}
+				if (n.equals("body")) {
+					p.size.x *= 0.78F;
+					p.size.y *= 0.86F;
+				}
+				if (n.equals("head")) head = p;
 			}
 			return;
 		}
@@ -218,13 +225,13 @@ public class WyvernBoss extends DisplayBoss {
 		lift = lerp(0.33F, lift, dying || rest ? 0 : diving ? 0.25F : 1);
 		tuck = lerp(0.42F, tuck, dying || rest ? 0 : 1 - extend * 0.86F);
 		diveWeight = lerp(0.38F, diveWeight, aiming || diving ? 1 : 0);
-		wingAngle = lerp(0.40F, wingAngle, rest ? -32 : diving ? -34 : aiming ? -12 : -21);
+		wingAngle = lerp(0.40F, wingAngle, dying ? -40 : rest ? -32 : diving ? -34 : aiming ? -12 : -21);
 		wingPower = lerp(0.38F, wingPower, dying ? 0 : rest ? 2 * idle.weight() : diving ? 6 : aiming ? 42 : 35);
 		visualPitch = lerp(0.33F, visualPitch, dying || rest ? 0 : -flyPitch);
 		bank = lerp(0.40F, bank, dying || rest ? 0 : flyRoll);
 		aimModel(2.6F, 48, 33, 0.29F);
 		float wingFold = clamp(fold + spawnFold, 0, 1);
-		if (dying) wingFold = Math.max(wingFold, BossMotion.ease(deathU * 1.6F));
+		if (dying) wingFold = wingFold * (1 - BossMotion.ease(deathU * 2.5F));
 		BossPoses.Flight flight = new BossPoses.Flight(flap, lift, tuck, wingFold, wingAngle, wingPower,
 			visualPitch * (1 - 0.75F * landing) + spawnPitch, bank, landing, lookYaw, lookPitch, diveWeight, deathU);
 		BossMotion.Frame cast = motion(CAST);
@@ -266,13 +273,23 @@ public class WyvernBoss extends DisplayBoss {
 			mob.teleport(at, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
 			return;
 		}
-		mob.setVelocity(new Vector(v.getX(), 0, v.getZ()));
-		if (Math.abs(dy) < 1e-4) return;
+		mob.setVelocity(new Vector());
 		Location l = mob.getLocation();
-		l.add(0, dy, 0);
-		// 땅/블록을 뚫고 내려가지 않게 (아래로 갈 때만 검사)
-		if (dy < 0 && BU.solidAt(mob.getWorld(), new Vector(l.getX(), l.getY(), l.getZ()))) { vel.setY(0); return; }
-		mob.teleport(l, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+		double nx = l.getX() + v.getX();
+		double ny = l.getY() + dy;
+		double nz = l.getZ() + v.getZ();
+		if (dy < 0 && BU.solidAt(mob.getWorld(), new Vector(l.getX(), ny, l.getZ()))) {
+			ny = l.getY();
+			vel.setY(0);
+		}
+		if (BU.solidAt(mob.getWorld(), new Vector(nx, ny, nz))) {
+			nx = l.getX();
+			nz = l.getZ();
+		}
+		if (Math.abs(nx - l.getX()) > 1e-4 || Math.abs(ny - l.getY()) > 1e-4 || Math.abs(nz - l.getZ()) > 1e-4) {
+			Location to = new Location(mob.getWorld(), nx, ny, nz, l.getYaw(), l.getPitch());
+			mob.teleport(to, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
+		}
 	}
 
 	private void steer(Vector desired, double accel, double maxSpeed) {
@@ -356,7 +373,7 @@ public class WyvernBoss extends DisplayBoss {
 		switch (mode) {
 			case M_CIRCLE -> {
 				circleAngle += 0.025 * spd;
-				double r = 12.5;
+				double r = 5.0;
 				Vector desired = target.getLocation().toVector().add(new Vector(Math.cos(circleAngle) * r, 8.5 + Math.sin(tickCount * 0.05) * 1.5, Math.sin(circleAngle) * r));
 				steerChase(desired, 0.03, 0.65);   // t385: 추격 수평 속도 ×1.5 (최대 0.65 → XZ 0.975)
 				faceVelocity(8);
@@ -382,7 +399,8 @@ public class WyvernBoss extends DisplayBoss {
 					vortexCd = VORTEX_CD;
 				}
 				if (diveCd <= 0) {
-					mode = M_DIVE_AIM; modeTimer = 30; diveCd = diveCooldown();
+					diveAimTotal = phase >= 3 ? 15 : 30;
+					mode = M_DIVE_AIM; modeTimer = diveAimTotal; diveCd = diveCooldown();
 					Fx.discardBeams(uuid);
 					Location tl = target.getLocation();
 					diveTarget = new Vector(tl.getX(), BU.groundY(w, tl.getX(), tl.getY() + 1, tl.getZ()), tl.getZ());
@@ -397,7 +415,7 @@ public class WyvernBoss extends DisplayBoss {
 				faceVelocity(12);
 				double radius = 5.5 + mob.getWidth() / 2;
 				if (modeTimer % 2 == 0) BU.ring(w, Particle.DUST, BU.dust(0xFF2020, 1.6F), diveTarget, radius, 44);
-				if (modeTimer % 4 == 0) Fx.groundMark(w, diveTarget, radius, 1 - modeTimer / 30.0, kind);
+				if (modeTimer % 4 == 0) Fx.groundMark(w, diveTarget, radius, 1 - modeTimer / (double) diveAimTotal, kind);
 				if (modeTimer <= 0) { mode = M_DIVE; modeTimer = 70; Fx.discardBeams(uuid); }
 			}
 			case M_DIVE -> {
@@ -420,16 +438,23 @@ public class WyvernBoss extends DisplayBoss {
 					vel.zero();
 					Location at = mob.getLocation();
 					BU.sound(at, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 2.5F, 0.7F);
+					BU.sound(at, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, SoundCategory.HOSTILE, 1.6F, 0.7F);
 					w.spawnParticle(Particle.EXPLOSION_EMITTER, at.getX(), at.getY(), at.getZ(), 1, 0, 0, 0, 0);
 					w.spawnParticle(Particle.GUST_EMITTER_LARGE, at.getX(), at.getY(), at.getZ(), 1, 0, 0, 0, 0);
 					Fx.slam(this, pos(), 5.5 + mob.getWidth() / 2);
-					for (Player p : BU.victims(w, mob.getBoundingBox().expand(5.5, 3, 5.5))) BU.hit(p, mob, 12, pos(), 1.2, 0.8);
-					mode = M_REST; modeTimer = 60;
-					restContact = false;
-					landingAt = tickCount;
+					var victims = BU.victims(w, mob.getBoundingBox().expand(5.5, 3, 5.5));
+					for (Player p : victims) BU.hit(p, mob, 12, pos(), 1.2, 0.8);
 					int[] col = BossPatterns.colors(kind);
 					BossPatterns.shockRing(this, pos(), 10, 0.5, 7, 12, col[0], col[1]);   // v1.2.0 폭풍 고리 (점프로 피하기)
-					BU.say(mob, Component.text("✦ 와이번이 지쳐 땅에 내려앉았습니다! (3초간 받는 피해 +50%)", NamedTextColor.GREEN));
+					if (victims.isEmpty()) {
+						mode = M_REST; modeTimer = 120;
+						restContact = false;
+						landingAt = tickCount;
+						BU.say(mob, Component.text("✦ 와이번이 지쳐 땅에 내려앉았습니다!", NamedTextColor.GREEN));
+					} else {
+						mode = M_CLIMB; modeTimer = 30;
+						BU.sound(at, "hobbang:wyvern.flap", SoundCategory.HOSTILE, 3.0F, 1.0F);
+					}
 				}
 			}
 			case M_REST -> {
@@ -452,7 +477,10 @@ public class WyvernBoss extends DisplayBoss {
 			}
 			default -> mode = M_CIRCLE;
 		}
-		if (idle.active() && tickCount % 20 == 0 && mode != M_REST) BU.sound(here, "hobbang:wyvern.flap", SoundCategory.HOSTILE, 1.2F, 1.0F);
+		if (idle.active() && tickCount % 20 == 0 && mode != M_REST) {
+			BU.sound(here, "hobbang:wyvern.flap", SoundCategory.HOSTILE, 1.3F, 0.92F);
+			BU.sound(here, Sound.ENTITY_ENDER_DRAGON_FLAP, SoundCategory.HOSTILE, 1.1F, 0.72F);
+		}
 	}
 
 	private Vector mouth() {
@@ -624,6 +652,17 @@ public class WyvernBoss extends DisplayBoss {
 		deathU = 0;
 		noClip = false;
 		mob.setGravity(false);   // v1.5.0: 낙하는 drive() 로 직접 (중력/속도 Y 가 안 먹는다)
+		if (modelMode) {
+			if (head != null && head.display instanceof org.bukkit.entity.ItemDisplay idsp && idsp.isValid()) {
+				ItemStack st = new ItemStack(Material.PAPER);
+				st.editMeta(m -> m.setItemModel(new org.bukkit.NamespacedKey("hobbang", "boss/tempest_wyvern/head_off")));
+				idsp.setItemStack(st);
+				idsp.setBrightness(new Display.Brightness(0, 0));
+			}
+			for (Part p : parts) {
+				if (p != null && p.display.isValid()) p.display.setGlowing(false);
+			}
+		}
 		Fx.burst(mob.getWorld(), mouth(), kind, 24, 1.25);
 		BU.sound(mob.getLocation(), "hobbang:wyvern.roar.awaken", SoundCategory.HOSTILE, 3.0F, 1.0F);
 	}

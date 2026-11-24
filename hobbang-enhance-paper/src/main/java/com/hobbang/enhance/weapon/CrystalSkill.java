@@ -25,7 +25,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /** 수정 대검: (3강~) 우클릭 관통 베기, (7강~) 거대 수정 대검 낙하 + 풀강(15강) 웅크리고 우클릭 수정 가시(바라보는 방향으로 4갈래) */
-final class CrystalSkill {
+public final class CrystalSkill {
 	private CrystalSkill() {}
 
 	/** 관통 베기 기본 거리(3강) — 실제 거리는 EnhanceTier.crystalPierceRange(lv) = 10 + (lv − 3) */
@@ -34,6 +34,9 @@ final class CrystalSkill {
 	/** 수정이 뻗는 방향 수: 13강 4 / 10강 3 / 그 미만 1 (t390: 전방위 8갈래 취소, 원래 전방 부채꼴로) */
 	static int lines(int lv) {
 		return lv >= 13 ? 4 : lv >= 10 ? 3 : 1;
+	}
+	public static int spikeCount(int lv) {
+		return 8 + lv / 5;
 	}
 	/** t388: 관통 베기 뒤 거대 대검 낙하(꽂기)는 7강부터 */
 	public static final int PLUNGE_LV = 7;
@@ -44,21 +47,29 @@ final class CrystalSkill {
 		Vector dir = p.getLocation().getDirection();
 		if (dir.lengthSquared() < 1e-6) dir = new Vector(0, 0, 1);
 		dir.normalize();
-		int n = lines(lv), spikes = Math.max(2, (int) Math.round((8 + lv / 5) * WeaponListener.RANGE_CUT * 0.5));   // 길이 추가 50% 축소
-		Vector o = p.getLocation().toVector();
+		int n = lines(lv), spikes = spikeCount(lv);
+		Vector o = p.getLocation().toVector().add(new Vector(0, 0.5, 0));
 		java.util.Set<java.util.UUID> hit = new java.util.HashSet<>();   // 여러 갈래·가시에 같은 대상은 시전당 1번만
 		for (int j = 0; j < n; j++) {
 			double off = Math.toRadians((j - (n - 1) / 2.0) * 22.0 * WeaponListener.RANGE_CUT);   // 갈래 각도 약 13° (원래대로)
 			Vector d = dir.clone().rotateAroundY(off);   // 좌우로만 벌어지고 위아래 각도는 시선 그대로
+			Vector cur = o.clone();
+			Vector half = d.clone().multiply(0.6);
+			outer:
 			for (int i = 1; i <= spikes; i++) {
-				Vector at = o.clone().add(d.clone().multiply(i * 1.2));
-				// 막힌 블록 안이면: 한 칸 위가 비었으면 그 위로 올려 계속(턱 넘기), 아니면 그 갈래는 여기서 멈춘다
-				if (!passable(sl, at)) {
-					Vector up = at.clone().add(new Vector(0, 1, 0));
-					if (!passable(sl, up)) break;
-					at = new Vector(at.getX(), Math.floor(at.getY()) + 1, at.getZ());
+				for (int s = 0; s < 2; s++) {
+					Vector next = cur.clone().add(half);
+					if (!passable(sl, next)) {
+						// 1칸 단차만 넘고, 2칸 이상 고체 벽·천장은 뚫지 않고 멈춘다
+						Vector step = new Vector(next.getX(), Math.floor(next.getY()) + 1.15, next.getZ());
+						Vector headCheck = new Vector(cur.getX(), step.getY(), cur.getZ());
+						if (!passable(sl, step) || !passable(sl, headCheck)) break outer;
+						cur = step;
+					} else {
+						cur = next;
+					}
 				}
-				ColossusBoss.spike(sl, at, i, (tier >= 1 ? 1.35F : 1.1F) + i * 0.04F, p.getUniqueId(), p, 10 * mult, hit);
+				ColossusBoss.spike(sl, cur.clone(), i, (tier >= 1 ? 1.35F : 1.1F) + i * 0.04F, p.getUniqueId(), p, 10 * mult, hit);
 			}
 		}
 		WeaponFx.crystalCast(sl, p, tier);
@@ -80,25 +91,42 @@ final class CrystalSkill {
 		dir.normalize();
 		Vector eyeV = eye.toVector();
 		final double range = com.hobbang.enhance.item.EnhanceTier.crystalPierceRange(lv);   // 3강 10칸 … 15강 22칸
+		final double swordDmg = swordDamage(p, lv);
 		double eyeH = p.getEyeHeight();
 		if (eyeH < 0.8) eyeH = 1.62;
 
 		// 시선 경로에서 벽에 막히기 전까지. 도착 시 발·몸·머리가 비어 있어야 함
+		// t413: 살짝 아래를 보면(평지에서 pitch 8° 등) 발 위치가 바닥 블록에 박혀 clear=0 → "베기 실패" 되던 문제.
+		// 발 지점이 막히면 직전 발 높이 +1칸 이내에서 가장 낮은 설 수 있는 높이(지면 윗면)로 올려
+		// 지면을 따라 미끄러지듯 이동한다. 직전 높이보다 1칸 넘게 높은 벽(2칸 이상)이면 멈춤.
 		double clear = 0;
+		double lastY = start.getY();
+		List<double[]> path = new ArrayList<>();   // {d, x, y, z} 착지 가능한 발 위치
 		for (double d = 0.5; d <= range; d += 0.5) {
 			Vector feet = eyeV.clone().add(dir.clone().multiply(d)).subtract(new Vector(0, eyeH, 0));
-			if (!passable(sl, feet) || !passable(sl, feet.clone().add(new Vector(0, 1.0, 0))) || !passable(sl, feet.clone().add(new Vector(0, 1.8, 0)))) break;
+			// 얇은 바닥 아래 빈 공간으로 빠지지 않도록: 직전 발 높이에서 내려온 사이에 고체 블록이 있으면 막힌 것으로 본다
+			if (!standable(sl, feet) || !columnClear(sl, feet, lastY)) {
+				Vector lifted = null;
+				for (double y = Math.floor(feet.getY()) + 1.0; y <= Math.floor(lastY + 1e-6) + 1.0 + 1e-6; y += 1.0) {
+					Vector up = feet.clone().setY(y);
+					if (standable(sl, up) && columnClear(sl, up, lastY)) { lifted = up; break; }
+				}
+				if (lifted == null) break;
+				feet = lifted;
+			}
 			clear = d;
+			lastY = feet.getY();
+			path.add(new double[]{d, feet.getX(), feet.getY(), feet.getZ()});
 		}
-		// 베기 판정: 시선 경로(3D 전방위) 옆 약 1칸(기존 1.6의 60%) 안의 적 전부 — 뚫고 지나가며 벤다
+		// 베기 판정: 시선 경로(3D 전방위) 좌우·상하 2.6칸 폭 안의 적 전부 — 넓게 베고 지나간다
 		List<LivingEntity> hits = new ArrayList<>();
 		double farthest = 0;
 		Vector dd = dir;
-		for (LivingEntity t : WeaponListener.around(p, range + 2)) {
+		for (LivingEntity t : WeaponListener.around(p, range + 3)) {
 			Vector to = t.getLocation().toVector().add(new Vector(0, t.getHeight() * 0.5, 0)).subtract(eyeV);
 			double along = to.dot(dd);
 			double side = to.clone().subtract(dd.clone().multiply(along)).length();
-			if (along < -0.5 || along > clear + 1.5 || side > 1.6 * WeaponListener.RANGE_CUT + t.getWidth() / 2) continue;
+			if (along < -0.8 || along > clear + 2.2 || side > 2.6 + t.getWidth() / 2) continue;
 			hits.add(t);
 			farthest = Math.max(farthest, along);
 		}
@@ -106,41 +134,70 @@ final class CrystalSkill {
 		boolean success = !hits.isEmpty();
 		double go = success ? Math.min(clear, farthest + 1.2) : clear;   // 성공: 적을 지나쳐 서고, 실패: 갈 수 있는 곳(최대 range 칸)까지 순간이동
 
-		// 궤적 연출 (시선 경로)
-		for (double d = 0; d <= go; d += 0.6) {
+		// 궤적 연출 (넓어진 베기 폭)
+		Vector right = new Vector(-dir.getZ(), 0, dir.getX());
+		if (right.lengthSquared() < 1e-6) right = new Vector(1, 0, 0);
+		else right.normalize();
+		for (double d = 0; d <= go; d += 0.55) {
 			Vector v = eyeV.clone().add(dir.clone().multiply(d));
-			sl.spawnParticle(Particle.END_ROD, v.getX(), v.getY(), v.getZ(), 1, 0.05, 0.3, 0.05, 0.02);
-			if (((int) (d / 0.6)) % 3 == 0) sl.spawnParticle(Particle.SWEEP_ATTACK, v.getX(), v.getY(), v.getZ(), 1, 0, 0, 0, 0);
-			sl.spawnParticle(Particle.BLOCK, v.getX(), v.getY(), v.getZ(), 2, 0.2, 0.1, 0.2, 0.05, Material.AMETHYST_BLOCK.createBlockData());
+			sl.spawnParticle(Particle.END_ROD, v.getX(), v.getY(), v.getZ(), 2, 0.8, 0.4, 0.8, 0.03);
+			if (((int) (d / 0.55)) % 2 == 0) {
+				sl.spawnParticle(Particle.SWEEP_ATTACK, v.getX(), v.getY(), v.getZ(), 1, 0, 0, 0, 0);
+				Vector l1 = v.clone().add(right.clone().multiply(1.3)), l2 = v.clone().subtract(right.clone().multiply(1.3));
+				sl.spawnParticle(Particle.SWEEP_ATTACK, l1.getX(), l1.getY(), l1.getZ(), 1, 0, 0, 0, 0);
+				sl.spawnParticle(Particle.SWEEP_ATTACK, l2.getX(), l2.getY(), l2.getZ(), 1, 0, 0, 0, 0);
+			}
+			sl.spawnParticle(Particle.BLOCK, v.getX(), v.getY(), v.getZ(), 3, 0.9, 0.2, 0.9, 0.06, Material.AMETHYST_BLOCK.createBlockData());
 		}
-		BU.sound(start, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.4F, 0.6F);
-		BU.sound(start, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.PLAYERS, 1.4F, 1.4F);
+		BU.sound(start, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.6F, 1.35F);
+		BU.sound(start, Sound.ITEM_TRIDENT_THROW, SoundCategory.PLAYERS, 1.3F, 1.6F);
+		BU.sound(start, Sound.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.PLAYERS, 1.4F, 1.2F);
+		BU.sound(start, Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 1.5F, 1.6F);
 
-		// 베기 피해 (뚫고 지나가므로 전원). 처치하면 쿨 즉시 초기화
+		// 첫 타 피해 = 검 공격력의 50%, 이후 대검 낙하 = 150%. 처치하면 쿨 즉시 초기화 + 초기화 사운드
 		boolean killed = false;
 		for (LivingEntity t : hits) {
-			WeaponListener.skillHit(t, p, 12.0 * mult);
+			WeaponListener.skillHit(t, p, swordDmg * 0.5);
 			if (dead(t)) killed = true;
 			Location tl = t.getLocation();
-			sl.spawnParticle(Particle.CRIT, tl.getX(), tl.getY() + t.getHeight() * 0.5, tl.getZ(), 14, 0.3, 0.4, 0.3, 0.3);
+			BU.sound(tl, Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.2F, 1.4F);
+			BU.sound(tl, Sound.BLOCK_GLASS_BREAK, SoundCategory.PLAYERS, 0.65F, 1.75F);
+			BU.sound(tl, Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.PLAYERS, 0.9F, 1.5F);
+			sl.spawnParticle(Particle.CRIT, tl.getX(), tl.getY() + t.getHeight() * 0.5, tl.getZ(), 16, 0.35, 0.45, 0.35, 0.3);
 		}
-		if (go > 0.4) {
-			Vector feet = eyeV.clone().add(dir.clone().multiply(go)).subtract(new Vector(0, eyeH, 0));
-			Location to = new Location(sl, feet.getX(), feet.getY(), feet.getZ(), start.getYaw(), start.getPitch());
+		if (killed) resetCooldownSound(p, false);
+		if (go > 0.4 && !path.isEmpty()) {
+			double[] best = path.get(0);
+			for (double[] pt : path) if (pt[0] <= go + 1e-6) best = pt;
+			Location to = new Location(sl, best[1], best[2], best[3], start.getYaw(), start.getPitch());
 			p.teleport(to, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN);
 			p.setFallDistance(0);
 			BU.sound(to, Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.8F, 1.6F);
 		}
-		p.sendActionBar(Component.text(success ? "✦ 관통 베기 " + hits.size() + "마리" : "✦ 베기 실패 — 순간이동", NamedTextColor.LIGHT_PURPLE));
+		// t413: 처치 시 쿨 초기화 문구가 이 줄에 덮여 안 보이던 문제 → 한 줄로 합쳐 보여준다
+		p.sendActionBar(Component.text(success ? "✦ 관통 베기 " + hits.size() + "마리" + (killed ? " · 처치! 쿨타임 초기화" : "") : "✦ 베기 실패 — 순간이동", NamedTextColor.LIGHT_PURPLE));
 
-		// 벤 모든 적 위로 거대 수정 대검 낙하 (대상마다 2틱씩 엇갈려) — t388: 7강부터
+		// 벤 모든 적 위로 거대 수정 대검 낙하 (검 공격력의 150%) — t388: 7강부터
 		if (lv >= PLUNGE_LV) for (int i = 0; i < hits.size(); i++) {
 			LivingEntity t = hits.get(i);
 			Fx.later(8 + 2 * i, () -> {
-				if (t.isValid() && !t.isDead() && p.isOnline()) fallingSword(p, t);
+				if (t.isValid() && !t.isDead() && p.isOnline()) fallingSword(p, t, swordDmg * 1.5);
 			});
 		}
 		return killed;
+	}
+
+	private static double swordDamage(Player p, int lv) {
+		var attr = p.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
+		if (attr != null && attr.getValue() > 0) return attr.getValue();
+		return 1.0 + HItem.CRYSTAL_GREATSWORD.damage + com.hobbang.enhance.item.EnhanceTier.crystalDamage(lv);
+	}
+
+	private static void resetCooldownSound(Player p, boolean bar) {
+		if (p == null || !p.isOnline()) return;
+		p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.PLAYERS, 1.4F, 1.6F);
+		p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 1.0F, 1.5F);
+		if (bar) p.sendActionBar(Component.text("✦ 처치! 관통 베기 쿨타임 초기화", NamedTextColor.LIGHT_PURPLE));
 	}
 
 	private static boolean dead(LivingEntity t) {
@@ -148,7 +205,22 @@ final class CrystalSkill {
 	}
 
 	private static void clearCrystalCooldown(Player p) {
-		if (p != null && p.isOnline()) p.setCooldown(HItem.CRYSTAL_GREATSWORD.cooldownGroup(), 0);
+		if (p != null && p.isOnline()) {
+			p.setCooldown(HItem.CRYSTAL_GREATSWORD.cooldownGroup(), 0);
+			resetCooldownSound(p, true);   // 대검 낙하 처치: 관통 베기 문구가 지난 뒤라 단독 표시
+		}
+	}
+
+	/** 발·몸통·머리(0 / +1.0 / +1.8) 가 모두 비어 있으면 그 발 위치에 설 수 있다 */
+	/** feet 위치에서 위로 fromY(직전 발 높이)까지 같은 x,z 기둥이 모두 통과 가능한지 */
+	private static boolean columnClear(World w, Vector feet, double fromY) {
+		for (int y = feet.getBlockY() + 1; y <= (int) Math.floor(fromY); y++)
+			if (!passable(w, new Vector(feet.getX(), y + 0.5, feet.getZ()))) return false;
+		return true;
+	}
+
+	private static boolean standable(World w, Vector feet) {
+		return passable(w, feet) && passable(w, feet.clone().add(new Vector(0, 1.0, 0))) && passable(w, feet.clone().add(new Vector(0, 1.8, 0)));
 	}
 
 	private static boolean passable(World w, Vector v) {
@@ -157,8 +229,8 @@ final class CrystalSkill {
 		return b.isPassable();
 	}
 
-	/** 블록 디스플레이로 만든 거대 수정 대검(끝이 아래)이 대상 머리 위에서 내리꽂힌다 → 20 피해 */
-	private static void fallingSword(Player p, LivingEntity t) {
+	/** 블록 디스플레이로 만든 거대 수정 대검(끝이 아래)이 대상 머리 위에서 내리꽂힌다 → 검 피해 150% */
+	private static void fallingSword(Player p, LivingEntity t, double dmg) {
 		World sl = t.getWorld();
 		Vector at = t.getLocation().toVector();
 		final float H = 18F;
@@ -179,7 +251,7 @@ final class CrystalSkill {
 				for (Part pt : parts) Fx.shape(pt.d(), pt.t(), pt.q(), pt.s(), 4);   // 4틱에 내리꽂힘
 			} else if (fx.age == 7) {
 				if (t.isValid() && !t.isDead()) {
-					WeaponListener.skillHit(t, p, SWORD_DMG);
+					WeaponListener.skillHit(t, p, dmg);
 					if (dead(t)) clearCrystalCooldown(p);
 				}
 				w.spawnParticle(Particle.EXPLOSION, at.getX(), at.getY() + 0.4, at.getZ(), 2, 0.3, 0.1, 0.3, 0);

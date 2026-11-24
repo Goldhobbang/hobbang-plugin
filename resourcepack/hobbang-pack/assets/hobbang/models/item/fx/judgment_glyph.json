@@ -1,0 +1,18 @@
+{
+  "credit": "t413 judgment sigil — flat 1-plane quad (lies in the XZ plane, centered), scaled by the item_display transformation",
+  "textures": {
+    "glyph": "hobbang:item/fx/judgment_glyph",
+    "particle": "hobbang:item/fx/judgment_glyph"
+  },
+  "elements": [
+    {
+      "from": [0, 8, 0],
+      "to": [16, 8, 16],
+      "shade": false,
+      "faces": {
+        "up": {"uv": [0, 0, 16, 16], "texture": "#glyph"},
+        "down": {"uv": [0, 16, 16, 0], "texture": "#glyph"}
+      }
+    }
+  ]
+}

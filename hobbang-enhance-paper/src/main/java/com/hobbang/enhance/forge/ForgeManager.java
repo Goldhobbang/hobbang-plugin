@@ -101,11 +101,17 @@ public final class ForgeManager implements Listener {
 	private static void loadChunk(Chunk c) {
 		long[] a = get(c);
 		if (a.length == 0) return;
+		long[] keep = new long[a.length];
+		int n = 0;
 		for (long v : a) {
 			int lx = (int) ((v >>> 60) & 15), lz = (int) ((v >>> 56) & 15), y = (int) ((v & 0xFFFFL) - 2048);
+			if (y < c.getWorld().getMinHeight() || y >= c.getWorld().getMaxHeight()) continue;
 			Block b = c.getBlock(lx, y, lz);
-			if (b.getType() == Material.SMITHING_TABLE) LOADED.add(b);
+			if (b.getType() != Material.SMITHING_TABLE) continue;   // /setblock·WorldEdit 등으로 사라진 강화대 기록은 버린다
+			LOADED.add(b);
+			keep[n++] = v;
 		}
+		if (n != a.length) set(c, java.util.Arrays.copyOf(keep, n));
 	}
 
 	@EventHandler
@@ -124,9 +130,11 @@ public final class ForgeManager implements Listener {
 	@EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
 	public void onPlace(BlockPlaceEvent e) {
 		if (HItem.ENHANCE_FORGE.is(e.getItemInHand())) add(e.getBlockPlaced());
+		else if (e.getBlockPlaced().getType() == Material.SMITHING_TABLE && isForge(e.getBlockPlaced())) remove(e.getBlockPlaced());   // 남은 옛 기록 위에 일반 작업대 → 강화대가 되지 않게
 	}
 
-	@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
+	// MONITOR: 보호 플러그인 등이 HIGHEST 에서 파괴를 취소하면 블록은 남는데 아이템만 떨어지던 복제 방지 (취소된 파괴는 여기 오지 않음)
+	@EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
 	public void onBreak(BlockBreakEvent e) {
 		Block b = e.getBlock();
 		if (!isForge(b)) return;
@@ -230,7 +238,9 @@ public final class ForgeManager implements Listener {
 	private static void ambient() {
 		if (LOADED.isEmpty()) return;
 		ThreadLocalRandom r = ThreadLocalRandom.current();
-		LOADED.removeIf(b -> b.getType() != Material.SMITHING_TABLE);
+		List<Block> gone = new java.util.ArrayList<>();
+		LOADED.removeIf(b -> { if (b.getType() != Material.SMITHING_TABLE) { gone.add(b); return true; } return false; });
+		for (Block b : gone) remove(b);   // 이벤트 없이 사라진 강화대(/setblock 등)의 청크 기록도 지운다
 		for (Block b : LOADED) {
 			World w = b.getWorld();
 			double x = b.getX(), y = b.getY(), z = b.getZ();

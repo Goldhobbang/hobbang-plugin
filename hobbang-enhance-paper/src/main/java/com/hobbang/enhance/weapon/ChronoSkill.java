@@ -37,9 +37,8 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -51,6 +50,10 @@ import java.util.UUID;
 public final class ChronoSkill implements Listener {
 	static final int TIMER_TICKS = 100, DING_DELAY = 30, SETTLE_STUN = 20;
 	private static final NamespacedKey NOGRAV = Keys.k("chrono_nograv");
+	private static final NamespacedKey NOAI = Keys.k("chrono_noai");
+
+	/** 업보청산 추가 피해 비율: 15강 +10% → 20강 +50% (강화당 +8%p) */
+	public static double karmaBonus(int lv) { return 0.10 + 0.08 * Math.max(0, lv - 15); }
 
 	/** 범위: 기본 + (스킬 강화 단계 × 0.1 × 2). 기존 bossRadiusAdd(0.1/단계)의 2배. 3강 해금부터 증가 */
 	static double radiusAdd(int lv) { return 0.2 * com.hobbang.enhance.item.EnhanceTier.bossSkillLv(lv); }
@@ -91,12 +94,18 @@ public final class ChronoSkill implements Listener {
 			}
 			if (lv >= 10) WeaponListener.skillDamage(t, p, 4 * mult);
 		}
+		for (Entity en : sl.getNearbyEntities(p.getBoundingBox().expand(fr))) {
+			if (en instanceof Projectile pr && pr.isValid() && !(pr.getShooter() instanceof Player pl && pl == p)) {
+				freezeProjectile(pr, dur);
+			}
+		}
 		WeaponFx.clockField(sl, p, p.getLocation().toVector(), tier, (float) fr);   // 법진 = 정지 범위에 딱 맞게
 		p.sendActionBar(Component.text("☽ 낫 베기 " + cut + "마리 · ⏸ 시간 정지 " + n + "마리", NamedTextColor.AQUA));
 	}
 
-	// ───────── 스턴: 발광 → 0.2초 뒤 중력 정지 → 끝나면 복구 ─────────
+	// ───────── 스턴: AI + 중력 + 속도 완전 정지 → 끝나면 복구 ─────────
 	private static final Map<UUID, BukkitTask> RESTORE = new HashMap<>();
+	private static final Map<UUID, BukkitTask> LOCK = new HashMap<>();
 
 	static void stun(LivingEntity t, int dur) {
 		if (BossManager.isBoss(t)) return;
@@ -106,15 +115,51 @@ public final class ChronoSkill implements Listener {
 		UUID id = t.getUniqueId();
 		BukkitTask old = RESTORE.remove(id);
 		if (old != null) old.cancel();
-		Fx.later(4, () -> {
-			if (!t.isValid() || t.isDead()) return;
-			if (!t.getPersistentDataContainer().has(NOGRAV, PersistentDataType.BYTE) && t.hasGravity()) {
-				t.setGravity(false);
-				t.getPersistentDataContainer().set(NOGRAV, PersistentDataType.BYTE, (byte) 1);
+		BukkitTask oldLock = LOCK.remove(id);
+		if (oldLock != null) oldLock.cancel();
+
+		if (t instanceof org.bukkit.entity.Mob m) {
+			if (!m.getPersistentDataContainer().has(NOAI, PersistentDataType.BYTE) && m.hasAI()) {
+				m.setAI(false);
+				m.getPersistentDataContainer().set(NOAI, PersistentDataType.BYTE, (byte) 1);
 			}
+			m.setTarget(null);
+			m.getPathfinder().stopPathfinding();
+		}
+		if (!t.getPersistentDataContainer().has(NOGRAV, PersistentDataType.BYTE) && t.hasGravity()) {
+			t.setGravity(false);
+			t.getPersistentDataContainer().set(NOGRAV, PersistentDataType.BYTE, (byte) 1);
+		}
+		t.setVelocity(new Vector());
+		t.setFallDistance(0);
+		final Location pin = t.getLocation().clone();
+		LOCK.put(id, Bukkit.getScheduler().runTaskTimer(HobbangPlugin.get(), () -> {
+			if (!t.isValid() || t.isDead()) { BukkitTask lk = LOCK.remove(id); if (lk != null) lk.cancel(); return; }
 			t.setVelocity(new Vector());
-		});
+			t.setFallDistance(0);
+			if (t.getLocation().distanceSquared(pin) > 0.04) t.teleport(pin);
+		}, 1L, 1L));
 		RESTORE.put(id, Bukkit.getScheduler().runTaskLater(HobbangPlugin.get(), () -> release(id), Math.max(5, dur)));
+	}
+
+	private static void freezeProjectile(Projectile pr, int dur) {
+		final Vector savedVel = pr.getVelocity().clone();
+		final boolean hadGrav = pr.hasGravity();
+		pr.setGravity(false);
+		pr.setVelocity(new Vector());
+		final Location pin = pr.getLocation().clone();
+		BukkitTask hold = Bukkit.getScheduler().runTaskTimer(HobbangPlugin.get(), () -> {
+			if (!pr.isValid() || pr.isDead()) return;
+			pr.setVelocity(new Vector());
+			if (pr.getLocation().distanceSquared(pin) > 0.02) pr.teleport(pin);
+		}, 1L, 1L);
+		Bukkit.getScheduler().runTaskLater(HobbangPlugin.get(), () -> {
+			hold.cancel();
+			if (pr.isValid() && !pr.isDead()) {
+				pr.setGravity(hadGrav);
+				pr.setVelocity(savedVel);
+			}
+		}, Math.max(5, dur));
 	}
 
 	/** 이미 더 긴 크로노 스턴이 있으면 줄이지 않는다 */
@@ -125,6 +170,8 @@ public final class ChronoSkill implements Listener {
 
 	private static void release(UUID id) {
 		RESTORE.remove(id);
+		BukkitTask lk = LOCK.remove(id);
+		if (lk != null) lk.cancel();
 		Entity e = Bukkit.getEntity(id);
 		if (e instanceof LivingEntity le) restore(le);
 	}
@@ -133,6 +180,10 @@ public final class ChronoSkill implements Listener {
 		if (le.getPersistentDataContainer().has(NOGRAV, PersistentDataType.BYTE)) {
 			le.setGravity(true);
 			le.getPersistentDataContainer().remove(NOGRAV);
+		}
+		if (le instanceof org.bukkit.entity.Mob m && m.getPersistentDataContainer().has(NOAI, PersistentDataType.BYTE)) {
+			m.setAI(true);
+			m.getPersistentDataContainer().remove(NOAI);
 		}
 	}
 
@@ -155,28 +206,39 @@ public final class ChronoSkill implements Listener {
 
 	// ───────── 15강: 5초 타이머 ─────────
 	private static final class Timer {
-		final Set<UUID> mobs = new LinkedHashSet<>();
+		final Map<UUID, Double> mobs = new LinkedHashMap<>();
 		double total;
 	}
 
 	private static final Map<UUID, Timer> TIMERS = new HashMap<>();
+	private static boolean settling = false;
 
-	/** 타이머 동안 플레이어가 입힌 피해와 때린 몹을 기록 (타이머 자신의 마무리 피해는 타이머가 끝난 뒤라 기록되지 않음) */
-	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+	/** 타이머 5초 동안 실제 피해는 0으로 만들고, 몹별로 들어갈 피해(스킬 포함)를 누적한다 */
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onDamage(EntityDamageByEntityEvent e) {
-		if (TIMERS.isEmpty()) return;
+		if (settling || TIMERS.isEmpty()) return;
 		Player p = e.getDamager() instanceof Player pl ? pl
 			: e.getDamager() instanceof Projectile pr && pr.getShooter() instanceof Player ps ? ps : null;
 		if (p == null) return;
 		Timer t = TIMERS.get(p.getUniqueId());
 		if (t == null || !(e.getEntity() instanceof LivingEntity le) || e.getEntity() instanceof Player) return;
-		t.mobs.add(le.getUniqueId());
-		t.total += e.getFinalDamage();
+		if (e.getFinalDamage() <= 0) return;
+		double dmg = e.getDamage();
+		if (dmg <= 0) return;
+		t.mobs.merge(le.getUniqueId(), dmg, Double::sum);
+		t.total += dmg;
+		for (org.bukkit.event.entity.EntityDamageEvent.DamageModifier m : org.bukkit.event.entity.EntityDamageEvent.DamageModifier.values()) {
+			if (m != org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE && e.isApplicable(m)) e.setDamage(m, 0);
+		}
+		e.setDamage(0);
+		Location tl = le.getLocation();
+		le.getWorld().spawnParticle(Particle.WAX_ON, tl.getX(), tl.getY() + le.getHeight() * 0.5, tl.getZ(), 4, 0.25, 0.35, 0.25, 0.15);
 	}
 
-	static void timer(Player p, int tier) {
+	static void timer(Player p, int lv, int tier) {
 		UUID pid = p.getUniqueId();
 		if (TIMERS.containsKey(pid)) return;
+		final double karmaMult = 1.0 + karmaBonus(lv);
 		Timer state = new Timer();
 		TIMERS.put(pid, state);
 		World sl = p.getWorld();
@@ -202,8 +264,8 @@ public final class ChronoSkill implements Listener {
 				BU.sound(p.getLocation(), Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 1.2F, 1.9F);
 				w.spawnParticle(Particle.END_ROD, at.getX(), at.getY(), at.getZ(), 14, 0.25, 0.25, 0.25, 0.06);
 				w.spawnParticle(Particle.WAX_ON, at.getX(), at.getY(), at.getZ(), 14, 0.35, 0.35, 0.35, 0.3);
-				p.sendActionBar(Component.text("⏱ 시간 정산 — " + state.mobs.size() + "마리 · 누적 피해 " + String.format("%.1f", state.total), NamedTextColor.GOLD));
-				settle(p, state, tier);
+				p.sendActionBar(Component.text("⏱ 업보청산 — " + state.mobs.size() + "마리 · 정산 피해 " + String.format("%.1f", state.total * karmaMult) + " (+" + Math.round(karmaBonus(lv) * 100) + "%)", NamedTextColor.GOLD));
+				settle(p, state, karmaMult, tier);
 			}
 		});
 	}
@@ -239,23 +301,25 @@ public final class ChronoSkill implements Listener {
 		Fx.shape(hand, t, q, new Vector3f(0.036F, 0.2F, 0.1F), 2);
 	}
 
-	/** 타이머 종료: 기록된 모든 몹 1초 스턴, 그 순간 톱니 생성. 1.5초 뒤 톱니가 돌며 피해 */
-	private static void settle(Player p, Timer t, int tier) {
-		for (UUID id : t.mobs) {
+	/** 업보청산 종료: 기록된 모든 몹 1초 스턴, 그 순간 톱니 생성. 1.5초 뒤 각 몹에 누적된 피해를 한 번에 입힌다 */
+	private static void settle(Player p, Timer t, double karmaMult, int tier) {
+		for (UUID id : t.mobs.keySet()) {
 			Entity e = Bukkit.getEntity(id);
 			if (e instanceof LivingEntity le && !le.isDead() && le.isValid()) stunAtLeast(le, SETTLE_STUN);
 		}
 		if (t.total <= 0) return;
 		int n = 0;
-		for (UUID id : t.mobs) {
-			Entity e = Bukkit.getEntity(id);
+		for (var entry : t.mobs.entrySet()) {
+			double mobDmg = entry.getValue();
+			if (mobDmg <= 0) continue;
+			Entity e = Bukkit.getEntity(entry.getKey());
 			if (!(e instanceof LivingEntity le) || le.isDead() || !le.isValid()) continue;
-			gear(p, le, t.total, tier);
+			gear(p, le, mobDmg * karmaMult, tier);
 			n++;
 		}
 		final int count = n;
 		Fx.later(DING_DELAY, () -> {
-			if (p.isOnline()) p.sendActionBar(Component.text("⚙ 시간의 톱니 " + count + "마리 · 피해 " + String.format("%.1f", t.total), NamedTextColor.GOLD));
+			if (p.isOnline()) p.sendActionBar(Component.text("⚙ 업보청산 완료 (" + count + "마리)", NamedTextColor.GOLD));
 		});
 	}
 
@@ -282,15 +346,26 @@ public final class ChronoSkill implements Listener {
 				fx.addBlock(Material.WAXED_CUT_COPPER.createBlockData(), true);
 				for (Display d : fx.displays) { d.setGlowing(true); d.setGlowColorOverride(glow); }
 				poseGear(fx, r, 0, 1);
-				BU.sound(new Location(w, pos[0], pos[1], pos[2]), Sound.BLOCK_CHAIN_PLACE, SoundCategory.PLAYERS, 1.2F, 1.2F);
+				Location lockLoc = new Location(w, pos[0], pos[1], pos[2]);
+				BU.sound(lockLoc, Sound.BLOCK_CHAIN_PLACE, SoundCategory.PLAYERS, 1.3F, 0.7F);
+				BU.sound(lockLoc, Sound.BLOCK_IRON_DOOR_CLOSE, SoundCategory.PLAYERS, 1.1F, 0.65F);
 			} else if (fx.age >= turn && fx.age <= turn + 6 && (fx.age - turn) % 2 == 0) {
 				int step = (fx.age - turn) / 2 + 1;
 				poseGear(fx, r, (float) (Math.PI / 4 * step), 1);
+				Location slLoc = new Location(w, pos[0], pos[1], pos[2]);
+				BU.sound(slLoc, Sound.BLOCK_PISTON_EXTEND, SoundCategory.PLAYERS, 1.3F, 0.45F + 0.06F * step);
+				BU.sound(slLoc, "hobbang:weapon.chrono.gear", SoundCategory.PLAYERS, 1.25F, 0.92F + 0.05F * step);
+				if (step == 1 || step == 3) BU.sound(slLoc, Sound.BLOCK_GRINDSTONE_USE, SoundCategory.PLAYERS, 1.1F, 0.48F + 0.04F * step);
 				if (fx.age == turn) {
-					BU.sound(new Location(w, pos[0], pos[1], pos[2]), Sound.BLOCK_IRON_TRAPDOOR_CLOSE, SoundCategory.PLAYERS, 1.4F, 0.6F);
-					BU.sound(new Location(w, pos[0], pos[1], pos[2]), Sound.BLOCK_LEVER_CLICK, SoundCategory.PLAYERS, 1.4F, 0.5F);
+					BU.sound(slLoc, "hobbang:sentinel.gears", SoundCategory.PLAYERS, 1.3F, 0.85F);
+					BU.sound(slLoc, Sound.BLOCK_IRON_DOOR_CLOSE, SoundCategory.PLAYERS, 1.25F, 0.48F);
 					if (le.isValid() && !le.isDead()) {
-						WeaponListener.skillHit(le, p, dmg);
+						settling = true;
+						try {
+							WeaponListener.skillHit(le, p, dmg);
+						} finally {
+							settling = false;
+						}
 						w.spawnParticle(Particle.CRIT, pos[0], pos[1], pos[2], 16, 0.4, 0.3, 0.4, 0.35);
 					}
 				}

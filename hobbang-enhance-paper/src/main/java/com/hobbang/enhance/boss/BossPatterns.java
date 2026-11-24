@@ -124,6 +124,18 @@ public final class BossPatterns {
 			Vector o = origin.get();
 			Vector end = o.clone().add(dir.clone().multiply(len));
 			if (t < warn) {
+				if (t == 1 && warn > 1) {
+					float bw = 1.4F;
+					float bl = (float) len;
+					Quaternionf bq = new Quaternionf().rotationTo(new Vector3f(0, 0, 1), new Vector3f((float) dir.getX(), (float) dir.getY(), (float) dir.getZ()));
+					Fx.spawn(world, b.uuid, o, warn - 1, (bfx, bwWorld) -> {
+						if (bfx.age == 1) {
+							BlockDisplay strip = bfx.addBlock(Material.RED_STAINED_GLASS.createBlockData(), true);
+							Vector3f tr = new Vector3f(-bw * 0.5F, -0.015F, 0F).rotate(bq);
+							Fx.shape(strip, tr, bq, new Vector3f(bw, 0.03F, bl), 0);
+						}
+					}).group(Fx.BEAM_GROUP);
+				}
 				if (t % 3 == 0) {
 					BU.line(world, Particle.DUST, dust, o, end, 0.9);
 					Fx.beamCharge(world, o, dir, t, b.kind);
@@ -182,7 +194,10 @@ public final class BossPatterns {
 		Fx fxm = Fx.spawn(w, b.uuid, at.clone().add(new Vector(0, 14, 0)), warn + 1, null);
 		Fx.spawn(w, b.uuid, at, warn + 1, (fx, world) -> {
 			int t = fx.age;
-			if (t % 3 == 0) circle(world, at, radius * Math.min(1, 0.4 + t / (double) warn), red, Particle.DUST);
+			if (t % 3 == 0) {
+				circle(world, at, radius * Math.min(1, 0.4 + t / (double) warn), red, Particle.DUST);
+				Fx.groundMark(world, at, radius, Math.min(1, t / (double) warn), b.kind);
+			}
 			if (t == warn - 14 && rockD[0] == null) {
 				rockD[0] = fxm.addBlock(rock.createBlockData(), true);
 				Fx.shape(rockD[0], new Vector3f(-0.6F, -0.6F, -0.6F), new Quaternionf(), new Vector3f(1.2F, 1.2F, 1.2F), 2);

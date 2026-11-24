@@ -5,7 +5,7 @@
         "name": "hobbang:boss/smith/slam",
         "volume": 1.0,
         "pitch": 1.0,
-        "weight": 3,
+        "weight": 10,
         "attenuation_distance": 48,
         "preload": true
       },
@@ -654,6 +654,51 @@
       {
         "name": "hobbang:boss/sentinel/gaze_stun",
         "attenuation_distance": 18,
+        "preload": true
+      }
+    ]
+  },
+  "smith.emerge": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/smith/emerge",
+        "attenuation_distance": 48,
+        "preload": false
+      }
+    ]
+  },
+  "smith.roar": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/smith/roar",
+        "attenuation_distance": 56,
+        "preload": false
+      }
+    ]
+  },
+  "smith.awaken_beam": {
+    "sounds": [
+      {
+        "name": "hobbang:boss/smith/awaken_beam",
+        "attenuation_distance": 60,
+        "preload": false
+      }
+    ]
+  },
+  "weapon.chrono.gear": {
+    "sounds": [
+      {
+        "name": "hobbang:weapon/chrono_gear",
+        "attenuation_distance": 28,
+        "preload": true
+      }
+    ]
+  },
+  "weapon.onepunch.hit": {
+    "sounds": [
+      {
+        "name": "hobbang:weapon/onepunch_hit",
+        "attenuation_distance": 48,
         "preload": true
       }
     ]

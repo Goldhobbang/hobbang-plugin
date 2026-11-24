@@ -1,5 +1,6 @@
 package com.hobbang.enhance.boss;
 
+import org.joml.Matrix3f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -8,7 +9,7 @@ import static com.hobbang.enhance.boss.BossMotion.*;
 /** Pack-model joint transforms shared by the live display and the offline renderer. */
 final class BossPoses {
 	private static final String SMITH = "abyssal_smith";
-	static final float SMITH_LEG_SCALE = 1.30F;
+	static final float SMITH_LEG_SCALE = 1.56F;
 	/** 걸음 보폭(걸을 때 허벅지가 앞뒤로 흔들리는 각도 ±), 앞다리 허벅지 추가 들기 비율, 무릎 굽힘 배율 (이전: 22 / 0 / 0.9) */
 	private static final float SMITH_STRIDE = 36F, SMITH_KNEE_RAISE = 0.35F, SMITH_KNEE_BEND = 1.5F;
 	// Keep the smaller hammer's flat striking face at its original contact height.
@@ -81,9 +82,6 @@ final class BossPoses {
 		static final Leap NONE = new Leap(0, 0);
 	}
 
-	/** 두 손 잡기에서 왼팔이 안쪽(몸 중심)으로 모이는 각도 — 손이 손잡이에 안 닿으면 여기를 조정 */
-	private static final float LEAP_GRIP_Z = 28F;
-
 	static SmithRig smith(Sink sink, Idle idle, float t, float yaw, float walk, float lookYaw, float lookPitch,
 	                      Frame strike, Frame follow, Frame swing, Frame cast, Frame sweep, Frame phase) {
 		return smith(sink, idle, t, yaw, walk, lookYaw, lookPitch, strike, follow, swing, cast, sweep, phase, Leap.NONE);
@@ -91,75 +89,156 @@ final class BossPoses {
 
 	static SmithRig smith(Sink sink, Idle idle, float t, float yaw, float walk, float lookYaw, float lookPitch,
 	                      Frame strike, Frame follow, Frame swing, Frame cast, Frame sweep, Frame phase, Leap leap) {
+		return smith(sink, idle, t, yaw, walk, lookYaw, lookPitch, strike, follow, swing, cast, sweep, phase, leap, false);
+	}
+
+	static SmithRig smith(Sink sink, Idle idle, float t, float yaw, float walk, float lookYaw, float lookPitch,
+	                      Frame strike, Frame follow, Frame swing, Frame cast, Frame sweep, Frame phase, Leap leap, boolean bareHand) {
 		float stride = sin(t * 0.18F);
-		float crouch = leap.crouch(), grip = leap.grip();
+		float crouch = leap.crouch();
 		float load = strike.prepare(), hit = strike.release();
-		float other = 1 - strike.strength();
+		float swingHit = swing.release();
+		float other = 1 - Math.max(strike.strength(), swingHit);
 		float weight = stride * walk;
-		float stomp = hit + 0.5F * sweep.release() * other;
-		float shift = -0.26F * load + 0.17F * hit + 0.12F * weight;
-		float rise = idle.wave(0.067F, 0) * 0.085F + Math.abs(weight) * 0.13F
-			- walk * Math.max(0, 1 - 5 * Math.abs(stride)) * 0.045F;
-		float lean = -12 * load + 55 * hit + other * (9 * sweep.release() - 10 * phase.prepare()) + 22 * crouch;
+		float strikeMask = 1 - Math.max(strike.strength(), leap.grip());
+		float stomp = hit + 0.65F * sweep.release() * other + 0.70F * swingHit * strikeMask;
+		float shift = -0.34F * load + 0.20F * hit + 0.18F * weight - 0.16F * sweep.prepare() * other;
+		float rise = idle.wave(0.067F, 0) * 0.095F + Math.abs(weight) * 0.16F
+			- walk * Math.max(0, 1 - 5 * Math.abs(stride)) * 0.075F;
+		float slamLean = -26 * load + 76 * hit + 64 * swingHit * strikeMask;
+		float lean = slamLean + other * (18 * sweep.release() - 12 * sweep.prepare() - 16 * cast.prepare() + 14 * cast.release() - 18 * phase.prepare() + 12 * phase.release()) + 28 * crouch;
 		Rigid root = Rigid.yaw(yaw);
-		float brace = ease(hit);
+		float brace = ease(Math.max(hit, swingHit * strikeMask * 0.85F));
 		float lift = smithLegLift();
-		Rigid base = root.at(shift, rise + 0.08F * stomp + lift - (lift + SMITH_HAMMER_RIM_REDUCTION) * brace - 1.1F * crouch,
-			-0.16F * load + 0.80F * hit);
-		Rigid pelvis = pivot(SMITH, base.at(0, -0.50F * ease(hit), 0), "torso").rotX(0.32F * lean).rotZ(-3 * weight + 3 * load);
+		Rigid base = root.at(shift, rise + 0.10F * stomp + lift - (lift + SMITH_HAMMER_RIM_REDUCTION) * brace - 1.25F * crouch,
+			-0.28F * load + 0.95F * hit + 0.60F * swingHit * strikeMask - 0.18F * sweep.prepare() * other + 0.22F * sweep.release() * other);
+		Rigid pelvis = pivot(SMITH, base.at(0, -0.68F * brace, 0), "torso").rotX(0.34F * lean).rotZ(-5 * weight + 5 * load - 4 * hit);
 		sink.place("torso", pelvis, 1);
 		Rigid chest = child(SMITH, pelvis, "torso", "chest")
-			.rotX(0.68F * lean + idle.wave(0.067F, 0.28F) * 2.1F)
-			.rotY(-5 * weight - 13 * load + 9 * hit + 18 * sweep.prepare() * other);
+			.rotX(0.66F * lean + idle.wave(0.067F, 0.28F) * 2.4F)
+			.rotY(-9 * weight - 10 * load + 10 * hit + other * (26 * sweep.prepare() - 22 * sweep.release()));
 		sink.place("chest", chest, 1);
-		smithLeg(sink, base, "_l", -SMITH_STRIDE * weight - 5 * load, stomp, brace, crouch);
-		smithLeg(sink, base, "_r", SMITH_STRIDE * weight + 8 * load, stomp, brace, crouch);
-		float headYaw = -lookYaw * (1 - 0.58F * strike.strength());
-		float headPitch = lookPitch - 9 * load - 12 * cast.prepare() + 8 * cast.release() - 13 * phase.release();
+		smithLeg(sink, base, "_l", -(SMITH_STRIDE + 5) * weight - 9 * load, stomp, brace, crouch);
+		smithLeg(sink, base, "_r", (SMITH_STRIDE + 5) * weight + 12 * load, stomp, brace, crouch);
+		float headYaw = -lookYaw * (1 - 0.58F * Math.max(strike.strength(), swingHit * strikeMask));
+		float headPitch = lookPitch - 14 * load + 10 * hit - 16 * cast.prepare() + 10 * cast.release() - 18 * phase.release();
 		Rigid head = child(SMITH, chest, "chest", "head").rotY(headYaw).rotX(headPitch);
 		sink.place("head", head, 1);
 		float jaw = idle.weight() * (SMITH_JAW_REST + SMITH_JAW_OPEN * smithBreathOpen(idle.ticks()));   // t392 김 분사와 동기
 		sink.place("jaw", child(SMITH, head, "head", "jaw").rotX(jaw), 1);
-		Rigid left = child(SMITH, chest, "chest", "arm_l")
-			.rotX(-13 * weight - 22 * load - 18 * hit - other * (25 * cast.prepare() + 72 * phase.release())
-				- 30 * crouch - grip * (118 * load + 31 * hit))   // grip: 오른팔(-140·load, -49·hit)과 같은 각도로 → 두 손 잡기
-			.rotZ(-4 - 10 * sweep.release() - LEAP_GRIP_Z * grip);
-		sink.place("arm_l", left, 1);
-		Rigid foreL = child(SMITH, left, "arm_l", "fore_l").rotX(-8 - 14 * load - 8 * walk - 24 * grip);
-		sink.place("fore_l", foreL, 1);
-		sink.place("hand_l", child(SMITH, foreL, "fore_l", "hand_l").rotX(-4 * walk), 1);
-		Rigid right = child(SMITH, chest, "chest", "arm_r")
-			.rotX(-140 * load - 49 * hit + 45 * crouch * (1 - load) + 13 * weight * other - other * (91 * swing.release()
-					+ 62 * sweep.prepare() + 19 * sweep.release() + 95 * phase.release())
+
+		// 망치 기준 그립: 1페이즈 맨손(bareHand)일 땐 양손 맨손 전투 모션 + 망치 숨김, 2페이즈+ 평소 오른손·SLAM/도약 때만 양손 그립
+		float twoHand = bareHand ? 0F : clamp(Math.max(strike.strength(), leap.grip()), 0F, 1F);
+		float castLift = cast.prepare() * other, castPush = cast.release() * other;
+		float sweepWind = sweep.prepare() * other, sweepRel = sweep.release() * other;
+		float phaseWind = phase.prepare() * other, phaseRel = phase.release() * other;
+
+		float bareSlam = bareHand ? strike.strength() : 0F;
+		float bareArmX = bareSlam > 0.01F ? (-152F * load - 108F * hit) : 0F;
+		float bareArmZ = bareSlam > 0.01F ? (18F * load - 6F * hit) : 0F;
+		float bareForeX = bareSlam > 0.01F ? (-20F * load - 14F * hit) : 0F;
+
+		Rigid fkArmR = child(SMITH, chest, "chest", "arm_r")
+			.rotX((bareHand
+				? (13 * weight * other - other * (98 * swingHit + 60 * sweepWind + 20 * sweepRel + 25 * castLift + 90 * phaseRel)) * (1 - bareSlam) + bareArmX
+				: 13 * weight * other - other * (91 * swingHit + 62 * sweepWind + 19 * sweepRel + 95 * phaseRel))
 				+ idle.wave(0.067F, 0.70F) * 1.3F)
-			.rotZ(10 * load + 18 * hit + 24 * sweep.prepare() * other);
-		sink.place("arm_r", right, 1);
-		float drawBack = follow.prepare() * (1 - hit);
-		Rigid foreR = child(SMITH, right, "arm_r", "fore_r")
-			.rotX(-10 - 24 * drawBack + 4 * hit - other * (21 * swing.release() + 13 * sweep.prepare()));
-		sink.place("fore_r", foreR, 1);
-		float wrist = -26 * drawBack + 80 * hit - 13 * swing.release() * other;
-		Rigid hand = child(SMITH, foreR, "fore_r", "hand_r").rotX(wrist * 0.35F);
-		sink.place("hand_r", hand, 1);
-		Rigid hammer = child(SMITH, hand, "hand_r", "hammer").rotX(wrist * 0.65F - 90);
-		if (hit > 0) {
-			// At contact the local -Z striking face is flat against the ground.
-			float align = ease(hit);
-			Quaternionf rotation = new Quaternionf(hammer.rot()).slerp(root.rotX(-90).rot(), align);
-			hammer = new Rigid(hammer.pos(), rotation);
+			.rotZ((bareHand ? (4 + 22 * sweepWind) * (1 - bareSlam) - bareArmZ : 24 * sweepWind));
+		Rigid fkForeR = child(SMITH, fkArmR, "arm_r", "fore_r")
+			.rotX(bareHand
+				? (-8 - 8 * walk - other * (22 * swingHit + 12 * sweepWind)) * (1 - bareSlam) + bareForeX
+				: -10 - other * (21 * swingHit + 13 * sweepWind));
+		Rigid fkHandR = child(SMITH, fkForeR, "fore_r", "hand_r")
+			.rotX(bareHand ? -8 * swingHit * other : -13 * swingHit * other * 0.35F);
+		Rigid fkHammer = child(SMITH, fkHandR, "hand_r", "hammer")
+			.rotX(-13 * swingHit * other * 0.65F - 90
+				+ idle.wave(0.14F, 1.1F) * (1 + walk) + idle.wave(0.067F, 1.2F) * 0.9F);
+
+		Rigid fkArmL = child(SMITH, chest, "chest", "arm_l")
+			.rotX((-13 * weight * other - other * (25 * castLift + 72 * phaseRel) - 18 * crouch) * (1 - bareSlam) + bareArmX
+				+ idle.wave(0.067F, 0.5F) * 2.5F)
+			.rotZ((-4 - 10 * sweepRel - 4 * crouch) * (1 - bareSlam) + bareArmZ);
+		Rigid fkForeL = child(SMITH, fkArmL, "arm_l", "fore_l")
+			.rotX((-8 - 8 * walk - 14 * crouch) * (1 - bareSlam) + bareForeX);
+		Rigid fkHandL = child(SMITH, fkForeL, "fore_l", "hand_l").rotX(-4 * walk);
+
+		Rigid hammer;
+		// 기본적으로 주먹을 쥔 상태 유지 (망치 파지·맨손 전투 모두 주먹)
+		float curlR = bareHand ? 76F : 68F;
+		float curlL = twoHand > 0.01F ? 68F : 76F;
+		if (twoHand <= 0.01F) {
+			hammer = fkHammer;
+			sink.place("hammer", hammer, bareHand ? 0F : 1F);
+			sink.place("arm_r", fkArmR, 1);
+			sink.place("fore_r", fkForeR, 1);
+			placeSmithHand(sink, "r", fkHandR, curlR);
+			sink.place("arm_l", fkArmL, 1);
+			sink.place("fore_l", fkForeL, 1);
+			placeSmithHand(sink, "l", fkHandL, curlL);
+		} else {
+			float downWeight = clamp(Math.max(hit, swingHit * strikeMask), 0F, 1.18F);
+			float over = clamp(downWeight, 0F, 1F);
+			float carry = clamp(1 - load - over, 0F, 1F);
+
+			// SLAM/도약용 양손 망치 포물선(원호) 궤적: 팔 길이(3.33) 이내 반지름에서 어깨 중심 호를 따라 팔과 함께 크게 휘두름
+			float thetaDeg = -18F * carry + 142F * load - 54F * over;
+			float thetaRad = thetaDeg * ((float) Math.PI / 180F);
+			float reach = 2.15F * carry + 2.42F * load + 2.25F * over;
+			float shoulderY = 2.30F;
+			float hx = -0.35F * carry - 0.72F * (float) Math.sin(Math.PI * load) * (1F - over);
+			float hy = shoulderY + reach * (float) Math.sin(thetaRad) - 0.25F * crouch * (1 - load);
+			float hz = reach * (float) Math.cos(thetaRad);
+			float hRotX = -90F - thetaDeg - 22F * over;
+			float hRotY = -14F * carry;
+			float hRotZ = -32F * carry;
+
+			Rigid ikHammer = chest.at(hx, hy, hz).rotY(hRotY).rotZ(hRotZ).rotX(hRotX);
+			if (downWeight > 0) {
+				float align = ease(Math.min(1F, downWeight));
+				Quaternionf impactRot = root.rotX(-72F).rot();
+				ikHammer = new Rigid(ikHammer.pos(), new Quaternionf(ikHammer.rot()).slerp(impactRot, align));
+			}
+			float w = ease(clamp(twoHand * 2.2F, 0F, 1F));
+			if (w >= 0.99F) {
+				hammer = ikHammer;
+			} else {
+				Vector3f hp = new Vector3f(fkHammer.pos()).lerp(ikHammer.pos(), w);
+				Quaternionf hq = new Quaternionf(fkHammer.rot()).slerp(ikHammer.rot(), w);
+				hammer = new Rigid(hp, hq);
+			}
+			sink.place("hammer", hammer, 1);
+
+			float upArc = clamp((float) Math.sin(Math.max(0F, thetaRad)), 0F, 1F);
+			Vector3f gripR = hammer.at(0F, 0F, 0F).pos();
+			Vector3f poleR = new Vector3f(-0.95F - 0.35F * upArc, -0.20F + 0.85F * upArc, -0.70F + 1.05F * upArc).rotate(chest.rot());
+			Rigid[] ikR = computeSmithArm(chest, "_r", gripR, poleR);
+
+			Vector3f gripL = hammer.at(0F, 0.65F, 0F).pos();
+			Vector3f poleL = new Vector3f(0.95F + 0.35F * upArc, -0.20F + 0.85F * upArc, -0.70F + 1.05F * upArc).rotate(chest.rot());
+			Rigid[] ikL = computeSmithArm(chest, "_l", gripL, poleL);
+
+			if (w >= 0.99F) {
+				sink.place("arm_r", ikR[0], 1);
+				sink.place("fore_r", ikR[1], 1);
+				placeSmithHand(sink, "r", ikR[2], 66F);
+				sink.place("arm_l", ikL[0], 1);
+				sink.place("fore_l", ikL[1], 1);
+				placeSmithHand(sink, "l", ikL[2], 64F);
+			} else {
+				blendArm(sink, "r", fkArmR, fkForeR, fkHandR, ikR, w, mix(curlR, 66F, w));
+				blendArm(sink, "l", fkArmL, fkForeL, fkHandL, ikL, w, mix(curlL, 64F, w));
+			}
 		}
-		sink.place("hammer", hammer.rotX(idle.wave(0.14F, 1.1F) * (1 + walk)
-			+ idle.wave(0.067F, 1.2F) * 0.9F), 1);
 		// Projectiles retain the original animation anchor, regardless of idle visibility.
 		float aimStride = weight * other;
-		Rigid aimBase = root.at(-0.26F * load + 0.17F * hit + 0.12F * aimStride,
-			sin(t * 0.067F) * 0.055F + Math.abs(aimStride) * 0.10F + 0.08F * stomp
-				+ lift - (lift + SMITH_HAMMER_RIM_REDUCTION) * brace - 0.50F * brace,
-			-0.16F * load + 0.80F * hit);
-		Rigid aimPelvis = pivot(SMITH, aimBase, "torso").rotX(0.32F * lean).rotZ(-3 * aimStride + 3 * load);
+		Rigid aimBase = root.at(-0.34F * load + 0.20F * hit + 0.18F * aimStride,
+			sin(t * 0.067F) * 0.055F + Math.abs(aimStride) * 0.12F + 0.10F * stomp
+				+ lift - (lift + SMITH_HAMMER_RIM_REDUCTION) * brace - 0.56F * brace,
+			-0.28F * load + 0.95F * hit);
+		Rigid aimPelvis = pivot(SMITH, aimBase, "torso").rotX(0.34F * lean).rotZ(-5 * aimStride + 5 * load);
 		Rigid aimChest = child(SMITH, aimPelvis, "torso", "chest")
-			.rotX(0.68F * lean + sin(t * 0.067F - 0.28F) * 1.4F)
-			.rotY(-5 * aimStride - 13 * load + 9 * hit + 18 * sweep.prepare() * other);
+			.rotX(0.66F * lean + sin(t * 0.067F - 0.28F) * 1.4F)
+			.rotY(-9 * aimStride - 22 * load + 16 * hit + 26 * sweep.prepare() * other);
 		Rigid mouth = child(SMITH, aimChest, "chest", "head").rotY(headYaw).rotX(headPitch);
 		return new SmithRig(head, mouth, hammer);
 	}
@@ -175,6 +254,94 @@ final class BossPoses {
 		sink.place(leg, l, 1);
 		sink.place(shin, s, 1);
 		sink.place(foot, smithLegChild(s, shin, foot).rotX(-(thigh + knee) * (0.65F + 0.35F * brace)), 1);
+	}
+
+	private static void placeSmithHand(Sink sink, String s, Rigid hand, float curl) {
+		String handName = "hand_" + s;
+		sink.place(handName, hand, 1);
+		float curlSign = "l".equals(s) ? -1F : 1F;
+		for (int i = 1; i <= 5; i++) {
+			float fCurl = i == 1 ? curl * 0.76F : curl * (0.94F + 0.03F * i);
+			float tCurl = i == 1 ? curl * 0.85F : Math.min(92F, curl * 1.10F);
+			float splay = i == 1 ? -10F : (3 - i) * 2.5F;
+			String fn = "finger_" + s + i;
+			Rigid f = child(SMITH, hand, handName, fn).rotZ(curlSign * fCurl).rotX(splay);
+			sink.place(fn, f, 1);
+			Rigid tip = child(SMITH, f, fn, "tip_" + s + i).rotZ(curlSign * tCurl);
+			sink.place("tip_" + s + i, tip, 1);
+		}
+	}
+
+	private static void blendArm(Sink sink, String s, Rigid fkArm, Rigid fkFore, Rigid fkHand, Rigid[] ik, float w, float curl) {
+		Rigid bArm = new Rigid(fkArm.pos(), new Quaternionf(fkArm.rot()).slerp(ik[0].rot(), w));
+		Rigid bFore = child(SMITH, bArm, "arm_" + s, "fore_" + s);
+		bFore = new Rigid(bFore.pos(), new Quaternionf(fkFore.rot()).slerp(ik[1].rot(), w));
+		Rigid bHand = child(SMITH, bFore, "fore_" + s, "hand_" + s);
+		bHand = new Rigid(bHand.pos(), new Quaternionf(fkHand.rot()).slerp(ik[2].rot(), w));
+		sink.place("arm_" + s, bArm, 1);
+		sink.place("fore_" + s, bFore, 1);
+		placeSmithHand(sink, s, bHand, curl);
+	}
+
+	/** 2본 해석적 IK: 어깨(chest 자식)에서 망치 자루 위 손바닥 목표점(palmTarget)까지 팔·전완·손을 역산 */
+	private static void solveSmithArm(Sink sink, Rigid chest, String side, Vector3f palmTarget, Vector3f poleDir) {
+		Rigid[] rig = computeSmithArm(chest, side, palmTarget, poleDir);
+		sink.place("arm" + side, rig[0], 1);
+		sink.place("fore" + side, rig[1], 1);
+		placeSmithHand(sink, side.substring(1), rig[2], 60F);
+	}
+
+	private static Rigid[] computeSmithArm(Rigid chest, String side, Vector3f palmTarget, Vector3f poleDir) {
+		String armName = "arm" + side, foreName = "fore" + side, handName = "hand" + side;
+		Vector3f pArm = BossModels.get(SMITH, armName).pivot();
+		Vector3f pFore = BossModels.get(SMITH, foreName).pivot();
+		Vector3f pHand = BossModels.get(SMITH, handName).pivot();
+		Vector3f pHam = BossModels.get(SMITH, "hammer").pivot();
+		Vector3f pHandR = BossModels.get(SMITH, "hand_r").pivot();
+		// hand → palm(자루 중심) 오프셋은 오른손 기준(hammer - hand_r)을 좌우 대칭으로 사용
+		float palmSign = "_l".equals(side) ? -1F : 1F;
+		Vector3f palmOff = new Vector3f(palmSign * (pHam.x - pHandR.x), pHam.y - pHandR.y, pHam.z - pHandR.z);
+		Vector3f v1 = new Vector3f(pFore).sub(pArm);
+		Vector3f v2 = new Vector3f(pHand).sub(pFore).add(palmOff);
+		float l1 = v1.length(), l2 = v2.length();
+
+		Vector3f shoulder = child(SMITH, chest, "chest", armName).pos();
+		Vector3f delta = new Vector3f(palmTarget).sub(shoulder);
+		float rawDist = delta.length();
+		float dist = clamp(rawDist, Math.abs(l1 - l2) + 0.05F, l1 + l2 - 0.05F);
+		Vector3f u = rawDist > 1e-6F ? new Vector3f(delta).div(rawDist) : new Vector3f(0, -1, 0);
+
+		float cosA = clamp((l1 * l1 + dist * dist - l2 * l2) / (2 * l1 * dist), -1F, 1F);
+		float sinA = (float) Math.sqrt(Math.max(0F, 1F - cosA * cosA));
+		Vector3f bend = new Vector3f(poleDir).fma(-poleDir.dot(u), u);
+		if (bend.lengthSquared() < 1e-6F) {
+			bend = new Vector3f(u).cross(Math.abs(u.z) < 0.9F ? new Vector3f(0, 0, 1) : new Vector3f(1, 0, 0));
+		}
+		bend.normalize();
+
+		Vector3f elbow = new Vector3f(shoulder).fma(l1 * cosA, u).fma(l1 * sinA, bend);
+		Vector3f upperDir = new Vector3f(elbow).sub(shoulder).normalize();
+		Vector3f foreDir = new Vector3f(shoulder).fma(dist, u).sub(elbow).normalize();
+
+		Vector3f yAxis = new Vector3f(upperDir).negate();
+		Vector3f xAxis = new Vector3f(u).cross(bend);
+		if (xAxis.lengthSquared() < 1e-6F) {
+			xAxis = new Vector3f(yAxis).cross(0, 0, 1);
+			if (xAxis.lengthSquared() < 1e-6F) xAxis = new Vector3f(yAxis).cross(1, 0, 0);
+		}
+		xAxis.normalize();
+		Vector3f zAxis = new Vector3f(xAxis).cross(yAxis).normalize();
+		xAxis.set(yAxis).cross(zAxis).normalize();
+		Quaternionf armRot = new Quaternionf().setFromNormalized(new Matrix3f(xAxis, yAxis, zAxis));
+		armRot.mul(new Quaternionf().rotationTo(new Vector3f(v1).normalize(), new Vector3f(0, -1, 0)));
+		Rigid arm = new Rigid(shoulder, armRot);
+
+		Rigid forePivot = child(SMITH, arm, armName, foreName);
+		Vector3f v2World = new Vector3f(v2).rotate(armRot).normalize();
+		Quaternionf foreRot = new Quaternionf().rotationTo(v2World, foreDir).mul(armRot);
+		Rigid fore = new Rigid(forePivot.pos(), foreRot);
+
+		return new Rigid[]{arm, fore, child(SMITH, fore, foreName, handName)};
 	}
 
 	static Rigid colossus(Sink sink, Idle idle, float t, float yaw, float walk, float lookYaw, float lookPitch,
@@ -273,6 +440,8 @@ final class BossPoses {
 		return child(SENTINEL, aimBody, "body", "clock");
 	}
 
+	private static final float WYVERN_WING_SCALE = 1.30F;
+
 	record Flight(float flap, float lift, float tuck, float fold, float wingAngle, float wingPower,
 	              float pitch, float bank, float landing, float lookYaw, float lookPitch, float dive, float death) {}
 
@@ -285,63 +454,74 @@ final class BossPoses {
 		float exhale = Math.max(cast.release(), channel.release());
 		float fall = ease(death / 0.32F), side = ease((death - 0.28F) / 0.42F), fade = ease((death - 0.72F) / 0.28F);
 		float sc = Math.max(0.05F, 1 - fade);
-		float bob = -sin(f.flap() - 0.48F) * 0.23F * f.lift() + breath * 0.045F;
-		Rigid root = Rigid.yaw(yaw).at(0, bob - 0.20F * tuck - 0.05F * land - 0.30F * side - 1.8F * fade, 0);
-		Rigid body = joint(root, "body").rotX(f.pitch() + breath * 1.4F + land + 28 * fall + 18 * side - 7 * phase.prepare())
-			.rotZ(f.bank() + 78 * side);
+		// 드래곤 비행/유휴: 날개 다운스트로크 직후 몸통 부상 + 피치 미세 리듬
+		float bob = -sin(f.flap() - 0.55F) * 0.34F * f.lift() + breath * 0.06F;
+		float bodyPitchWave = -sin(f.flap() - 0.25F) * 4.2F * f.lift();
+		Rigid root = Rigid.yaw(yaw).at(0, bob - 0.20F * tuck - 0.05F * land - 0.55F * side - 1.8F * fade, 0);
+		Rigid body = joint(root, "body").rotX(f.pitch() + bodyPitchWave + breath * 1.8F + land + 22 * fall + 14 * side - 7 * phase.prepare())
+			.rotZ(f.bank() + 22 * side);
 		sink.place("body", body, sc);
-		Rigid waist = joint(body, "waist").rotY(idle.wave(0.08F, 0.28F) * (1.8F + 2.8F * tuck))
-			.rotX(sin(f.flap() - 0.55F) * 3.2F * f.lift() - 3 * land);
+		Rigid waist = joint(body, "waist").rotY(idle.wave(0.08F, 0.28F) * (2.2F + 3.0F * tuck))
+			.rotX(sin(f.flap() - 0.55F) * 4.5F * f.lift() - 3 * land);
 		sink.place("waist", waist, sc);
-		Rigid hips = joint(waist, "hips").rotY(idle.wave(0.08F, 0.62F) * (2.2F + 3.5F * tuck))
-			.rotX(sin(f.flap() - 0.92F) * 3.8F * f.lift() - 2 * land);
+		Rigid hips = joint(waist, "hips").rotY(idle.wave(0.08F, 0.62F) * (2.8F + 3.8F * tuck))
+			.rotX(sin(f.flap() - 0.95F) * 5.2F * f.lift() - 2 * land);
 		sink.place("hips", hips, sc);
-		float lookY = -f.lookYaw() * (1 - side), lookP = f.lookPitch() + 40 * side;
-		Rigid n1 = joint(body, "neck_1").rotY(lookY * 0.24F + idle.wave(0.05F, 0) * 4)
-			.rotX(lookP * 0.20F + idle.wave(0.07F, 0) * 3 + 24 * tuck - 12 * charge + 8 * exhale);
+		float lookY = -f.lookYaw() * (1 - side), lookP = f.lookPitch() + 18 * side;
+		// 목 S자 파동 전파 + 머리 시선 안정화 (사망 시 목/머리를 옆으로 기대듯 꺾음)
+		float neckWave1 = sin(f.flap() - 0.40F) * 4.0F * f.lift();
+		float neckWave2 = sin(f.flap() - 0.90F) * 4.5F * f.lift();
+		float neckWave3 = sin(f.flap() - 1.40F) * 3.8F * f.lift();
+		Rigid n1 = joint(body, "neck_1").rotY(lookY * 0.24F + idle.wave(0.05F, 0) * 5.0F + 10 * side)
+			.rotX(lookP * 0.20F + neckWave1 + idle.wave(0.07F, 0) * 3.5F + 24 * tuck - 12 * charge + 8 * exhale);
 		sink.place("neck_1", n1, sc);
-		Rigid n2 = joint(n1, "neck_2").rotY(lookY * 0.26F + idle.wave(0.05F, 0.45F) * 3)
-			.rotX(lookP * 0.24F + idle.wave(0.07F, 0.45F) * 2.2F + 8 * tuck - 7 * charge);
+		Rigid n2 = joint(n1, "neck_2").rotY(lookY * 0.26F + idle.wave(0.05F, 0.45F) * 4.0F + 14 * side)
+			.rotX(lookP * 0.24F + neckWave2 + idle.wave(0.07F, 0.45F) * 2.6F + 8 * tuck - 7 * charge);
 		sink.place("neck_2", n2, sc);
-		Rigid n3 = joint(n2, "neck_3").rotY(lookY * 0.25F + idle.wave(0.05F, 0.9F) * 2)
-			.rotX(lookP * 0.24F + idle.wave(0.07F, 0.9F) * 1.6F - 8 * tuck + 6 * exhale);
+		Rigid n3 = joint(n2, "neck_3").rotY(lookY * 0.25F + idle.wave(0.05F, 0.9F) * 3.0F + 16 * side)
+			.rotX(lookP * 0.24F + neckWave3 + idle.wave(0.07F, 0.9F) * 2.0F - 8 * tuck + 6 * exhale);
 		sink.place("neck_3", n3, sc);
-		Rigid head = joint(n3, "head").rotY(lookY * 0.25F).rotX(lookP * 0.32F - 20 * tuck + 8 * dive - 8 * phase.release());
+		Rigid head = joint(n3, "head").rotY(lookY * 0.25F + 28 * side).rotZ(48 * side)
+			.rotX(lookP * 0.32F - neckWave3 * 0.85F - 20 * tuck + 8 * dive - 8 * phase.release());
 		sink.place("head", head, sc);
 		float jaw = 22 * dive + 11 * charge + 34 * exhale + 20 * phase.release();
-		sink.place("jaw", joint(head, "jaw").rotX(death > 0 ? 30 * ease(death * 3) : Math.min(48, jaw) + (idle.weight() + idle.wave(0.11F, 0.9F)) * 1.5F), sc);
+		sink.place("jaw", joint(head, "jaw").rotX(death > 0 ? 30 * ease(death * 3) : Math.min(48, jaw) + (idle.weight() + idle.wave(0.11F, 0.9F)) * 1.8F), sc);
 		Rigid tail = hips;
 		for (int i = 0; i < TAIL.length; i++) {
-			float lag = i * 0.57F;
+			float lag = i * 0.62F;
+			float ampScale = 1.0F + 0.22F * i;
 			tail = joint(tail, TAIL[i])
-				.rotY(idle.wave(0.08F, lag) * (3.6F + 2 * tuck) - f.bank() * 0.07F + 12 * death * (i + 1))
-				.rotX(sin(f.flap() - 1.65F - lag) * 3.6F * f.lift() * idle.weight()
-					+ idle.wave(0.07F, lag + 0.5F) * 1.2F + 2 * tuck + 8 * death);
+				.rotY(idle.wave(0.08F, lag) * (4.2F + 2.4F * tuck) * ampScale - f.bank() * 0.12F + 12 * death * (i + 1))
+				.rotX(sin(f.flap() - 1.65F - lag) * 5.0F * ampScale * f.lift() * idle.weight()
+					+ idle.wave(0.07F, lag + 0.5F) * 1.6F + 2 * tuck + 8 * death);
 			sink.place(TAIL[i], tail, sc);
 		}
+		float wingSc = sc * WYVERN_WING_SCALE;
 		for (int i = 0; i < SIDES.length; i++) {
 			float sign = i == 0 ? 1 : -1;
 			String q = SIDES[i], armName = "wing_arm" + q, foreName = "wing_fore" + q;
-			float a = f.wingAngle() + sway * f.wingPower() + 17 * flare + 12 * land - 40 * side
-				+ idle.wave(0.06F, 0.35F) * 2.5F * fold;
-			Rigid arm = joint(body, armName).rotZ(sign * a).rotY(sign * 24 * fold);
-			sink.place(armName, arm, sc);
-			Rigid fore = joint(arm, foreName).rotY(sign * 54 * fold)
-				.rotZ(sign * (sin(f.flap() - 0.52F) * 7 * (1 - fold) * f.lift()
-					+ idle.wave(0.06F, 0.8F) * 2 * fold));
-			sink.place(foreName, fore, sc);
+			float a = f.wingAngle() + sway * f.wingPower() + 17 * flare + 12 * land - 38 * side
+				+ idle.wave(0.06F, 0.35F) * 3.0F * fold;
+			float wingSweep = -sin(f.flap() + 0.35F) * 14.0F * (1 - fold) * f.lift();
+			float wingTwist = (float) Math.cos(f.flap()) * 9.0F * (1 - fold) * f.lift();
+			Rigid arm = joint(body, armName).rotZ(sign * a).rotY(sign * (24 * fold + wingSweep)).rotX(wingTwist);
+			sink.place(armName, arm, wingSc);
+			Rigid fore = wyvernWingChild(arm, armName, foreName).rotY(sign * 54 * fold)
+				.rotZ(sign * (sin(f.flap() - 0.65F) * 18.0F * (1 - fold) * f.lift()
+					+ idle.wave(0.06F, 0.8F) * 2.5F * fold - 24 * side));
+			sink.place(foreName, fore, wingSc);
 			for (int finger = 0; finger < WING_FINGERS.length; finger++) {
 				String name = WING_FINGERS[finger] + q;
-				float ripple = sin(f.flap() - 0.94F - finger * 0.36F) * (4 + 2 * finger) * (1 - fold) * f.lift()
-					+ idle.wave(0.06F, 1.15F + finger * 0.24F) * 1.8F * fold;
-				sink.place(name, joint(fore, name).rotY(sign * FINGER_FOLD[finger] * fold).rotZ(sign * ripple), sc);
+				float ripple = sin(f.flap() - 1.05F - finger * 0.42F) * (7.0F + 3.0F * finger) * (1 - fold) * f.lift()
+					+ idle.wave(0.06F, 1.15F + finger * 0.24F) * 2.2F * fold - 12 * side;
+				sink.place(name, wyvernWingChild(fore, foreName, name).rotY(sign * FINGER_FOLD[finger] * fold).rotZ(sign * ripple), wingSc);
 			}
 		}
 		float toes = sway * 5 * tuck;
 		for (String sideTag : SIDES) {
 			char legSide = sideTag.charAt(1);
-			wyvernLeg(sink, body, "f" + legSide, 70 * tuck + toes, 35 * tuck + 12 * land, 45 * tuck - 27 * land, sc);
-			wyvernLeg(sink, hips, "h" + legSide, 85 * tuck + toes - 7 * land, 10 * tuck + 12 * land, 50 * tuck - 11 * land, sc);
+			wyvernLeg(sink, body, "f" + legSide, 32 * tuck + toes, 18 * tuck + 12 * land, 28 * tuck - 27 * land, sc);
+			wyvernLeg(sink, hips, "h" + legSide, 42 * tuck + toes - 7 * land, 14 * tuck + 12 * land, 30 * tuck - 11 * land, sc);
 		}
 		float aimBreath = sin(t * 0.06F);
 		float aimBob = bob + (aimBreath - breath) * 0.045F;
@@ -356,6 +536,13 @@ final class BossPoses {
 			.rotX(lookP * 0.24F + sin(t * 0.07F - 0.9F) * 1.6F - 8 * tuck + 6 * exhale);
 		return joint(aimNeck, "head").rotY(lookY * 0.25F).rotX(lookP * 0.32F - 20 * tuck + 8 * dive - 8 * phase.release())
 			.at(0, -0.1F, 1.05F);
+	}
+
+	private static Rigid wyvernWingChild(Rigid parent, String from, String to) {
+		Vector3f[] joint = BossModels.rig(WYVERN, to);
+		Vector3f offset = joint[0], rest = joint[1];
+		return parent.at(offset.x * WYVERN_WING_SCALE, offset.y * WYVERN_WING_SCALE, offset.z * WYVERN_WING_SCALE)
+			.rotX(rest.x).rotY(rest.y).rotZ(rest.z);
 	}
 
 	private static void wyvernLeg(Sink sink, Rigid root, String tag, float thigh, float shin, float foot, float scale) {

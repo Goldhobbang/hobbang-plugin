@@ -34,7 +34,8 @@ public abstract class Boss {
 	public final Mob mob;
 	public final BossKind kind;
 	public final UUID uuid;
-	protected final BossBar bar;
+	protected BossBar bar;
+	private int barFillTicks = 0;
 	private final Set<Player> viewers = new HashSet<>();
 	protected int phase;
 	protected int invulTicks = 0;
@@ -50,13 +51,43 @@ public abstract class Boss {
 		this.kind = kind;
 		this.uuid = mob.getUniqueId();
 		this.phase = mob.getPersistentDataContainer().getOrDefault(Keys.PHASE, PersistentDataType.INTEGER, 1);
-		this.bar = BossBar.bossBar(Component.text(kind.name), 1f, phaseColor(phase), BossBar.Overlay.NOTCHED_10);
-		if (phase > phaseThresholds().length) bar.addFlag(BossBar.Flag.DARKEN_SCREEN);
+		this.bar = BossBar.bossBar(barTitle(phase), 1f, phaseColor(phase), BossBar.Overlay.NOTCHED_10);
+		if (phase >= totalPhases()) bar.addFlag(BossBar.Flag.DARKEN_SCREEN);
 	}
 
 	protected abstract float[] phaseThresholds();
 	protected abstract BossBar.Color phaseColor(int phase);
 	protected abstract void dropLoot(List<ItemStack> drops, Random r);
+
+	public int totalPhases() { return phaseThresholds().length + 1; }
+
+	protected Component barTitle(int p) { return Component.text(kind.name + " · " + p + "페이즈"); }
+
+	protected int phaseInvulTicks(int newPhase) { return 50; }
+
+	public double phaseMaxHealth(int p) { return phaseMaxHealth(kind, p); }
+
+	public static double phaseMaxHealth(BossKind kind, int p) {
+		int idx = Math.max(0, Math.min(2, p - 1));
+		return switch (kind) {
+			case ABYSSAL_SMITH -> (new double[]{200, 250, 300})[idx];
+			case PRISM_COLOSSUS -> (new double[]{300, 320, 360})[idx];
+			case TEMPEST_WYVERN -> (new double[]{240, 260, 300})[idx];
+			case CHRONO_SENTINEL -> (new double[]{260, 280, 340})[idx];
+		};
+	}
+
+	protected void swapPhaseBar(int newPhase) {
+		BossBar next = BossBar.bossBar(barTitle(newPhase), 0f, phaseColor(newPhase), BossBar.Overlay.NOTCHED_10);
+		if (newPhase >= totalPhases()) next.addFlag(BossBar.Flag.DARKEN_SCREEN);
+		for (Player p : viewers) {
+			p.hideBossBar(bar);
+			p.showBossBar(next);
+		}
+		this.bar = next;
+		this.barFillTicks = 20;
+		updateViewers();
+	}
 
 	public int getPhase() {
 		return phase;
@@ -86,7 +117,15 @@ public abstract class Boss {
 		tickCount++;
 		if (mob.isValid()) {
 			if (tickCount % 10 == 1) updateViewers();
-			if (!dead) bar.progress((float) Math.max(0, Math.min(1, health() / maxHealth())));
+			if (!dead) {
+				float pct = (float) Math.max(0, Math.min(1, health() / maxHealth()));
+				if (barFillTicks > 0) {
+					barFillTicks--;
+					bar.progress(Math.min(pct, (20 - barFillTicks) / 20f));
+				} else {
+					bar.progress(pct);
+				}
+			}
 		}
 		serverTick();
 	}

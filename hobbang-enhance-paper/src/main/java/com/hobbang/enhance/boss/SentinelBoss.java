@@ -234,6 +234,7 @@ public class SentinelBoss extends DisplayBoss {
 			BU.say(mob, Component.text("⚠ 3페이즈: 시간 역행 - 채널링 중 " + (int) REWIND_BREAK + " 피해를 주면 저지! 실패 시 체력 회복", NamedTextColor.GRAY));
 			rewindCd = REWIND_CD;
 			rewindUnlockedAt = tickCount;
+			if (stopTimer <= 0) startTimeStop();
 		}
 		refreshGlow();
 	}
@@ -292,7 +293,7 @@ public class SentinelBoss extends DisplayBoss {
 				hoverY,
 				playerPos.getZ() + Math.sin(orbitAngle) * radius);
 			Vector delta = desired.subtract(here.toVector());
-			Vector accel = new Vector(delta.getX() * 0.028, delta.getY() * 0.010, delta.getZ() * 0.028);
+			Vector accel = new Vector(delta.getX() * 0.028, delta.getY() * 0.007, delta.getZ() * 0.028);
 			Vector v = mob.getVelocity().multiply(0.8).add(accel);
 			if (stunTimer > 0) v = new Vector(0, -0.04, 0);
 			mob.setVelocity(v);
@@ -588,7 +589,9 @@ public class SentinelBoss extends DisplayBoss {
 					if (tgt == null) { f.kill(); return; }
 					f.vel = tgt.getLocation().toVector().add(new Vector(0, 1, 0)).subtract(f.pos).normalize().multiply(0.7);
 					Fx.puff(w, Particle.ELECTRIC_SPARK, f.pos, 5, 0.24, 0.05);
-					BU.sound(new Location(w, f.pos.getX(), f.pos.getY(), f.pos.getZ()), Sound.ENTITY_ARROW_SHOOT, SoundCategory.HOSTILE, 1F, 1.8F);
+					Location bl = new Location(w, f.pos.getX(), f.pos.getY(), f.pos.getZ());
+			BU.sound(bl, Sound.BLOCK_DISPENSER_DISPENSE, SoundCategory.HOSTILE, 0.9F, 1.85F);
+			BU.sound(bl, Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.HOSTILE, 0.7F, 1.65F);
 				}
 				if (f.age > 20) {
 					w.spawnParticle(Particle.WAX_ON, f.pos.getX(), f.pos.getY(), f.pos.getZ(), 1, 0, 0, 0, 0);

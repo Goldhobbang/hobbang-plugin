@@ -1,0 +1,7 @@
+{
+  "parent": "hobbang:item/boss/abyssal_smith/finger_r1",
+  "textures": {
+    "t": "hobbang:item/boss/abyssal_smith/hand_r_purple",
+    "particle": "hobbang:item/boss/abyssal_smith/hand_r_purple"
+  }
+}

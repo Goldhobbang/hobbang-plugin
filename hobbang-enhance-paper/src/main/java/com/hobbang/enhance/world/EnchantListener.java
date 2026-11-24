@@ -46,8 +46,8 @@ public final class EnchantListener implements Listener {
 	private static boolean stomping = false;
 
 	// ───────── 상위 보호 ─────────
-	/** 상위 보호 레벨당 EPF (바닐라 보호 IV = 4) */
-	public static int superiorProtEpf(int level) { return level <= 0 ? 0 : 4 + level; }
+	/** 상위 보호: 레벨과 무관하게 장비 한 칸당 EPF 5 = 피해 20% 감소 (바닐라 보호 IV = 4 = 16%) */
+	public static int superiorProtEpf(int level) { return level <= 0 ? 0 : 5; }
 
 	/**
 	 * 같은 장비에 보호와 상위 보호가 함께 있으면 더 높은 쪽만 적용 (합산하지 않음).
@@ -164,12 +164,14 @@ public final class EnchantListener implements Listener {
 		Player p = e.getPlayer();
 		ItemStack tool = p.getInventory().getItemInMainHand();
 		if (Enchants.level(Enchants.AUTO_SMELT, tool) <= 0) return;
+		// 상자·통·셜커 등을 부수면 안의 물건도 이 이벤트로 온다 → 강화된 철/금 장비가 너깃으로 녹던 문제. 컨테이너는 제련하지 않는다
+		if (e.getBlockState() instanceof org.bukkit.inventory.InventoryHolder) return;
 		float xp = 0;
 		boolean any = false;
 		for (Item it : e.getItems()) {
 			ItemStack s = it.getItemStack();
 			CookingRecipe<?> r = SMELT.get(s.getType());
-			if (r == null || s.hasItemMeta() && s.getItemMeta().hasCustomName()) continue;
+			if (r == null || s.hasItemMeta()) continue;   // 인첸트·강화·이름 등 데이터가 붙은 아이템은 그대로 (광석 드롭에는 메타가 없다)
 			ItemStack out = r.getResult().clone();
 			out.setAmount(Math.min(out.getMaxStackSize(), s.getAmount() * out.getAmount()));
 			it.setItemStack(out);

@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  * 위치: 플레이어 발밑 = 투기장 바닥, 제단 = 플레이어 위치 (구조물 정중앙).
  */
 public final class StructurePlacer {
-	private static final int PER_TICK = 1000;
+	private static final int PER_TICK = 3000;
 
 	private StructurePlacer() {}
 

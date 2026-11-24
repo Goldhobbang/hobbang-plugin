@@ -147,7 +147,7 @@ public final class EnhanceLogic {
 		p.sendMessage(t("━━━━ 강화 미리보기 ━━━━", NamedTextColor.GOLD));
 		p.sendMessage(Component.empty().append(ItemUtil.levelTag(l)).append(ItemUtil.plainName(s)));
 		if (l >= MAX_LEVEL) {
-			p.sendMessage(t("이미 최대 강화(+15)입니다!", NamedTextColor.LIGHT_PURPLE));
+			p.sendMessage(t("이미 최대 강화(+" + MAX_LEVEL + ")입니다!", NamedTextColor.LIGHT_PURPLE));
 			return;
 		}
 		// 기본은 보조 아이템 없이 (보조 아이템은 강화대 창의 보조 칸에 넣어야 쓰인다). 예전 방식이면 가방 기준
@@ -187,7 +187,7 @@ public final class EnhanceLogic {
 		}
 		int l = ItemUtil.getLevel(s);
 		if (l >= MAX_LEVEL) {
-			p.sendMessage(t("[홉방] 이미 최대 강화(+15)입니다!", NamedTextColor.LIGHT_PURPLE));
+			p.sendMessage(t("[홉방] 이미 최대 강화(+" + MAX_LEVEL + ")입니다!", NamedTextColor.LIGHT_PURPLE));
 			return;
 		}
 		Odds o = odds(src, s);

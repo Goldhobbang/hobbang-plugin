@@ -49,6 +49,27 @@ public final class HobbangCommand {
 		ctx.getSource().getSender().sendMessage(c);
 	}
 
+	public static LiteralCommandNode<CommandSourceStack> buildEnhance() {
+		return Commands.literal("enhance").requires(OP)
+			.then(Commands.literal("set")
+				.then(Commands.argument("level", IntegerArgumentType.integer(0, ItemUtil.MAX_LEVEL)).executes(ctx -> enhanceLevel(ctx, false))))
+			.then(Commands.literal("add")
+				.then(Commands.argument("amount", IntegerArgumentType.integer()).executes(ctx -> enhanceLevel(ctx, true))))
+			.build();
+	}
+
+	private static BossKind bossByArg(String arg) {
+		BossKind k = BossKind.byId(arg);
+		if (k != null) return k;
+		return switch (arg.toLowerCase(java.util.Locale.ROOT)) {
+			case "smith" -> BossKind.ABYSSAL_SMITH;
+			case "colossus" -> BossKind.PRISM_COLOSSUS;
+			case "wyvern" -> BossKind.TEMPEST_WYVERN;
+			case "sentinel" -> BossKind.CHRONO_SENTINEL;
+			default -> null;
+		};
+	}
+
 	public static LiteralCommandNode<CommandSourceStack> build() {
 		return Commands.literal("hobbang")
 			.executes(HobbangCommand::help)
@@ -63,17 +84,40 @@ public final class HobbangCommand {
 			.then(Commands.literal("guide").executes(ctx -> {
 				Player p = player(ctx);
 				if (p == null) return 0;
-				EnhanceLogic.give(p, HItem.GUIDE.create());
+				// 권한 없이 쓸 수 있는 명령: 무한 지급 + 가방이 차면 바닥에 떨어뜨려 아이템 엔티티를 무한히 만들 수 있었다
+				if (EnhanceLogic.count(p, HItem.GUIDE) > 0) {
+					ok(ctx, Component.text("이미 가이드북을 가지고 있습니다. 우클릭으로 읽으세요.", NamedTextColor.YELLOW));
+					return 0;
+				}
+				if (!p.getInventory().addItem(HItem.GUIDE.create()).isEmpty()) {
+					ok(ctx, Component.text("가방에 빈칸이 없습니다.", NamedTextColor.RED));
+					return 0;
+				}
 				ok(ctx, Component.text("가이드북을 받았습니다! 우클릭으로 읽으세요.", NamedTextColor.GREEN));
 				return 1;
 			}))
 			.then(Commands.literal("set").requires(OP)
-				.then(Commands.argument("level", IntegerArgumentType.integer(0, 15)).executes(ctx -> enhanceLevel(ctx, false))))
+				.then(Commands.argument("level", IntegerArgumentType.integer(0, ItemUtil.MAX_LEVEL)).executes(ctx -> enhanceLevel(ctx, false))))
 			.then(Commands.literal("enhance").requires(OP)
 				.then(Commands.literal("set")
-					.then(Commands.argument("level", IntegerArgumentType.integer(0, 15)).executes(ctx -> enhanceLevel(ctx, false))))
+					.then(Commands.argument("level", IntegerArgumentType.integer(0, ItemUtil.MAX_LEVEL)).executes(ctx -> enhanceLevel(ctx, false))))
 				.then(Commands.literal("add")
 					.then(Commands.argument("amount", IntegerArgumentType.integer()).executes(ctx -> enhanceLevel(ctx, true)))))
+			.then(Commands.literal("dummy").requires(OP)
+				.executes(ctx -> {
+					Player p = player(ctx);
+					if (p == null) return 0;
+					com.hobbang.enhance.world.DummyManager.spawn(p);
+					ok(ctx, Component.text("훈련용 더미를 소환했습니다.", NamedTextColor.GREEN));
+					return 1;
+				})
+				.then(Commands.literal("remove").executes(ctx -> {
+					Player p = player(ctx);
+					if (p == null) return 0;
+					int removed = com.hobbang.enhance.world.DummyManager.removeNear(p, 32.0);
+					ok(ctx, Component.text("주변 훈련용 더미 " + removed + "개를 제거했습니다.", NamedTextColor.YELLOW));
+					return 1;
+				})))
 			.then(Commands.literal("kit").requires(OP).executes(ctx -> {
 				Player p = player(ctx);
 				if (p == null) return 0;
@@ -105,6 +149,13 @@ public final class HobbangCommand {
 				ok(ctx, Component.text("보스 키트 지급 완료 (핵 3종, 신규 주문서, 보스 무기 3종)", NamedTextColor.GREEN));
 				return 1;
 			}))
+			.then(Commands.literal("onepunch").requires(OP).executes(ctx -> {
+				Player p = player(ctx);
+				if (p == null) return 0;
+				EnhanceLogic.give(p, HItem.ONEPUNCH_GLOVE.create());
+				ok(ctx, Component.text("원펀맨 글러브 지급 완료", NamedTextColor.RED));
+				return 1;
+			}))
 			.then(Commands.literal("give").requires(OP)
 				.then(Commands.argument("item", StringArgumentType.word())
 					.suggests((c, b) -> { for (HItem h : HItem.values()) if (h.id.startsWith(b.getRemainingLowerCase())) b.suggest(h.id); return b.buildFuture(); })
@@ -120,7 +171,8 @@ public final class HobbangCommand {
 				.then(Commands.argument("name", StringArgumentType.word())
 					.suggests((c, b) -> { for (BossKind k : BossKind.values()) if (k.id.startsWith(b.getRemainingLowerCase())) b.suggest(k.id); return b.buildFuture(); })
 					.executes(ctx -> {
-						BossKind k = BossKind.byId(StringArgumentType.getString(ctx, "name"));
+						String arg = StringArgumentType.getString(ctx, "name");
+						BossKind k = bossByArg(arg);
 						if (k == null) {
 							ok(ctx, Component.text("보스 이름: abyssal_smith, prism_colossus, tempest_wyvern, chrono_sentinel", NamedTextColor.RED));
 							return 0;
@@ -138,7 +190,9 @@ public final class HobbangCommand {
 					return n;
 				})))
 			.then(Commands.literal("storm").executes(ctx -> {
-				com.hobbang.enhance.forge.Altar.stormHelp((Player) ctx.getSource().getSender());
+				Player p = player(ctx);
+				if (p == null) return 0;
+				com.hobbang.enhance.forge.Altar.stormHelp(p);
 				return 1;
 			}))
 			.then(Commands.literal("recipetest").requires(OP).executes(HobbangCommand::recipeTest))
@@ -230,12 +284,12 @@ public final class HobbangCommand {
 			return 0;
 		}
 		int arg = IntegerArgumentType.getInteger(ctx, add ? "amount" : "level");
-		int want = add ? ItemUtil.getLevel(s) + arg : arg;
-		int lv = Math.max(0, Math.min(ItemUtil.MAX_LEVEL, want));
+		long want = add ? (long) ItemUtil.getLevel(s) + arg : arg;   // long: add 2147483647 이 음수로 넘쳐 0 이 되던 문제
+		int lv = (int) Math.max(0, Math.min(ItemUtil.MAX_LEVEL, want));
 		ItemUtil.setLevel(s, lv);
 		p.getInventory().setItemInMainHand(s);
 		String tail = "로 설정했습니다.";
-		if (add) tail = (lv != want) ? "로 바꿨습니다. (0~15로 제한)" : "로 바꿨습니다.";
+		if (add) tail = (lv != want) ? "로 바꿨습니다. (0~" + ItemUtil.MAX_LEVEL + "로 제한)" : "로 바꿨습니다.";
 		ok(ctx, Component.text("강화 단계를 ").append(ItemUtil.levelTag(lv)).append(Component.text(tail)));
 		return 1;
 	}

@@ -85,7 +85,7 @@ public final class WeaponFx {
 	private static final float[][] QUAKE_KEYS = {
 		{0, 0.82F, 0.70F, 2}, {2, 1.00F, 1.00F, 2}, {4, 1.04F, 1.00F, 2}, {6, 0.80F, 0.60F, 2}, {8, 0.00F, 0.00F, 2}, {10, 0.07F, 0.00F, 2}, {12, 0.00F, 0.00F, 2}
 	};
-	private static final int QUAKE_WAVE = 8, QUAKE_TILE_TICKS = 14, QUAKE_MAX_TILES = 150;
+	private static final int QUAKE_WAVE = 8, QUAKE_TILE_TICKS = 14, QUAKE_MAX_TILES = 1400;
 
 	private record QuakeTile(org.bukkit.entity.BlockDisplay d, Vector3f base, int delay, float lift, Quaternionf tilt, Vector3f scale, Vector land, BlockData data) {}
 
@@ -140,15 +140,15 @@ public final class WeaponFx {
 	private static void buildQuake(Fx fx, World w, Vector c, double R, java.util.List<QuakeTile> out) {
 		ThreadLocalRandom rnd = ThreadLocalRandom.current();
 		double area = Math.PI * R * R;
-		double step = Math.max(1.0, Math.sqrt(area / QUAKE_MAX_TILES));   // 타일 한 칸 간격 (칸 수가 많으면 넓힘)
-		float size = (float) (step * 1.3);                                 // 간격보다 크게 → 서로 겹쳐서 틈이 안 보임
+		double step = Math.max(0.85, Math.sqrt(area / QUAKE_MAX_TILES));  // 기본 블럭(1.0) 크기 충격파 타일 간격
+		float size = 1.0F;
 		Display.Brightness gl = new Display.Brightness(
 			w.getBlockAt((int) Math.floor(c.getX()), (int) Math.floor(c.getY() + 0.5), (int) Math.floor(c.getZ())).getLightFromBlocks(),
 			w.getBlockAt((int) Math.floor(c.getX()), (int) Math.floor(c.getY() + 0.5), (int) Math.floor(c.getZ())).getLightFromSky());
 		int n = (int) Math.ceil(R / step);
 		for (int i = -n; i <= n; i++) {
 			for (int j = -n; j <= n; j++) {
-				if (out.size() >= QUAKE_MAX_TILES + 40) return;
+				if (out.size() >= QUAKE_MAX_TILES + 350) return;
 				double px = c.getX() + i * step + rnd.nextDouble(-0.22, 0.22) * step;
 				double pz = c.getZ() + j * step + rnd.nextDouble(-0.22, 0.22) * step;
 				double dx = px - c.getX(), dz = pz - c.getZ();

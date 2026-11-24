@@ -39,6 +39,7 @@ public final class HobbangPlugin extends JavaPlugin {
 		com.hobbang.enhance.forge.Altar.init(this);
 		pm.registerEvents(new com.hobbang.enhance.world.EnchantingListener(), this);
 		pm.registerEvents(new com.hobbang.enhance.boss.BossLoot(), this);
+		com.hobbang.enhance.boss.BossLoot.restoreLoaded();
 		pm.registerEvents(new WeaponListener(), this);
 		com.hobbang.enhance.weapon.WeaponSkills.init(this);
 		// v1.4.0: 대장장이의 망치를 든 플레이어에게만 용암 불씨 (10틱마다)
@@ -48,6 +49,7 @@ public final class HobbangPlugin extends JavaPlugin {
 		}, 20, 10);
 		pm.registerEvents(new com.hobbang.enhance.enhance.EnhanceEffects(), this);
 		pm.registerEvents(new WorldListener(), this);
+		pm.registerEvents(new com.hobbang.enhance.world.GenStone(), this);
 		pm.registerEvents(new TradeListener(), this);
 		pm.registerEvents(new EnchantListener(), this);
 		pm.registerEvents(new Recipes(), this);
@@ -58,6 +60,7 @@ public final class HobbangPlugin extends JavaPlugin {
 		com.hobbang.enhance.arena.Arenas.init(this);
 		com.hobbang.enhance.arena.StormArena.init(this);
 		com.hobbang.enhance.arena.ArenaDress.init(this);
+		com.hobbang.enhance.world.DummyManager.init(this);
 		// v1.4.1: 구조물 템플릿을 서버 시작 직후 미리 읽어 둔다 (첫 /hobbang structure place 때 ~55ms 렉 제거)
 		// v1.4.3: 같은 타이밍에 보스 파츠 item_display 워밍업 (첫 대장장이 소환 스파이크 완화)
 		Bukkit.getScheduler().runTaskLater(this, () -> {
@@ -65,8 +68,10 @@ public final class HobbangPlugin extends JavaPlugin {
 				if (st.structure != null) try { com.hobbang.enhance.arena.StructurePlacer.template(st); } catch (Exception ex) { getLogger().warning("구조물 템플릿 미리 읽기 실패: " + st.structure); }
 			com.hobbang.enhance.boss.BossWarmup.start();
 		}, 40L);
-		getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, ev ->
-			ev.registrar().register(HobbangCommand.build(), "홉방 강화 명령어", List.of("hb")));
+		getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, ev -> {
+			ev.registrar().register(HobbangCommand.build(), "홉방 강화 명령어", List.of("hb"));
+			ev.registrar().register(HobbangCommand.buildEnhance(), "홉방 강화 단계 설정", List.of());
+		});
 		getLogger().info("홉방 강화 " + getPluginMeta().getVersion() + " 활성화 (레시피 " + Recipes.KEYS.size() + "개)");
 	}
 
@@ -77,7 +82,7 @@ public final class HobbangPlugin extends JavaPlugin {
 		com.hobbang.enhance.boss.TimeStun.shutdown();
 		com.hobbang.enhance.weapon.WeaponSkills.shutdown();
 		com.hobbang.enhance.arena.ArenaDress.shutdown();
-		com.hobbang.enhance.arena.StormArena.saveSync();
+		com.hobbang.enhance.arena.StormArena.shutdown();   // 와이번 전 투기장의 폭풍의 핵 반환 + 동기 저장
 		Recipes.unregister();
 	}
 }

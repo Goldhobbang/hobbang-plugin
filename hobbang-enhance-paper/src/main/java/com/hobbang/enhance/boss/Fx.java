@@ -269,17 +269,49 @@ public final class Fx {
 		}
 	}
 
-	/** Segments inside the existing warning boundary converge on the impact. */
+	private static final Map<Long, Long> SURFACE_MARK_AT = new HashMap<>();
+
+	private static Material markMat(BossKind kind, boolean inner) {
+		return switch (kind) {
+			case ABYSSAL_SMITH -> inner ? Material.ORANGE_STAINED_GLASS : Material.RED_STAINED_GLASS;
+			case PRISM_COLOSSUS -> inner ? Material.CYAN_STAINED_GLASS : Material.MAGENTA_STAINED_GLASS;
+			case CHRONO_SENTINEL -> inner ? Material.CYAN_STAINED_GLASS : Material.YELLOW_STAINED_GLASS;
+			case TEMPEST_WYVERN -> inner ? Material.WHITE_STAINED_GLASS : Material.LIGHT_BLUE_STAINED_GLASS;
+		};
+	}
+
+	/** 면 기반 바닥 예고 표식 (8각 반투명 발광 판 + 진행도 내부 판) */
 	static void groundMark(World w, Vector c, double radius, double progress, BossKind kind) {
-		Theme theme = Theme.of(kind);
-		double r = radius * (1 - 0.74 * progress);
-		for (int i = 0; i < 8; i++) {
-			double a = i * Math.PI / 4;
-			double x = Math.cos(a), z = Math.sin(a);
-			w.spawnParticle(Particle.DUST_COLOR_TRANSITION, c.getX() + x * r, c.getY() + 0.14, c.getZ() + z * r, 1, 0, 0, 0, 0, theme.dust);
-			w.spawnParticle(Particle.DUST_COLOR_TRANSITION, c.getX() + x * (r - 0.2), c.getY() + 0.14, c.getZ() + z * (r - 0.2),
-				1, 0, 0, 0, 0, theme.dust);
-		}
+		long key = ((long) Math.round(c.getX()) * 73856093L) ^ ((long) Math.round(c.getZ()) * 19349663L) ^ (kind.ordinal() * 83492791L);
+		long now = w.getFullTime();
+		Long prev = SURFACE_MARK_AT.get(key);
+		if (prev != null && now - prev < 3) return;
+		SURFACE_MARK_AT.put(key, now);
+		if (SURFACE_MARK_AT.size() > 256) SURFACE_MARK_AT.clear();
+
+		double gy = BU.groundY(w, c.getX(), c.getY() + 1.0, c.getZ());
+		Vector pos = new Vector(c.getX(), gy + 0.03, c.getZ());
+		float outerSide = (float) (Math.max(0.6, radius) * 1.414);
+		float innerFrac = (float) Math.max(0.15, Math.min(1.0, progress));
+		float innerSide = outerSide * innerFrac;
+		Material outMat = markMat(kind, false);
+		Material inMat = markMat(kind, true);
+		Fx.spawn(w, null, pos, 4, (fx, world) -> {
+			if (fx.age == 1) {
+				for (int k = 0; k < 2; k++) {
+					BlockDisplay d = fx.addBlock(outMat.createBlockData(), true);
+					Quaternionf q = k == 0 ? new Quaternionf() : new Quaternionf().rotationY((float) (Math.PI / 4));
+					Vector3f t = new Vector3f(-outerSide * 0.5F, 0F, -outerSide * 0.5F).rotate(q);
+					Fx.shape(d, t, q, new Vector3f(outerSide, 0.025F, outerSide), 0);
+				}
+				for (int k = 0; k < 2; k++) {
+					BlockDisplay d = fx.addBlock(inMat.createBlockData(), true);
+					Quaternionf q = k == 0 ? new Quaternionf() : new Quaternionf().rotationY((float) (Math.PI / 4));
+					Vector3f t = new Vector3f(-innerSide * 0.5F, 0.012F, -innerSide * 0.5F).rotate(q);
+					Fx.shape(d, t, q, new Vector3f(innerSide, 0.025F, innerSide), 0);
+				}
+			}
+		});
 	}
 
 	static void ripple(Boss boss, Vector center, double radius, int ticks) {
@@ -304,12 +336,12 @@ public final class Fx {
 	};
 	private static final int HEAVE_TILE_TICKS = 14;
 	private static final int HEAVE_LIFE = HEAVE_START + HEAVE_WAVE + HEAVE_TILE_TICKS + 1; // 26
-	private static final int HEAVE_MAX_TILES = 70;
+	private static final int HEAVE_MAX_TILES = 110;
 	private static final float HEAVE_LIFT_CENTER = 1.7F;
-	private static final float HEAVE_LIFT_EDGE = 0.72F;
+	private static final float HEAVE_LIFT_EDGE = 0.85F;
 	private static final Vector3f TILE_PIVOT = new Vector3f(0.5F, 0.5F, 0.5F);
 
-	private record HeaveTile(BlockDisplay display, Vector3f base, int delay, float lift, Quaternionf tilt, Vector landing, BlockData data) {
+	private record HeaveTile(BlockDisplay display, Vector3f base, int delay, float lift, Quaternionf tilt, float scale, Vector landing, BlockData data) {
 	}
 
 	static void slam(Boss boss, Vector impact, double radius) {
@@ -358,14 +390,15 @@ public final class Fx {
 	private static void heavePose(HeaveTile tile, float liftFrac, float tiltFrac, int interp) {
 		Quaternionf rot = new Quaternionf().slerp(tile.tilt(), tiltFrac);
 		// rotate around the tile's own centre, not the display origin corner
-		Vector3f pivotFix = new Vector3f(TILE_PIVOT).sub(rot.transform(new Vector3f(TILE_PIVOT)));
+		Vector3f pivot = new Vector3f(TILE_PIVOT).mul(tile.scale());
+		Vector3f pivotFix = new Vector3f(pivot).sub(rot.transform(new Vector3f(pivot)));
 		Vector3f t = new Vector3f(tile.base()).add(0.0F, tile.lift() * liftFrac, 0.0F).add(pivotFix);
 		if (liftFrac == 0.0F && tiltFrac == 0.0F) {
 			t.set(tile.base());
 			rot.identity();
 		}
 
-		shape(tile.display(), t, rot, new Vector3f(1.0F), interp);
+		shape(tile.display(), t, rot, new Vector3f(tile.scale()), interp);
 	}
 
 	private static List<HeaveTile> slamTiles(Fx uplift, double radius) {
@@ -411,6 +444,7 @@ public final class Fx {
 				double dz = z + 0.5 - center.getZ();
 				double dist = Math.sqrt(dx * dx + dz * dz);
 				double f = Math.min(1.0, dist / r0);
+				float scale = (float)(1.5 + 1.0 * f);
 				float lift = (float)(HEAVE_LIFT_CENTER + (HEAVE_LIFT_EDGE - HEAVE_LIFT_CENTER) * f + rnd.nextDouble(-0.12, 0.12));
 				lift = Math.max(0.55F, Math.min(1.85F, lift));
 				int delay = (int)Math.round(f * HEAVE_WAVE);
@@ -423,9 +457,9 @@ public final class Fx {
 					.rotateY((float)Math.toRadians(rnd.nextDouble(-6.0, 6.0)));
 				BlockData data = block.getBlockData();
 				BlockDisplay display = uplift.addBlock(data, false);
-				Vector3f base = new Vector3f((float)(x - center.getX()), (float)(y - center.getY()) - 0.035F, (float)(z - center.getZ()));
-				shape(display, base, new Quaternionf(), new Vector3f(1.0F), 0);
-				tiles.add(new HeaveTile(display, base, delay, lift, tilt, new Vector(x + 0.5, y + 1.05, z + 0.5), data));
+				Vector3f base = new Vector3f((float)(x + 0.5 - scale * 0.5 - center.getX()), (float)(y + 1.0 - scale - center.getY()) - 0.035F, (float)(z + 0.5 - scale * 0.5 - center.getZ()));
+				shape(display, base, new Quaternionf(), new Vector3f(scale), 0);
+				tiles.add(new HeaveTile(display, base, delay, lift, tilt, scale, new Vector(x + 0.5, y + 1.05, z + 0.5), data));
 			}
 		}
 
@@ -514,6 +548,10 @@ public final class Fx {
 	 * {@link #discardBeams(UUID)} triggers the same retract early.
 	 */
 	static Fx beam(Boss boss, Supplier<Vector> origin, Supplier<Vector> directionSource, float length, int life, Material shell, int rgb) {
+		return beamThick(boss, origin, directionSource, length, life, shell, rgb, 1.0F);
+	}
+
+	static Fx beamThick(Boss boss, Supplier<Vector> origin, Supplier<Vector> directionSource, float length, int life, Material shell, int rgb, float thickness) {
 		Vector first = directionSource.get();
 		if (first != null && first.lengthSquared() > 1.0E-6) {
 			Fx.Theme theme = Fx.Theme.of(boss.kind);
@@ -561,9 +599,9 @@ public final class Fx {
 							int interp = retracting ? 1 : 2;
 
 							for (int layer = 0; layer < fx.displays.size(); layer++) {
-								float width = (layer == 0 ? 1.04F : (layer == 1 ? 0.66F : 0.36F)) * (1.0F + 0.18F * BossMotion.sin(fx.age * 1.16F + layer)) * thin * (k > 0.0F ? 1.0F : 0.0F);
+								float width = (layer == 0 ? 1.04F : (layer == 1 ? 0.66F : 0.36F)) * thickness * (1.0F + 0.18F * BossMotion.sin(fx.age * 1.16F + layer)) * thin * (k > 0.0F ? 1.0F : 0.0F);
 								Quaternionf rot = new Quaternionf(axis).rotateZ(fx.age * (0.13F + 0.065F * layer));
-								float jitter = layer == 2 || retracting ? 0.0F : 0.14F * BossMotion.sin(fx.age * 0.82F + layer * 2);
+								float jitter = layer == 2 || retracting ? 0.0F : 0.14F * Math.min(1.8F, thickness) * BossMotion.sin(fx.age * 0.82F + layer * 2);
 								Vector3f offset = new Vector3f(-width / 2.0F, -width / 2.0F, 0.0F).rotate(rot).add(new Vector3f(jitter, -jitter, 0.0F).rotate(axis));
 								shape(fx.displays.get(layer), offset, rot, new Vector3f(width, width, length * k), interp);
 							}

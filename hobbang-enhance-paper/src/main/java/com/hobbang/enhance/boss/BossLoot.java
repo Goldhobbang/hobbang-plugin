@@ -94,6 +94,26 @@ public final class BossLoot implements Listener {
 		BU.sound(base, Sound.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.PLAYERS, 1F, 1F);
 	}
 
+	/**
+	 * 청크 언로드 때 onRemove 가 팀 항목을 지우므로(스코어보드에 쌓이지 않게), 다시 로드되면 색을 되살린다.
+	 * 보상 아이템은 PDC(KEY)로 표시돼 있고 발광 플래그는 엔티티에 저장돼 있다.
+	 */
+	@EventHandler
+	public void onEntitiesLoad(org.bukkit.event.world.EntitiesLoadEvent e) {
+		for (org.bukkit.entity.Entity en : e.getEntities()) restoreGlow(en);
+	}
+
+	/** 플러그인 활성화 전에 이미 로드된 청크(스폰 청크 등)의 보상 아이템 */
+	public static void restoreLoaded() {
+		for (World w : Bukkit.getWorlds()) for (Item it : w.getEntitiesByClass(Item.class)) restoreGlow(it);
+	}
+
+	private static void restoreGlow(org.bukkit.entity.Entity en) {
+		if (!(en instanceof Item it) || !it.getPersistentDataContainer().has(KEY)) return;
+		it.setGlowing(true);
+		team(colorOf(it.getItemStack())).addEntry(it.getUniqueId().toString());
+	}
+
 	@EventHandler
 	public void onRemove(EntityRemoveFromWorldEvent e) {
 		if (!(e.getEntity() instanceof Item it)) return;

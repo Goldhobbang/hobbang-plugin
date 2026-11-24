@@ -17,6 +17,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -37,8 +38,85 @@ import java.util.UUID;
 public final class HammerSkill implements Listener {
 	/** 낙하 급강하 중이거나 막 착지한 플레이어 → 낙하 피해 무시 (만료 시각 ms) */
 	private static final Map<UUID, Long> NO_FALL = new HashMap<>();
-	/** 거리 30칸에서 범위·피해 최대 ×2. 그 이상은 30과 동일, 이하는 비례 */
-	static final double SLAM_FULL_DISTANCE = 30.0;
+	private static final Map<UUID, RedSky> RED_SKIES = new HashMap<>();
+
+	private static final class RedSky {
+		final net.kyori.adventure.bossbar.BossBar bar;
+		final java.util.List<Player> viewers;
+		RedSky(net.kyori.adventure.bossbar.BossBar bar, java.util.List<Player> viewers) {
+			this.bar = bar;
+			this.viewers = viewers;
+		}
+		void clear() {
+			for (Player v : viewers) {
+				if (!v.isOnline()) continue;
+				v.hideBossBar(bar);
+				v.setWorldBorder(null);
+			}
+		}
+	}
+
+	private static void beginRedSky(Player p) {
+		endRedSky(p.getUniqueId());
+		World w = p.getWorld();
+		org.bukkit.WorldBorder wb = org.bukkit.Bukkit.createWorldBorder();
+		wb.setCenter(p.getLocation());
+		wb.setSize(120.0);
+		wb.setWarningDistance(100000);
+		net.kyori.adventure.bossbar.BossBar bar = net.kyori.adventure.bossbar.BossBar.bossBar(
+			net.kyori.adventure.text.Component.text("☠ 천공 강림", net.kyori.adventure.text.format.NamedTextColor.RED),
+			1.0F,
+			net.kyori.adventure.bossbar.BossBar.Color.RED,
+			net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS,
+			java.util.EnumSet.of(net.kyori.adventure.bossbar.BossBar.Flag.DARKEN_SCREEN, net.kyori.adventure.bossbar.BossBar.Flag.CREATE_WORLD_FOG)
+		);
+		java.util.List<Player> viewers = new java.util.ArrayList<>();
+		for (Player near : w.getPlayers()) {
+			if (near.getLocation().distanceSquared(p.getLocation()) <= 56 * 56) {
+				near.showBossBar(bar);
+				near.setWorldBorder(wb);
+				viewers.add(near);
+			}
+		}
+		RED_SKIES.put(p.getUniqueId(), new RedSky(bar, viewers));
+	}
+
+	private static void endRedSky(UUID id) {
+		RedSky sky = RED_SKIES.remove(id);
+		if (sky != null) sky.clear();
+	}
+	/** 거리 45칸(20강 천공 내려찍기 최대 높이)에서 낙하 보너스 최대 +31.5, 20강 최대 피해 50.0 */
+	static final double SLAM_FULL_DISTANCE = 45.0;
+	public static final double BASE_DMG = 10.0;
+	public static final double ENHANCE_DMG_STEP = 0.05;
+	public static final double FALL_DMG_PER_BLOCK = 0.7;
+
+	public static double groundDamage(int lv) {
+		return BASE_DMG * (1.0 + ENHANCE_DMG_STEP * com.hobbang.enhance.item.EnhanceTier.bossSkillLv(lv));
+	}
+
+	public static double fallBonus(double dist) {
+		return Math.min(SLAM_FULL_DISTANCE, Math.max(0.0, dist)) * FALL_DMG_PER_BLOCK;
+	}
+
+	/** 20강 최대 높이(45칸) 낙하만 50.0에 도달 가능; 저강화·평지·천장 막힘 저고도는 영혼 중첩으로도 낮게 상한 */
+	public static double capDamage(int lv, double dist) {
+		int slv = com.hobbang.enhance.item.EnhanceTier.bossSkillLv(lv);
+		double gCap = 14.0 + 0.7 * slv;                       // +3: 14.0, +15: 22.4, +20: 25.9
+		double fullCap = lv >= 20 ? 50.0 : 20.0 + 1.5 * slv;  // +3: 20.0, +15: 38.0, +19: 44.0, +20: 50.0
+		double hFrac = Math.min(1.0, Math.max(0.0, dist / SLAM_FULL_DISTANCE));
+		double cap = gCap + (fullCap - gCap) * hFrac;
+		if (lv < 20 || dist < 44.0) cap = Math.min(48.0, cap);
+		return cap;
+	}
+
+	@EventHandler
+	public void onQuit(PlayerQuitEvent e) {
+		Player p = e.getPlayer();
+		NO_FALL.remove(p.getUniqueId());
+		endRedSky(p.getUniqueId());
+		if (!p.hasGravity()) p.setGravity(true);
+	}
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onFall(EntityDamageEvent e) {
@@ -54,11 +132,96 @@ public final class HammerSkill implements Listener {
 		return r == null ? 0 : p.getLocation().getY() - r.getHitPosition().getY();
 	}
 
+	public static double baseRadius(int lv) {
+		int slv = com.hobbang.enhance.item.EnhanceTier.bossSkillLv(lv);
+		return 2.5 + 0.05 * slv + 0.5 * (slv / 5);
+	}
+
 	static void cast(Player p, ItemStack stack, int lv, double mult, double rad, int tier) {
-		double radius = 5.0 + rad + (com.hobbang.enhance.item.EnhanceTier.bossSkillLv(lv) / 5) + Souls.radiusAdd(stack, lv);   // 3강 해금부터 5강화당 +1칸
-		double dmg = 8.0 * mult * Souls.dmgMult(stack, lv);
-		if (!p.isOnGround() && !p.isGliding() && !p.isSwimming() && !p.isInWater() && groundDistance(p) >= 2.5) slam(p, lv, radius, dmg, tier);
-		else quake(p, lv, radius, dmg, tier);
+		double radius = baseRadius(lv) + Souls.radiusAdd(stack, lv);   // 3강 2.5칸, 이후 강화당 +0.05칸, 5강화당 +0.5칸
+		double soulsMult = Souls.dmgMult(stack, lv);
+		if (!p.isOnGround() && !p.isGliding() && !p.isSwimming() && !p.isInWater() && groundDistance(p) >= 2.5) slam(p, lv, radius, soulsMult, tier, p.getLocation().getY());
+		else if (lv >= 15) skySlam(p, lv, radius, soulsMult, tier);
+		else quake(p, lv, radius, Math.min(capDamage(lv, 0), groundDamage(lv) * soulsMult), tier);
+	}
+
+	private static double jumpVelocityForHeight(double targetHeight) {
+		double lo = 0.0, hi = 6.0;
+		for (int iter = 0; iter < 24; iter++) {
+			double mid = (lo + hi) * 0.5;
+			double y = 0, vy = mid;
+			while (vy > 0) {
+				y += vy;
+				vy = (vy - 0.08) * 0.98;
+			}
+			if (y < targetHeight) lo = mid;
+			else hi = mid;
+		}
+		return (lo + hi) * 0.5;
+	}
+
+	/** 15강~ 지상 지진: 위더 소환 소리와 함께 20칸(+15강 초과당 +5칸) 포물선 도약 → 최고점 지나 자연 낙하 시작 시 바라보는 방향으로 다이브 */
+	private static void skySlam(Player p, int lv, double radius, double soulsMult, int tier) {
+		World sl = p.getWorld();
+		double wantUp = 20.0 + 5.0 * (lv - 15);
+		RayTraceResult ceil = sl.rayTraceBlocks(p.getEyeLocation(), new Vector(0, 1, 0), wantUp + 1.0, FluidCollisionMode.NEVER, true);
+		if (ceil != null) {
+			double maxUp = ceil.getHitPosition().getY() - p.getLocation().getY() - p.getHeight() - 0.2;
+			if (maxUp < 1.0) {
+				quake(p, lv, radius, Math.min(capDamage(lv, 0), groundDamage(lv) * soulsMult), tier);
+				return;
+			}
+			wantUp = Math.min(wantUp, maxUp);
+		}
+		final UUID id = p.getUniqueId();
+		NO_FALL.put(id, Long.MAX_VALUE);
+		beginRedSky(p);
+		p.setGravity(true);
+		p.setFallDistance(0);
+		double v0 = jumpVelocityForHeight(wantUp + 0.2);
+		p.setVelocity(new Vector(0, v0, 0));
+		BU.sound(p.getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.PLAYERS, 1.4F, 0.9F);
+		sl.spawnParticle(Particle.EXPLOSION, p.getLocation().getX(), p.getLocation().getY() + 0.3, p.getLocation().getZ(), 4, 0.8, 0.2, 0.8, 0);
+		sl.spawnParticle(Particle.SOUL_FIRE_FLAME, p.getLocation().getX(), p.getLocation().getY() + 0.5, p.getLocation().getZ(), 24, 0.6, 0.3, 0.6, 0.08);
+		new BukkitRunnable() {
+			int t = 0;
+			int fallTicks = 0;
+			double prevY = p.getLocation().getY();
+			double peakY = prevY;
+
+			@Override public void run() {
+				if (!p.isOnline() || p.isDead() || p.getWorld() != sl) {
+					NO_FALL.remove(id);
+					endRedSky(id);
+					cancel();
+					return;
+				}
+				t++;
+				p.setFallDistance(0);
+				Location cur = p.getLocation();
+				if (cur.getY() > peakY) peakY = cur.getY();
+				double vy = cur.getY() - prevY;
+				prevY = cur.getY();
+				if (t % 2 == 0) {
+					sl.spawnParticle(Particle.CRIMSON_SPORE, cur.getX(), cur.getY() + 6.0, cur.getZ(), 28, 14.0, 4.0, 14.0, 0.02);
+					sl.spawnParticle(Particle.SOUL_FIRE_FLAME, cur.getX(), cur.getY() + 0.2, cur.getZ(), 4, 0.25, 0.2, 0.25, 0.02);
+					sl.spawnParticle(Particle.CLOUD, cur.getX(), cur.getY(), cur.getZ(), 3, 0.3, 0.1, 0.3, 0.03);
+				}
+				if (t > 4 && (vy < -0.05 || p.getVelocity().getY() < -0.15)) {
+					fallTicks++;
+					if (fallTicks >= 3) {
+						BU.sound(cur, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 1.0F, 0.65F);
+						cancel();
+						slam(p, lv, radius, soulsMult, tier, peakY);
+						return;
+					}
+				}
+				if ((t > 3 && p.isOnGround()) || t >= 80) {
+					cancel();
+					slam(p, lv, radius, soulsMult, tier, peakY);
+				}
+			}
+		}.runTaskTimer(HobbangPlugin.get(), 1L, 1L);
 	}
 
 	/** 일반 지진: 반경 안의 적에게 피해 + 밀치기(뜨는 높이는 0.8) */
@@ -79,8 +242,9 @@ public final class HammerSkill implements Listener {
 	}
 
 	/** 공중 사용: 시선 방향으로 가속 급강하(하강각 최소 45°, 더 아래를 보면 그 각도 그대로). 착지·벽·적 충돌 시 낙하 거리 비례 충격파 */
-	private static void slam(Player p, int lv, double radius, double dmg, int tier) {
-		final double startY = p.getLocation().getY();
+	private static void slam(Player p, int lv, double radius, double soulsMult, int tier, double peakY) {
+		final double startY = Math.max(peakY, p.getLocation().getY());
+		final Vector fixedDir = slamDir(p);
 		final UUID id = p.getUniqueId();
 		NO_FALL.put(id, Long.MAX_VALUE);
 		BU.sound(p.getLocation(), Sound.ITEM_MACE_SMASH_AIR, SoundCategory.PLAYERS, 1.6F, 0.7F);
@@ -88,20 +252,22 @@ public final class HammerSkill implements Listener {
 			int t = 0;
 
 			@Override public void run() {
-				if (!p.isOnline() || p.isDead() || p.getWorld() == null) { NO_FALL.remove(id); cancel(); return; }
+				if (!p.isOnline() || p.isDead() || p.getWorld() == null) { NO_FALL.remove(id); endRedSky(id); cancel(); return; }
 				t++;
 				double speed = Math.min(3.2, 0.8 + 0.4 * t);   // 가속: 틱마다 빨라짐
-				Vector dir = slamDir(p);
+				Vector dir = fixedDir.clone();
 				boolean landed = t > 1 && (p.isOnGround() || groundDistance(p) < 0.2);
 				boolean crashed = t > 1 && slamCrash(p, dir, speed);
 				if (landed || crashed || t > 100) {
 					cancel();
+					endRedSky(id);
 					NO_FALL.put(id, System.currentTimeMillis() + 1500);   // 착지 직후 낙하 피해 처리까지 여유
 					p.setFallDistance(0);
 					if (crashed) p.setVelocity(new Vector(0, 0, 0));
 					double dist = Math.max(0, startY - p.getLocation().getY());
-					double k = 1 + Math.min(1.0, dist / SLAM_FULL_DISTANCE);   // 0칸 1배 … 30칸+ 2배 (범위·피해)
-					quake(p, lv, radius * k, dmg * k, tier);
+					double k = 1 + Math.min(1.0, dist / SLAM_FULL_DISTANCE);   // 0칸 1배 … 45칸+ 2배 (범위)
+					double hitDmg = Math.min(capDamage(lv, dist), (groundDamage(lv) + fallBonus(dist)) * soulsMult);
+					quake(p, lv, radius * k, hitDmg, tier);
 					return;
 				}
 				p.setVelocity(dir.multiply(speed));

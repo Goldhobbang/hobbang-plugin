@@ -32,6 +32,8 @@ public final class Keys {
 	public static final NamespacedKey YAW = k("yaw");
 	/** 엔티티 PDC: 보스가 부른 소환수 표시 */
 	public static final NamespacedKey MINION = k("minion");
+	/** 엔티티 PDC: 사망 연출이 시작된 보스 (연출 도중 언로드/종료돼 다시 로드되면 붙이지 않고 지운다) */
+	public static final NamespacedKey BOSS_DYING = k("boss_dying");
 
 	/** 블록 엔티티 PDC (구조물 템플릿에 들어 있음): 보스 제단 = 보스 id (v1.4.0) */
 	public static final NamespacedKey ALTAR = k("altar");

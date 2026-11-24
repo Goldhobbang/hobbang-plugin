@@ -1,0 +1,8 @@
+{
+  "parent": "hobbang:item/boss/abyssal_smith/leg_l",
+  "textures": {
+    "t": "hobbang:item/boss/abyssal_smith/leg_l_purple",
+    "particle": "hobbang:item/boss/abyssal_smith/leg_l_purple",
+    "t1": "hobbang:item/boss/abyssal_smith/leg_l_1_purple"
+  }
+}

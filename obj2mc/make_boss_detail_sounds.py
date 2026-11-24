@@ -106,6 +106,61 @@ def effects():
         + 0.28 * chime(t, (350, 701, 903), 13, 0.02)
         + 0.35 * thud(t, 57, 22))
 
+    # Abyssal Smith emerges from central basalt altar (heavy stone breach + molten surge)
+    t = time(1.45)
+    emerge_boom = 0.85 * thud(t, 44, 7.5) + 0.50 * thud(np.maximum(0, t - 0.14), 38, 4.5)
+    emerge_rock = 0.62 * noise(t, 95, 760) * np.exp(-t * 4.2) * (1.0 - np.exp(-t * 95))
+    emerge_magma = 0.34 * noise(t, 1100, 3200) * np.exp(-np.maximum(0, t - 0.06) * 2.8) * np.minimum(1, t / 0.08)
+    emerge_groan = 0.48 * sweep(t, 148, 46, 2.2) * np.exp(-t * 2.6) * np.minimum(1, t / 0.05)
+    yield 'smith.emerge', 'smith/emerge', 48, 0.86, emerge_boom + emerge_rock + emerge_magma + emerge_groan
+
+    # Abyssal Smith skyward roar (colossal forge-titan guttural roar + abyssal resonance)
+    t = time(3.40)
+    roar_attack = np.minimum(1.0, t / 0.18) ** 1.4
+    roar_tail = np.where(t < 1.85, 1.0, np.exp(-(t - 1.85) * 1.9))
+    roar_env = roar_attack * roar_tail
+    f0 = np.where(t < 0.55, 78 + 72 * np.sin(np.pi * 0.5 * (t / 0.55)),
+                  150 - 92 * (np.maximum(0.0, t - 0.55) / 2.85) ** 0.85)
+    f0 = f0 * (1.0 + 0.045 * np.sin(2 * np.pi * 17.5 * t) + 0.02 * np.sin(2 * np.pi * 5.1 * t))
+    phase = 2 * np.pi * np.cumsum(f0) / RATE
+    vocal_raw = (1.0 * np.sin(phase) + 0.72 * np.sin(2 * phase + 0.4)
+                 + 0.48 * np.sin(3 * phase) + 0.30 * np.sin(4 * phase) + 0.18 * np.sin(5 * phase))
+    vocal = np.tanh(2.3 * vocal_raw) * (0.76 + 0.24 * np.sin(2 * np.pi * 23.0 * t))
+    throat_noise = 0.55 * noise(t, 260, 1450) * (0.7 + 0.3 * np.sin(2 * np.pi * 21.0 * t))
+    furnace_hiss = 0.28 * noise(t, 1600, 3900) * np.exp(-np.maximum(0, t - 0.3) * 0.6)
+    blast_sub = 0.65 * thud(np.maximum(0, t - 0.16), 46, 3.2)
+    abyss_res = 0.26 * chime(t, (112, 168, 281), 1.4, 0.12)
+    yield 'smith.roar', 'smith/roar', 56, 0.92, (0.78 * vocal + throat_noise + furnace_hiss) * roar_env + blast_sub + abyss_res
+
+    # Abyssal Smith Phase 3 sky beam awakening (charge -> colossal impact -> purple plasma hum)
+    t = time(3.60)
+    charge = np.where(t < 0.72, (t / 0.72) ** 1.6, 0.0) * (
+        0.55 * sweep(t, 130, 820, 1.4) + 0.45 * noise(t, 350, 2200))
+    impact_t = np.maximum(0.0, t - 0.66)
+    impact_mask = (t >= 0.66).astype(float)
+    beam_boom = impact_mask * (0.95 * thud(impact_t, 39, 3.8) + 0.68 * noise(t, 240, 2900) * np.exp(-impact_t * 3.6))
+    plasma_env = impact_mask * np.minimum(1.0, impact_t / 0.08) * np.where(t < 2.55, 1.0, np.exp(-(t - 2.55) * 2.1))
+    mod = 0.85 * np.sin(2 * np.pi * 3.8 * t)
+    plasma = (0.48 * np.sin(2 * np.pi * 72 * t) + 0.38 * np.sin(2 * np.pi * 108.5 * t + mod)
+              + 0.28 * np.sin(2 * np.pi * 216.0 * t) + 0.18 * np.sin(2 * np.pi * 325.0 * t - mod)
+              + 0.22 * noise(t, 450, 1950)) * plasma_env
+    yield 'smith.awaken_beam', 'smith/awaken_beam', 60, 0.90, charge + beam_boom + 0.72 * plasma
+
+    # Chrono Scythe Karma Settlement heavy mechanical gear turn (zero anvil clang/ring)
+    t = time(0.86)
+    grind = 0.38 * noise(t, 110, 560) * (0.55 + 0.45 * np.maximum(0.0, np.sin(2 * np.pi * 24.0 * t))) * np.sin(np.pi * np.minimum(1.0, t / 0.78)) ** 0.7
+    motor_hum = 0.32 * (np.sin(2 * np.pi * 58 * t) + 0.55 * np.sin(2 * np.pi * 87 * t)) * np.sin(np.pi * np.minimum(1.0, t / 0.82))
+    teeth = np.zeros_like(t)
+    for dt_k, pitch_k, amp_k in ((0.01, 1.05, 0.62), (0.13, 0.96, 0.72), (0.27, 0.88, 0.80), (0.44, 0.80, 0.90), (0.63, 0.68, 1.00)):
+        tk = np.maximum(0.0, t - dt_k)
+        mk = (t >= dt_k).astype(float)
+        # Damped low iron block thump (fast decay 38-55 so it clunks mechanically instead of ringing like an anvil)
+        teeth += mk * amp_k * (
+            0.85 * thud(tk, 64 * pitch_k, 26)
+            + 0.46 * noise(t, 130, 520) * np.exp(-tk * 42)
+            + 0.24 * np.sin(2 * np.pi * 145 * pitch_k * tk) * np.exp(-tk * 44))
+    yield 'weapon.chrono.gear', 'weapon/chrono_gear', 28, 0.88, 0.78 * teeth + grind + motor_hum
+
 
 def main():
     ffmpeg = shutil.which('ffmpeg')
@@ -115,8 +170,9 @@ def main():
     original = path.read_text(encoding='utf-8')
     events = json.loads(original)
     for name, file, distance, volume, signal in effects():
-        write_ogg(ASSETS / 'sounds/boss' / (file + '.ogg'), signal, volume, ffmpeg)
-        events[name] = {'sounds': [{'name': 'hobbang:boss/' + file,
+        rel = file if file.startswith('weapon/') else 'boss/' + file
+        write_ogg(ASSETS / 'sounds' / (rel + '.ogg'), signal, volume, ffmpeg)
+        events[name] = {'sounds': [{'name': 'hobbang:' + rel,
                                    'attenuation_distance': distance, 'preload': len(signal) < RATE}]}
     path.write_text(json.dumps(events, indent=2, ensure_ascii=False) + '\n', encoding='utf-8', newline='\n')
 

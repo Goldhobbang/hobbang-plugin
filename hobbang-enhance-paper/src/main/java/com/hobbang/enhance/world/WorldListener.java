@@ -153,8 +153,10 @@ public final class WorldListener implements Listener {
 		ItemStack tool = p.getInventory().getItemInMainHand();
 		boolean creative = p.getGameMode() == GameMode.CREATIVE;
 		Material type = b.getType();
+		// 플레이어가 놓았거나 돌 생성기(용암+물)·피스톤으로 생긴 돌이면 강화석 없음 (기록도 지운다)
+		boolean natural = !(isStoneLike(type) && b.getY() < EnhanceConfig.CFG.stoneDropMaxY && GenStone.consume(b));
 		// 강화석 광맥 (돌·심층암·응회암을 캐다 보면 가끔): Fabric 강화석 광석 대체
-		if (!creative && !silk(tool) && isStoneLike(type) && b.getY() < EnhanceConfig.CFG.stoneDropMaxY && e.isDropItems()
+		if (natural && !creative && !silk(tool) && isStoneLike(type) && b.getY() < EnhanceConfig.CFG.stoneDropMaxY && e.isDropItems()
 			&& !b.getDrops(tool, p).isEmpty() && rnd().nextDouble() * 100 < EnhanceConfig.CFG.stoneDropChance) {
 			boolean deep = type == Material.DEEPSLATE;
 			int fortune = tool.getType().isAir() ? 0 : tool.getEnchantmentLevel(Enchantment.FORTUNE);

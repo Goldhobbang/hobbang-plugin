@@ -41,6 +41,11 @@ public final class EnhanceConfig {
 			new Stage(20, 50, 20, 2, 9),
 			new Stage(15, 50, 25, 2, 10),
 			new Stage(10, 50, 30, 3, 12),
+			new Stage(10, 50, 35, 2, 13),
+			new Stage(10, 50, 35, 2, 14),
+			new Stage(9, 50, 40, 2, 15),
+			new Stage(9, 50, 40, 2, 16),
+			new Stage(8, 50, 45, 2, 18),
 		};
 		public int radiantFrom = 10;
 		public double luckCharmBonus = 10;
@@ -67,6 +72,26 @@ public final class EnhanceConfig {
 	}
 
 	public static Data CFG = new Data();
+
+	/** 손으로 고친 json 의 빈 칸(null)·음수·NaN 이 강화 창/확률표에서 NPE 나 음수 비용(재료·경험치 지급)이 되지 않게 보정 */
+	static void sanitize(Data d) {
+		Data def = new Data();
+		for (int i = 0; i < d.stages.length; i++) {
+			Stage s = d.stages[i];
+			if (s == null) { d.stages[i] = def.stages[i]; continue; }
+			s.success = pct(s.success, def.stages[i].success);
+			s.downgrade = pct(s.downgrade, def.stages[i].downgrade);
+			s.destroy = pct(s.destroy, def.stages[i].destroy);
+			s.stones = Math.max(0, s.stones);
+			s.xpLevels = Math.max(0, s.xpLevels);
+		}
+		d.radiantFrom = Math.max(0, Math.min(20, d.radiantFrom));
+		if (d.bossModels == null) d.bossModels = def.bossModels;
+	}
+
+	private static double pct(double v, double fallback) {
+		return Double.isFinite(v) ? Math.max(0, Math.min(100, v)) : fallback;
+	}
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
 	public static Path path() {
@@ -80,11 +105,20 @@ public final class EnhanceConfig {
 			if (Files.exists(p)) {
 				try (Reader r = Files.newBufferedReader(p, StandardCharsets.UTF_8)) {
 					Data d = GSON.fromJson(r, Data.class);
-					if (d == null || d.stages == null || d.stages.length != 15) {
-						HobbangPlugin.get().getLogger().warning("hobbang-enhance.json 의 stages 는 15개여야 합니다. 기본값 사용.");
+					if (d != null && d.stages != null && d.stages.length == 15) {
+						Data def = new Data();
+						Stage[] merged = new Stage[20];
+						System.arraycopy(d.stages, 0, merged, 0, 15);
+						System.arraycopy(def.stages, 15, merged, 15, 5);
+						d.stages = merged;
+						HobbangPlugin.get().getLogger().info("hobbang-enhance.json 15단계 → 20단계로 자동 확장했습니다.");
+					}
+					if (d == null || d.stages == null || d.stages.length != 20) {
+						HobbangPlugin.get().getLogger().warning("hobbang-enhance.json 의 stages 는 20개여야 합니다. 기본값 사용.");
 						CFG = new Data();
 						return "설정 오류 - 기본값 사용";
 					}
+					sanitize(d);
 					CFG = d;
 				}
 			} else {

@@ -1,0 +1,13 @@
+{
+  "parent": "hobbang:item/boss/abyssal_smith/torso",
+  "textures": {
+    "t": "hobbang:item/boss/abyssal_smith/torso_purple",
+    "particle": "hobbang:item/boss/abyssal_smith/torso_purple",
+    "t1": "hobbang:item/boss/abyssal_smith/torso_1_purple",
+    "t2": "hobbang:item/boss/abyssal_smith/torso_2_purple",
+    "t3": "hobbang:item/boss/abyssal_smith/torso_3_purple",
+    "t4": "hobbang:item/boss/abyssal_smith/torso_4_purple",
+    "t5": "hobbang:item/boss/abyssal_smith/torso_5_purple",
+    "t6": "hobbang:item/boss/abyssal_smith/torso_6_purple"
+  }
+}

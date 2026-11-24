@@ -59,9 +59,16 @@ public final class BossManager implements Listener {
 	}
 
 	public static void shutdown() {
-		for (Boss b : BOSSES.values()) b.unload();
+		// 사망 연출 중에 꺼지면 보상·정리를 지금 끝낸다 (예전: 보상 없이 무적 히트박스가 저장됨)
+		List<Boss> all = new ArrayList<>(BOSSES.values());
+		all.addAll(DYING);
+		for (Boss b : all) {
+			if (b instanceof DisplayBoss db && db.dying && !db.dead) {
+				try { db.finishDeath(); } catch (Exception ex) { HobbangPlugin.get().getLogger().warning("shutdown finishDeath (" + b.kind.id + "): " + ex); }
+			}
+		}
+		for (Boss b : all) b.unload();
 		BOSSES.clear();
-		for (Boss b : DYING) b.unload();
 		DYING.clear();
 		Fx.clearAll();
 		Ritual.clear();
@@ -128,6 +135,9 @@ public final class BossManager implements Listener {
 		// v1.3.0: 보스 크기 변경 — 이미 소환돼 있던 1.2.0 보스도 붙을 때 새 크기로
 		attr(m, Attribute.SCALE, kind.scale);
 		if (kind == BossKind.ABYSSAL_SMITH) attr(m, Attribute.STEP_HEIGHT, 2.5);
+		// 순간이동 점프·조립 연출 도중 언로드되면 NoAI 가 저장된다 → 다시 붙을 때 복구 (조립은 재개되지 않음)
+		if (!m.hasAI()) m.setAI(true);
+		if (m.isInvulnerable()) m.setInvulnerable(false);
 		m.setInvisible(true);   // v1.4.2: 대장장이도 소환 직후 숨김 (조립 연출 전 위더 스켈레톤이 한 틱 비치지 않게)
 		if (kind != BossKind.ABYSSAL_SMITH) {
 			m.setSilent(true);
@@ -159,6 +169,11 @@ public final class BossManager implements Listener {
 		if (existing != null) return existing;
 		BossKind kind = kindOf(m);
 		if (kind == null || m.isDead()) return null;
+		if (m.getPersistentDataContainer().has(Keys.BOSS_DYING)) {
+			// 사망 연출 도중 저장된 히트박스: 보상은 이미(또는 종료 시) 정산됨 → 다시 붙이지 않고 지운다
+			m.remove();
+			return null;
+		}
 		configure(m, kind);
 		Boss b = create(m, kind);
 		b.arena = com.hobbang.enhance.arena.ArenaRef.read(m);
@@ -188,22 +203,22 @@ public final class BossManager implements Listener {
 			attr(m, Attribute.FOLLOW_RANGE, 48.0);
 			switch (kind) {
 				case ABYSSAL_SMITH -> {
-					attr(m, Attribute.MAX_HEALTH, 600); attr(m, Attribute.ARMOR, 12); attr(m, Attribute.ARMOR_TOUGHNESS, 8);
+					attr(m, Attribute.MAX_HEALTH, Boss.phaseMaxHealth(kind, 1)); attr(m, Attribute.ARMOR, 12); attr(m, Attribute.ARMOR_TOUGHNESS, 8);
 					attr(m, Attribute.ATTACK_DAMAGE, 14); attr(m, Attribute.ATTACK_KNOCKBACK, 1.5);
-					attr(m, Attribute.MOVEMENT_SPEED, 0.3); attr(m, Attribute.STEP_HEIGHT, 2.5);
+					attr(m, Attribute.MOVEMENT_SPEED, 0.24); attr(m, Attribute.STEP_HEIGHT, 2.5);
 					SmithBoss.equip(m);
 				}
 				case PRISM_COLOSSUS -> {
-					attr(m, Attribute.MAX_HEALTH, 900); attr(m, Attribute.ARMOR, 16); attr(m, Attribute.ARMOR_TOUGHNESS, 10);
+					attr(m, Attribute.MAX_HEALTH, Boss.phaseMaxHealth(kind, 1)); attr(m, Attribute.ARMOR, 16); attr(m, Attribute.ARMOR_TOUGHNESS, 10);
 					attr(m, Attribute.ATTACK_DAMAGE, 16); attr(m, Attribute.ATTACK_KNOCKBACK, 2.0);
 					attr(m, Attribute.MOVEMENT_SPEED, 0.24); attr(m, Attribute.STEP_HEIGHT, 2.5);
 				}
 				case TEMPEST_WYVERN -> {
-					attr(m, Attribute.MAX_HEALTH, 700); attr(m, Attribute.ARMOR, 8); attr(m, Attribute.ARMOR_TOUGHNESS, 6);
+					attr(m, Attribute.MAX_HEALTH, Boss.phaseMaxHealth(kind, 1)); attr(m, Attribute.ARMOR, 8); attr(m, Attribute.ARMOR_TOUGHNESS, 6);
 					attr(m, Attribute.ATTACK_DAMAGE, 12); attr(m, Attribute.MOVEMENT_SPEED, 0.3); attr(m, Attribute.FOLLOW_RANGE, 64.0);
 				}
 				case CHRONO_SENTINEL -> {
-					attr(m, Attribute.MAX_HEALTH, 800); attr(m, Attribute.ARMOR, 10); attr(m, Attribute.ARMOR_TOUGHNESS, 8);
+					attr(m, Attribute.MAX_HEALTH, Boss.phaseMaxHealth(kind, 1)); attr(m, Attribute.ARMOR, 10); attr(m, Attribute.ARMOR_TOUGHNESS, 8);
 					attr(m, Attribute.ATTACK_DAMAGE, 10); attr(m, Attribute.MOVEMENT_SPEED, 0.25);
 				}
 			}
@@ -213,7 +228,7 @@ public final class BossManager implements Listener {
 		Mob m = (Mob) raw;
 		Boss spawned = attach(m);
 		if (spawned instanceof DisplayBoss db) db.startAssemble();
-		com.hobbang.enhance.arena.ArenaDress.start(spawned);
+		com.hobbang.enhance.arena.ArenaDress.bindBoss(spawned);
 		int x = at.getBlockX(), y = at.getBlockY(), z = at.getBlockZ();
 		if (kind == BossKind.ABYSSAL_SMITH) {
 			BU.sound(at, Sound.ENTITY_WITHER_SPAWN, SoundCategory.HOSTILE, 3.0F, 0.7F);

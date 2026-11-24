@@ -1,0 +1,9 @@
+{
+  "parent": "hobbang:item/boss/smith_hammer/hammer",
+  "textures": {
+    "t": "hobbang:item/boss/smith_hammer/hammer_purple",
+    "particle": "hobbang:item/boss/smith_hammer/hammer_purple",
+    "t1": "hobbang:item/boss/smith_hammer/hammer_1_purple",
+    "t2": "hobbang:item/boss/smith_hammer/hammer_2_purple"
+  }
+}

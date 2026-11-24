@@ -10,9 +10,11 @@ import org.bukkit.Sound;
  * 총 90틱(4.5초). 파츠는 interpolation_duration 으로만 날아오며, 틱마다 변환을 쓰지 않는다.
  */
 final class AssembleAnim {
-	enum Style { ASSEMBLE, DIVE, EMERGE, COMPRESS }
+	enum Style { ASSEMBLE, DIVE, EMERGE, COMPRESS, SMITH_EMERGE }
 
 	static final int DURATION = 90;
+	/** 대장장이 전용 출현 연출: 오른손 돌출 → 왼손 돌출 → 양손 버티기 → 기상 → 웅크림 응축 → 포효 (166틱) */
+	static final int SMITH_DURATION = 166;
 	/** 흩어진 모습이 보이는 채 멈춰 있는 틱 */
 	static final int HOLD = 4;
 	/** 한 파츠가 제자리로 날아가는 시간 */
@@ -39,7 +41,7 @@ final class AssembleAnim {
 
 	static Style style(BossKind kind) {
 		return switch (kind) {
-			case ABYSSAL_SMITH -> Style.ASSEMBLE;
+			case ABYSSAL_SMITH -> Style.SMITH_EMERGE;
 			case TEMPEST_WYVERN -> Style.DIVE;
 			case PRISM_COLOSSUS -> Style.EMERGE;
 			case CHRONO_SENTINEL -> Style.COMPRESS;
@@ -52,6 +54,7 @@ final class AssembleAnim {
 			case DIVE -> DIVE_DURATION;
 			case EMERGE -> EMERGE_DURATION;
 			case COMPRESS -> COMP_DURATION;
+			case SMITH_EMERGE -> SMITH_DURATION;
 		};
 	}
 

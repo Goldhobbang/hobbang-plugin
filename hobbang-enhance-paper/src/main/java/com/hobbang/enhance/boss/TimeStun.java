@@ -120,6 +120,16 @@ public final class TimeStun implements Listener {
 		}
 	}
 
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onInteractEntity(org.bukkit.event.player.PlayerInteractEntityEvent e) {
+		if (isActive(e.getPlayer())) e.setCancelled(true);
+	}
+
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onInteractAtEntity(org.bukkit.event.player.PlayerInteractAtEntityEvent e) {
+		if (isActive(e.getPlayer())) e.setCancelled(true);
+	}
+
 	@EventHandler
 	public void onDeath(PlayerDeathEvent e) { release(e.getPlayer().getUniqueId()); }
 

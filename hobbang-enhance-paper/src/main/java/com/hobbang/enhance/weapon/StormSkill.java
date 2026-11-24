@@ -35,17 +35,24 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * 뇌운 전투도끼. 돌진 낙뢰 / 낙뢰 연쇄 / 풀강 이중 낙뢰는 "심판"과 수치를 공유하지 않는다 (아래 상수가 따로 있음).
  */
-final class StormSkill {
+public final class StormSkill {
 	private StormSkill() {}
 
 	/** 돌진 낙뢰 · 연쇄 낙뢰 피해 (기본, ×강화 배율) */
 	static final double DASH_DMG = 9.0, CHAIN_DMG = 6.0;
-	/** 심판 낙뢰 1발 피해(×강화 배율) / 폭발 반경 / 삼지창 기본 피해(심판 10강부터 강화당 +5) */
-	static final double JUDGE_DMG = 5.0, JUDGE_BLAST_R = 2.3, TRIDENT_DMG = 10.0;
-	/** 삼지창 피해: 기본 10, 심판이 열리는 10강부터 강화당 +5 (15강 = 35) */
-	static double tridentDmg(int lv) { return TRIDENT_DMG + 5.0 * Math.max(0, lv - 10); }
-	/** 심판 표식이 다 커지는 시간(틱), 낙뢰가 쏟아지는 시간(틱) */
-	static final int MARK = 24, SPREAD = 12;
+	/** 심판 낙뢰 1발 피해(×강화 배율) / 폭발 반경 / 삼지창 고정 피해 & 범위 */
+	static final double JUDGE_DMG = 5.0, JUDGE_BLAST_R = 2.3, TRIDENT_DMG = 30.0, TRIDENT_AOE_R = 4.5;
+	/** 삼지창 피해: 30 고정 */
+	static double tridentDmg(int lv) { return TRIDENT_DMG; }
+	/** 심판 범위 = 4 + 0.5 × bossSkillLv (기본 5 → 4, 20% 축소) */
+	public static double judgeRadius(int lv) { return 4.0 + 0.5 * com.hobbang.enhance.item.EnhanceTier.bossSkillLv(lv); }
+	/** 심판 첫 낙뢰 수 = 10 + 2 × (강화 − 10) → 10강 10발, 15강 20발, 20강 30발 */
+	public static int judgeBolts(int lv) { return 10 + 2 * Math.max(0, lv - 10); }
+	/** 심판 문양 아이템 모델 (리소스팩 assets/hobbang/items/fx/judgment_glyph.json) */
+	static final org.bukkit.NamespacedKey GLYPH_MODEL = new org.bukkit.NamespacedKey("hobbang", "fx/judgment_glyph");
+	/** 심판 표식이 다 커지는 시간(틱, 40=2.0초), 해금(10강) 이후 강화당 0.1초(2틱) 감소, 최소 20틱(1.0초) */
+	static final int MARK = 40, MARK_MIN = 20, SPREAD = 12;
+	public static int judgeMarkTicks(int lv) { return Math.max(MARK_MIN, MARK - 2 * Math.max(0, lv - 10)); }
 
 	/** 낙뢰 연쇄 마릿수: 10강 1마리부터 강화마다 +1 (15강 6마리) */
 	static int chain(int lv) {
@@ -147,31 +154,53 @@ final class StormSkill {
 			c = eyeV.clone().add(dirN.clone().multiply(reach));
 		}
 		final Vector center = c;
-		final double R = 5.0 + rad;
-		final int bolts = lv;   // 10강 10번 … 15강 15번
+		final int skillLv = com.hobbang.enhance.item.EnhanceTier.bossSkillLv(lv);
+		final double R = judgeRadius(lv);
+		final int markTicks = judgeMarkTicks(lv);   // 10강 24틱(1.2초) → 강화당 -4틱(-0.2초), 최소 8틱(0.4초)
+		final int bolts = judgeBolts(lv);   // t413: 10강 10번 … 15강 20번 (+2/강화)
 		Location cl = new Location(sl, c.getX(), c.getY(), c.getZ());
 		BU.sound(cl, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.PLAYERS, 0.8F, 1.5F);
 		BU.sound(cl, Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 1.2F, 1.8F);
 
-		// 표식: 원이 커지고 안쪽 고리 + 돌아가는 줄기
-		Particle.DustOptions blue = BU.dust(0x8FE8FF, 1.5F), white = BU.dust(0xFFFFFF, 1.1F);
-		Fx.spawn(sl, p.getUniqueId(), center, MARK + 2, (fx, w) -> {
-			if (fx.age > MARK || fx.age % 2 != 0) return;
-			double u = fx.age / (double) MARK;
-			double r = R * (1 - (1 - u) * (1 - u));
-			BU.ring(w, Particle.DUST, blue, center, r, 52);
-			BU.ring(w, Particle.DUST, white, center, r * 0.62, 34);
-			for (int k = 0; k < 6; k++) {
-				double a = fx.age * 0.16 + k * Math.PI / 3;
-				w.spawnParticle(Particle.ELECTRIC_SPARK, center.getX() + Math.cos(a) * r * 0.85, center.getY() + 0.15, center.getZ() + Math.sin(a) * r * 0.85, 1, 0, 0, 0, 0);
+		// t413: 파티클 문양 대신 거대한 문양 하나(아이템 디스플레이, 평면 쿼드 텍스처)가 표식 높이에 눕혀진 채
+		// 선딜 동안 지름 0 → 2R 로 자라며 천천히 돈다. 낙뢰(·15강 삼지창)가 끝나면 줄어들며 사라진다.
+		final int strikeEnd = markTicks + 2 + SPREAD + (lv >= 15 ? 8 + 8 : 4);
+		final int life = strikeEnd + 8;
+		final ItemStack glyph = new ItemStack(Material.PAPER);
+		glyph.editMeta(m -> m.setItemModel(GLYPH_MODEL));
+		final double dir0 = ThreadLocalRandom.current().nextDouble() * Math.PI * 2;
+		Fx.spawn(sl, p.getUniqueId(), center.clone().add(new Vector(0, 0.06, 0)), life, (fx, w) -> {
+			int a = fx.age;
+			if (a == 1) {
+				ItemDisplay d = fx.addItem(glyph, ItemDisplay.ItemDisplayTransform.FIXED, true);
+				d.setViewRange(4.0F);   // 멀리(공중 표식 50칸+)에서도 보이게
+				d.setShadowRadius(0F);
+				Fx.shape(d, new Vector3f(), new Quaternionf().rotationY((float) dir0), new Vector3f(0.01F, 1F, 0.01F), 0);
+				return;
 			}
-			if (fx.age % 6 == 0) BU.sound(cl, Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 0.8F, 0.6F + (float) u);
+			if (fx.displays.isEmpty() || a % 2 != 0) return;
+			Display d = fx.displays.getFirst();
+			double u = Math.min(1.0, (a - 1) / (double) markTicks);
+			double grow = 1 - (1 - u) * (1 - u) * (1 - u);   // 처음엔 빠르게, 끝에서 감속
+			double shrink = a <= strikeEnd ? 1.0 : Math.max(0.0, 1.0 - (a - strikeEnd) / 7.0);
+			float dia = (float) (2 * R * grow * shrink);
+			float rot = (float) (dir0 + a * 0.035);   // 초당 약 40° 회전
+			Fx.shape(d, new Vector3f(), new Quaternionf().rotationY(rot), new Vector3f(Math.max(0.01F, dia), 1F, Math.max(0.01F, dia)), 2);
+			// 가장자리에 소수의 강조 파티클만
+			if (a % 4 == 0 && a <= strikeEnd) {
+				double rr = R * grow;
+				for (int k = 0; k < 4; k++) {
+					double ang = rot + k * Math.PI / 2;
+					w.spawnParticle(Particle.ELECTRIC_SPARK, center.getX() + Math.cos(ang) * rr * 0.92, center.getY() + 0.3, center.getZ() + Math.sin(ang) * rr * 0.92, 2, 0.05, 0.25, 0.05, 0.01);
+				}
+			}
+			if (a % 6 == 0 && a <= markTicks) BU.sound(cl, Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 0.8F, 0.6F + (float) u);
 		});
 
 		// 낙뢰: 표식이 다 그려지면 SPREAD 틱 동안 랜덤 자리에 쏟아진다
 		ThreadLocalRandom rnd = ThreadLocalRandom.current();
 		for (int i = 0; i < bolts; i++) {
-			int tick = MARK + 2 + (int) (i * (double) SPREAD / bolts);
+			int tick = markTicks + 2 + (int) (i * (double) SPREAD / bolts);
 			Fx.later(tick, () -> {
 				double a = rnd.nextDouble() * Math.PI * 2, r = R * Math.sqrt(rnd.nextDouble());
 				// t399: 낙뢰는 언제나 심판 표식 위(표식 원 안, 표식과 같은 높이)에만 — 바닥 스냅 없음
@@ -179,7 +208,7 @@ final class StormSkill {
 				blast(p, sl, at, JUDGE_DMG * mult);
 			});
 		}
-		if (lv >= 15) Fx.later(MARK + 2 + SPREAD + 8, () -> trident(p, sl, center, R, lv));
+		if (lv >= 15) Fx.later(markTicks + 2 + SPREAD + 8, () -> trident(p, sl, center, R, lv));
 	}
 
 	/** 심판 낙뢰폭발 1발 (가벼운 연출 — 번개 이펙트 + 폭발 + 반경 내 모든 적) */
@@ -216,7 +245,16 @@ final class StormSkill {
 				BU.sound(cl, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 1.5F, 0.6F);
 				w.spawnParticle(Particle.EXPLOSION_EMITTER, c.getX(), c.getY() + 0.5, c.getZ(), 1, 0, 0, 0, 0);
 				w.spawnParticle(Particle.ELECTRIC_SPARK, c.getX(), c.getY() + 0.8, c.getZ(), 60, 1.2, 0.8, 1.2, 0.4);
-				for (LivingEntity t : WeaponListener.enemiesAt(w, c, Math.max(3.0, R * 0.6), 4.0, p)) WeaponListener.skillHit(t, p, tDmg);
+				Set<LivingEntity> targets = new LinkedHashSet<>();
+				// 삼지창 엔티티 직격 판정 (필중): 삼지창 낙하 기둥(반경 1.5, 높이 9칸) 내 대상
+				for (Entity en : w.getNearbyEntities(org.bukkit.util.BoundingBox.of(c.clone().add(new Vector(0, 4.0, 0)), 1.5, 5.0, 1.5))) {
+					if (en instanceof LivingEntity le && en != p && !(en instanceof Player) && !le.isDead() && !(en instanceof ArmorStand as && as.isMarker())) {
+						targets.add(le);
+					}
+				}
+				// 박힌 지점 기준 주변 범위 피해 (직격 대상은 Set으로 중복 제외)
+				targets.addAll(WeaponListener.enemiesAt(w, c, TRIDENT_AOE_R, 4.0, p));
+				for (LivingEntity t : targets) WeaponListener.skillHit(t, p, tDmg);
 				shock(p, w, c, R);
 			} else if (fx.age == 26) {
 				Fx.shape(fx.displays.getFirst(), new Vector3f(0, 0, 0), rot, new Vector3f(0), 6);   // 서서히 사라짐

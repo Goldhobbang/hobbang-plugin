@@ -71,7 +71,7 @@ public abstract class DisplayBoss extends Boss {
 	protected final BossMotion.Idle idle = new BossMotion.Idle();
 	protected float lookYaw, lookPitch;
 	private boolean partsBuilt = false;
-	private final Vector3f riderOff = new Vector3f();
+	protected final Vector3f riderOff = new Vector3f();
 	/** v1.3.0: 리소스팩 모델 사용 여부 (파츠를 만들 때 결정, 설정이 바뀌면 다시 만든다) */
 	protected boolean modelMode = false;
 	/** v1.3.0: 예전 블록 모델을 새 보스 크기에 맞춰 키우는 배율 (리소스팩 모델은 이미 새 크기라 1) */
@@ -166,14 +166,32 @@ public abstract class DisplayBoss extends Boss {
 		int plant = (int) Math.floor(stride / Math.PI);
 		if (idle.active() && lastPlant != Integer.MIN_VALUE && plant != lastPlant && movement > 0.035) {
 			BU.sound(mob.getLocation(), event, SoundCategory.HOSTILE, volume, plant % 2 == 0 ? 0.96F : 1.04F);
+			onFootfall(plant);
 		}
 		lastPlant = plant;
 	}
+
+	protected void onFootfall(int plant) {}
 
 	private int lastPlant = Integer.MIN_VALUE;
 
 	final void cue(BossMotion.Move move, int hit, int live, int recovery) {
 		if (!dying && !dead) motion.play(move, tickCount, hit, live, recovery);
+	}
+
+	protected final void clearMove(BossMotion.Move move) {
+		motion.clear(move);
+	}
+
+	protected boolean fastPose() {
+		return false;
+	}
+
+	private boolean resetInterp = false;
+
+	/** 공격/연출 큐가 재생 중인지 (아니면 포즈는 기본 직립이어야 한다) */
+	protected boolean posing() {
+		return !dying && !assembling() && motion.active(tickCount);
 	}
 
 	protected BossMotion.Frame motion(BossMotion.Move move) {
@@ -251,10 +269,21 @@ public abstract class DisplayBoss extends Boss {
 		return model;
 	}
 
+	protected boolean overrideEnergyModels() { return false; }
+
+	protected void poseAssemble(AssembleAnim.Style style, int tick) {}
+
 	private void updateEnergyModels() {
+		if (overrideEnergyModels()) return;
 		for (EnergyPart part : energyParts) {
 			boolean surge = part.surge != null && energySurge(part.name);
 			part.show(surge ? part.surge : idle.active() ? part.idle : part.still);
+		}
+	}
+
+	protected void setEnergyPartStill(String name, boolean still) {
+		for (EnergyPart part : energyParts) {
+			if (part.name.equals(name)) part.show(still ? part.still : part.idle);
 		}
 	}
 
@@ -417,7 +446,15 @@ public abstract class DisplayBoss extends Boss {
 		animTick++;
 		updateIdle();
 		if (idle.active() && idle.ticks() % 8 == 0) Fx.ambient(this);
-		if (animTick % ANIM_INTERVAL == 0) {
+		boolean fast = fastPose();
+		if (fast || animTick % ANIM_INTERVAL == 0) {
+			if (fast) {
+				for (Part p : parts) if (p.display.isValid()) p.display.setInterpolationDuration(1);
+				resetInterp = true;
+			} else if (resetInterp) {
+				for (Part p : parts) if (p.display.isValid()) p.display.setInterpolationDuration(ANIM_INTERVAL);
+				resetInterp = false;
+			}
 			motion.expire(tickCount);
 			updateRiderOffset();
 			poseParts(animTick);
@@ -500,9 +537,15 @@ public abstract class DisplayBoss extends Boss {
 			case DIVE -> tickDive(theme, l, w, bh);
 			case EMERGE -> tickEmerge(theme, l, w, bh);
 			case COMPRESS -> tickCompress(theme, l, w, bh);
+			case SMITH_EMERGE -> tickSmithEmerge();
 		}
 		mob.setVelocity(new org.bukkit.util.Vector());
 		if (assembleTick >= AssembleAnim.duration(assembleStyle)) finishAssemble(theme);
+	}
+
+	private void tickSmithEmerge() {
+		for (Part p : parts) if (p.display.isValid()) p.display.setInterpolationDuration(1);
+		poseAssemble(AssembleAnim.Style.SMITH_EMERGE, assembleTick);
 	}
 
 	private void tickAssembleClassic(AssembleAnim.Theme theme, Location l, World w, double bh) {
@@ -689,6 +732,7 @@ public abstract class DisplayBoss extends Boss {
 			case DIVE -> initDive(theme);
 			case EMERGE -> initEmerge(height, theme);
 			case COMPRESS -> initCompress(height, theme);
+			case SMITH_EMERGE -> tickSmithEmerge();
 		}
 	}
 
@@ -972,12 +1016,9 @@ public abstract class DisplayBoss extends Boss {
 		World w = l.getWorld();
 		double bh = Math.max(2.0, mob.getHeight());
 		AssembleAnim.burst(w, l.getX(), l.getY() + bh * 0.5, l.getZ(), kind, 16);
-		BU.sound(l, theme.finish(), SoundCategory.HOSTILE, 2.2F, 0.75F);
+		if (assembleStyle != AssembleAnim.Style.SMITH_EMERGE) BU.sound(l, theme.finish(), SoundCategory.HOSTILE, 2.2F, 0.75F);
 		if (kind == BossKind.TEMPEST_WYVERN) {
 			BU.sound(l, "hobbang:wyvern.roar.awaken", SoundCategory.HOSTILE, 2.0F, 0.95F);
-		} else if (kind == BossKind.ABYSSAL_SMITH) {
-			BU.sound(l, "hobbang:smith.scrape", SoundCategory.HOSTILE, 2.0F, 0.95F);
-			BU.sound(l, "hobbang:smith.slam", SoundCategory.HOSTILE, 2.0F, 1.0F);
 		} else if (kind == BossKind.PRISM_COLOSSUS) {
 			w.spawnParticle(Particle.END_ROD, l.getX(), l.getY() + bh * 0.6, l.getZ(), 24, 1.0, 1.2, 1.0, 0.08);
 		} else if (kind == BossKind.CHRONO_SENTINEL) {
@@ -1062,28 +1103,28 @@ public abstract class DisplayBoss extends Boss {
 		}
 	}
 
+	protected final void advancePhase() {
+		int next = phase + 1;
+		setPhase(next);
+		org.bukkit.attribute.AttributeInstance maxAttr = mob.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+		double nextMax = phaseMaxHealth(next);
+		if (maxAttr != null) maxAttr.setBaseValue(nextMax);
+		mob.setHealth(Math.max(1.0, nextMax));
+		invulTicks = phaseInvulTicks(next);
+		swapPhaseBar(next);
+		Location l = mob.getLocation();
+		switch (kind) {
+			case TEMPEST_WYVERN -> BU.sound(l, "hobbang:wyvern.roar.awaken", SoundCategory.HOSTILE, 3.0F, 1.0F);
+			case ABYSSAL_SMITH -> {} // SmithBoss.onPhaseChange plays Phase 2 forge & Phase 3 awaken_beam sounds
+			case CHRONO_SENTINEL -> BU.sound(l, "hobbang:sentinel.clockwork", SoundCategory.HOSTILE, 2.0F, 1.0F);
+			case PRISM_COLOSSUS -> BU.sound(l, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.HOSTILE, 3.0F, 0.75F);
+		}
+		mob.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, l.getX(), l.getY() + 1, l.getZ(), 1, 0, 0, 0, 0);
+		onPhaseChange(next);
+	}
+
 	private void aiStep() {
 		World w = mob.getWorld();
-		double hp = health() / maxHealth();
-		float[] th = phaseThresholds();
-		if (phase - 1 < th.length && hp <= th[phase - 1]) {
-			setPhase(phase + 1);
-			invulTicks = 50;
-			bar.color(phaseColor(phase));
-			if (phase == th.length + 1) bar.addFlag(BossBar.Flag.DARKEN_SCREEN);
-			Location l = mob.getLocation();
-			switch (kind) {
-				case TEMPEST_WYVERN -> BU.sound(l, "hobbang:wyvern.roar.awaken", SoundCategory.HOSTILE, 3.0F, 1.0F);
-				case ABYSSAL_SMITH -> {
-					BU.sound(l, "hobbang:smith.scrape", SoundCategory.HOSTILE, 2.0F, 0.95F);
-					BU.sound(l, "hobbang:smith.slam", SoundCategory.HOSTILE, 2.0F, 1.0F);
-				}
-				case CHRONO_SENTINEL -> BU.sound(l, "hobbang:sentinel.clockwork", SoundCategory.HOSTILE, 2.0F, 1.0F);
-				case PRISM_COLOSSUS -> BU.sound(l, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.HOSTILE, 3.0F, 0.75F);
-			}
-			w.spawnParticle(Particle.EXPLOSION_EMITTER, l.getX(), l.getY() + 1, l.getZ(), 1, 0, 0, 0, 0);
-			onPhaseChange(phase);
-		}
 		double bw = mob.getWidth(), bh = mob.getHeight();
 		if (invulTicks > 0) {
 			invulTicks--;
@@ -1125,6 +1166,18 @@ public abstract class DisplayBoss extends Boss {
 			startDeath();
 			return;
 		}
+		boolean onePunchFinite = false;
+		if (!dying && !dead && e instanceof EntityDamageByEntityEvent hitOne
+			&& hitOne.getDamager() instanceof Player pl
+			&& com.hobbang.enhance.item.HItem.of(pl.getInventory().getItemInMainHand()) == com.hobbang.enhance.item.HItem.ONEPUNCH_GLOVE) {
+			if (com.hobbang.enhance.weapon.WeaponListener.onePunchDamage(pl.getInventory().getItemInMainHand()) <= 0.0) {
+				deathKiller = pl;
+				e.setCancelled(true);
+				startDeath();
+				return;
+			}
+			onePunchFinite = true;
+		}
 		if (invulTicks > 0 || c == EntityDamageEvent.DamageCause.FALL || c == EntityDamageEvent.DamageCause.DROWNING
 			|| c == EntityDamageEvent.DamageCause.LIGHTNING || c == EntityDamageEvent.DamageCause.SUFFOCATION || c == EntityDamageEvent.DamageCause.CRAMMING
 			|| fromSelf(e, mob)) {
@@ -1138,9 +1191,15 @@ public abstract class DisplayBoss extends Boss {
 			if (dm instanceof org.bukkit.entity.Player pl0) lastHitter = pl0;
 			else if (dm instanceof org.bukkit.entity.Projectile pj0 && pj0.getShooter() instanceof org.bukkit.entity.Player pl0) lastHitter = pl0;
 		}
-		e.setDamage(Math.min(amount * damageMultiplier(), 40.0));
+		e.setDamage(onePunchFinite ? amount : Math.min(amount * damageMultiplier(), 40.0));
 		if (health() - e.getFinalDamage() <= 0) {
 			e.setCancelled(true);
+			if (phase < totalPhases()) {
+				hurtFlash = 4;
+				setFlash(true);
+				advancePhase();
+				return;
+			}
 			if (e instanceof org.bukkit.event.entity.EntityDamageByEntityEvent ev) {
 				org.bukkit.entity.Entity dmg = ev.getDamager();
 				if (dmg instanceof org.bukkit.entity.Player pl) deathKiller = pl;
@@ -1161,6 +1220,8 @@ public abstract class DisplayBoss extends Boss {
 	protected void startDeath() {
 		if (dying || dead) return;
 		dying = true;
+		// 연출 도중 청크 언로드/서버 종료로 히트박스가 저장돼도, 다시 로드될 때 무적·AI 꺼짐 상태의 "안 죽는 보스"로 붙지 않게 표시
+		try { mob.getPersistentDataContainer().set(com.hobbang.enhance.Keys.BOSS_DYING, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1); } catch (Exception ignored) {}
 		Fx.discardOwned(uuid, true);
 		deathTick = 0;
 		deathLen = Math.max(1, deathDuration());
@@ -1240,6 +1301,7 @@ public abstract class DisplayBoss extends Boss {
 		// v1.5.0: 단계마다 격리 — 보상/투기장 복구에서 예외가 나도 파츠 discard·히트박스 제거는 항상 실행
 		safe("rewards", () -> settleRewards(fat, killer));
 		safe("arena", () -> com.hobbang.enhance.arena.ArenaDress.restore(this));
+		safe("storm", () -> com.hobbang.enhance.arena.StormArena.bossFinished(uuid));   // 히트박스는 remove() 라 EntityDeathEvent 가 오지 않는다
 		safe("fx", () -> Fx.discardOwned(uuid));
 		safe("parts", this::discardParts);
 		safe("bar", this::hideBar);

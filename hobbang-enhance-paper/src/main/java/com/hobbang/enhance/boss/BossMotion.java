@@ -66,6 +66,16 @@ final class BossMotion {
 		cues.add(new Cue(move, now, hit, live, recovery));
 	}
 
+	void clear(Move move) {
+		cues.removeIf(cue -> cue.move() == move);
+	}
+
+	/** 재생 중(끝나지 않은) 큐가 하나라도 있으면 true */
+	boolean active(int now) {
+		for (Cue cue : cues) if (now >= cue.start() && now < cue.end()) return true;
+		return false;
+	}
+
 	void expire(int now) {
 		cues.removeIf(cue -> now >= cue.end() + 3);
 	}

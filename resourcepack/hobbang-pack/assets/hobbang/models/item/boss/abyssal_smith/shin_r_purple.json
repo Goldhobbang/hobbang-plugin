@@ -1,0 +1,7 @@
+{
+  "parent": "hobbang:item/boss/abyssal_smith/shin_r",
+  "textures": {
+    "t": "hobbang:item/boss/abyssal_smith/shin_r_purple",
+    "particle": "hobbang:item/boss/abyssal_smith/shin_r_purple"
+  }
+}

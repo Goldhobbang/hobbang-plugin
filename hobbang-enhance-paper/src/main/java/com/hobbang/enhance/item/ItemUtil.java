@@ -29,13 +29,14 @@ import java.util.List;
 public final class ItemUtil {
 	private ItemUtil() {}
 
-	public static final int MAX_LEVEL = 15;
+	public static final int MAX_LEVEL = 20;
 
 	// ───────── 판별 ─────────
 	public static HItem hitem(ItemStack s) {
 		if (s == null || s.getType().isAir()) return null;
-		String id = s.getPersistentDataContainer().get(Keys.ID, PersistentDataType.STRING);
-		return id == null ? null : HItem.byId(id);
+		var pdc = s.getPersistentDataContainer();
+		if (!pdc.has(Keys.ID, PersistentDataType.STRING)) return null;   // 타입이 다른 값(조작된 NBT)이면 get 이 예외를 던진다
+		return HItem.byId(pdc.get(Keys.ID, PersistentDataType.STRING));
 	}
 
 	public static boolean isHobbang(ItemStack s) {
@@ -72,18 +73,23 @@ public final class ItemUtil {
 		if (s == null || s.getType().isAir() || s.getAmount() != 1) return false;
 		if (!s.hasData(DataComponentTypes.MAX_DAMAGE)) return false;
 		HItem h = hitem(s);
-		if (h != null && !h.isWeapon()) return false;
+		if (h != null && (!h.isWeapon() || h == HItem.ONEPUNCH_GLOVE)) return false;
 		return isWeapon(s) || armorSlot(s) != null || isTool(s) || EnhanceTier.ranged(s);
 	}
 
 	public static int getLevel(ItemStack s) {
 		if (s == null || s.getType().isAir()) return 0;
-		return s.getPersistentDataContainer().getOrDefault(Keys.LEVEL, PersistentDataType.INTEGER, 0);
+		var pdc = s.getPersistentDataContainer();
+		if (!pdc.has(Keys.LEVEL, PersistentDataType.INTEGER)) return 0;
+		// 조작된 NBT(음수·초과)가 stages[] 인덱스로 쓰여 예외가 나지 않게 0~MAX 로 제한
+		return Math.max(0, Math.min(MAX_LEVEL, pdc.get(Keys.LEVEL, PersistentDataType.INTEGER)));
 	}
 
 	public static int getArtisan(ItemStack s) {
 		if (s == null || s.getType().isAir()) return 0;
-		return s.getPersistentDataContainer().getOrDefault(Keys.ARTISAN, PersistentDataType.INTEGER, 0);
+		var pdc = s.getPersistentDataContainer();
+		if (!pdc.has(Keys.ARTISAN, PersistentDataType.INTEGER)) return 0;
+		return Math.max(0, Math.min(1000, pdc.get(Keys.ARTISAN, PersistentDataType.INTEGER)));
 	}
 
 	public static void setArtisan(ItemStack s, int v) {
@@ -164,6 +170,7 @@ public final class ItemUtil {
 
 	// ───────── 이름 / 설명 ─────────
 	public static NamedTextColor tierColor(int l) {
+		if (l >= 20) return NamedTextColor.DARK_PURPLE;
 		if (l >= 15) return NamedTextColor.DARK_RED;
 		if (l >= 12) return NamedTextColor.RED;
 		if (l >= 10) return NamedTextColor.GOLD;
@@ -253,31 +260,58 @@ public final class ItemUtil {
 		return Component.text(text, color).decoration(TextDecoration.ITALIC, false);
 	}
 
-	/** 설명(lore) 다시 쓰기: 강화 별/다음 확률 + 아이템 고유 설명 */
+	/** 설명(lore) 다시 쓰기:
+	 *  커스텀 무기: 1) 맨 위 소개(1~2줄) + 강화 상태  2) 스킬 설명(작은 회색 문장) + 영혼 수집량  3) 맨 아래 적용된 스킬 수치
+	 *  기타 커스텀 아이템: 소개 1~2줄
+	 *  바닐라 강화 장비: 강화 상태 + 마일스톤 */
 	public static void refreshLore(ItemStack s) {
 		HItem h = hitem(s);
 		int l = getLevel(s);
 		List<Component> lines = new ArrayList<>();
 		boolean gear = canEnhanceType(s, h);
-		if (gear && l > 0) {
-			lines.add(line(stars(l), tierColor(l)));
-			if (l < MAX_LEVEL) {
-				EnhanceConfig.Stage st = EnhanceConfig.CFG.stages[l];
-				lines.add(line(String.format("다음 강화 %.0f%%  ·  장인의 기운 %.1f%%", st.success, getArtisan(s) / 10.0), NamedTextColor.DARK_AQUA));
+		if (h != null && h.isWeapon()) {
+			// 1) 맨 위: 아이템 소개 (1~2줄)
+			if (h.desc2 != null) lines.add(line(h.desc2, h.descColor));
+			if (l > 0) {
+				lines.add(line(stars(l), tierColor(l)));
+				if (l < MAX_LEVEL) {
+					EnhanceConfig.Stage st = EnhanceConfig.CFG.stages[l];
+					lines.add(line(String.format("다음 강화 %.0f%%  ·  장인의 기운 %.1f%%", st.success, getArtisan(s) / 10.0), NamedTextColor.DARK_AQUA));
+				} else {
+					lines.add(line("최대 강화 달성!", NamedTextColor.LIGHT_PURPLE));
+				}
 			} else {
-				lines.add(line("최대 강화 달성!", NamedTextColor.LIGHT_PURPLE));
+				lines.add(line("강화 가능 · 강화대에서 강화", NamedTextColor.DARK_GRAY));
 			}
-		} else if (gear && h != null) {
-			lines.add(line("강화 가능 · 강화대에서 강화", NamedTextColor.DARK_GRAY));
-		} else if (gear && getArtisan(s) > 0) {
-			lines.add(line(String.format("장인의 기운 %.1f%%", getArtisan(s) / 10.0), NamedTextColor.DARK_AQUA));
-		}
-		if (gear && l > 0) for (String[] e : EnhanceTier.loreLines(s, l))
-			lines.add(line(e[1], e[0].equals("on") ? NamedTextColor.GOLD : NamedTextColor.DARK_GRAY));
-		if (h == HItem.SMITH_HAMMER && l >= 10) lines.add(line(com.hobbang.enhance.weapon.Souls.lore(s, l), NamedTextColor.LIGHT_PURPLE));   // 영혼 수집량 (수치)
-		if (h != null) {
+			// 2) 그 아래: 스킬 설명 (회색, 짧은 문장) + 영혼 수집량
+			for (String sd : EnhanceTier.bossSkillDescriptions(h)) {
+				lines.add(line(sd, NamedTextColor.GRAY));
+			}
+			if (h == HItem.SMITH_HAMMER && l >= 10) {
+				lines.add(line(com.hobbang.enhance.weapon.Souls.lore(s, l), NamedTextColor.LIGHT_PURPLE));
+			}
+			// 3) 맨 아래: 지금 적용된 스킬 이름과 데미지/수치 (현재 강화 기준 계산값)
+			boolean unlocked = EnhanceTier.bossSkillUnlocked(l);
+			for (String ap : EnhanceTier.bossAppliedStats(s, h, l)) {
+				lines.add(line(ap, unlocked ? NamedTextColor.GOLD : NamedTextColor.DARK_GRAY));
+			}
+		} else if (h != null) {
 			if (h.desc != null) lines.add(line(h.desc, h.descColor));
-			if (h.desc2 != null) lines.add(line(h.desc2, h.desc2Color));
+			if (h.desc2 != null) lines.add(line(h.desc2, NamedTextColor.GRAY));
+		} else {
+			if (gear && l > 0) {
+				lines.add(line(stars(l), tierColor(l)));
+				if (l < MAX_LEVEL) {
+					EnhanceConfig.Stage st = EnhanceConfig.CFG.stages[l];
+					lines.add(line(String.format("다음 강화 %.0f%%  ·  장인의 기운 %.1f%%", st.success, getArtisan(s) / 10.0), NamedTextColor.DARK_AQUA));
+				} else {
+					lines.add(line("최대 강화 달성!", NamedTextColor.LIGHT_PURPLE));
+				}
+			} else if (gear && getArtisan(s) > 0) {
+				lines.add(line(String.format("장인의 기운 %.1f%%", getArtisan(s) / 10.0), NamedTextColor.DARK_AQUA));
+			}
+			if (gear && l > 0) for (String[] e : EnhanceTier.loreLines(s, l))
+				lines.add(line(e[1], e[0].equals("on") ? NamedTextColor.GOLD : NamedTextColor.DARK_GRAY));
 		}
 		if (lines.isEmpty()) {
 			if (s.hasData(DataComponentTypes.LORE) && l == 0 && h == null) {
@@ -304,7 +338,7 @@ public final class ItemUtil {
 	public static final NamespacedKey STAT_VER = Keys.k("stat_ver");
 
 	/** v1.4.0 무기 정체성 버전: 3 = 뇌운검→뇌운 전투도끼(네더라이트 도끼), 크로노 단검→크로노 낫 */
-	public static final int ITEM_REVISION = 3;
+	public static final int ITEM_REVISION = 6;
 	public static final NamespacedKey ITEM_REV = Keys.k("item_rev");
 
 	/** 예전 보스 무기(기반 아이템/이름/모델이 바뀐 것)를 새 정체성으로. 강화 단계·인첸트·내구도·이름표·PDC 는 그대로. 바뀐 새 스택 또는 null */

@@ -51,11 +51,11 @@ public class ColossusBoss extends DisplayBoss {
 	private int prismRingCd = PRISM_RING_CD, crossCd = CROSS_CD, gravCd = GRAV_CD;
 	private int swingAnim = 0, attackCd = 0;
 	private Vector lockDir = new Vector();
-	/** Prism laser: 3.0 s charge, then 5.0 s of continuous fire tracking at 4 m/s. */
+	/** Prism laser: 3.0 s charge, then 5.0 s of continuous fire tracking at 3 m/s. */
 	private static final int BEAM_CHARGE = 60;
 	private static final int BEAM_FIRE = 100;
 	private static final float BEAM_LEN = 22.0F;
-	private static final double BEAM_TRACK_PER_TICK = 4.0 / 20.0;
+	private static final double BEAM_TRACK_PER_TICK = 3.0 / 20.0;
 	private double lastX = Double.NaN, lastZ, moved = 0;
 
 	private Part legL, legR, torso, chest, core, head, eyeL, eyeR, crown, armL, armR, fistL, fistR, shL, shR, back1, back2, back3;
@@ -146,7 +146,7 @@ public class ColossusBoss extends DisplayBoss {
 	@Override
 	protected void poseParts(float t) {
 		float step = t * (modelMode ? 0.074F : 0.25F);
-		playFootfall(step * (modelMode ? 2.8F : 1), moved, "hobbang:colossus.step", 0.78F);
+		playFootfall(step * (modelMode ? 2.8F : 1), moved, "hobbang:colossus.step", 0.62F);
 		if (modelMode) { poseModel(t); return; }
 		float walk = (float) Math.min(1.0, moved * 8);
 		float sw = sin(t * 0.25F) * 28F * walk;
@@ -385,7 +385,7 @@ public class ColossusBoss extends DisplayBoss {
 		if (rainCd <= 0 && phase >= 3) { start(ACT_RAIN, 34); rainCd = RAIN_CD; }
 		else if (newPatterns(dist)) { /* v1.2.0 신규 패턴 */ }
 		else if (beamCd <= 0 && phase >= 2) { start(ACT_BEAM, BEAM_CHARGE + BEAM_FIRE); beamCd = BEAM_CD; BU.sound(here, "hobbang:colossus.beam.charge", SoundCategory.HOSTILE, 2.0F, 1.0F); }
-		else if (slamCd <= 0 && dist < 8.5) { start(ACT_SLAM, 26); slamCd = SLAM_CD; BU.sound(here, Sound.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 2F, 0.5F); }
+		else if (slamCd <= 0 && dist < 8.5) { start(ACT_SLAM, 26); slamCd = SLAM_CD; BU.sound(here, Sound.ENTITY_IRON_GOLEM_ATTACK, SoundCategory.HOSTILE, 2F, 0.42F); BU.sound(here, Sound.BLOCK_DEEPSLATE_BREAK, SoundCategory.HOSTILE, 1.5F, 0.50F); }
 		else if (spikeCd <= 0 && dist < 18) {
 			start(ACT_SPIKE, 24); spikeCd = SPIKE_CD;
 			Vector d = target.getLocation().toVector().subtract(here.toVector()).setY(0);
@@ -558,7 +558,8 @@ public class ColossusBoss extends DisplayBoss {
 					Fx.puff(w, Particle.END_ROD, at.clone().add(new Vector(0, size, 0)), 5, 0.45, 0.13);
 					Fx.groundMark(w, at, 1.3, 0.2, BossKind.PRISM_COLOSSUS);
 				}
-				BU.sound(new Location(w, at.getX(), at.getY(), at.getZ()), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.HOSTILE, 1.2F, 0.7F);
+				BU.sound(new Location(w, at.getX(), at.getY(), at.getZ()), Sound.BLOCK_DEEPSLATE_BREAK, SoundCategory.HOSTILE, 1.4F, 0.55F);
+				BU.sound(new Location(w, at.getX(), at.getY(), at.getZ()), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.HOSTILE, 0.7F, 0.50F);
 				for (Entity ent : w.getNearbyEntities(BU.box(at, 1.3, 2.5, 1.3), en -> en instanceof LivingEntity le && !le.isDead() && en != source)) {
 					LivingEntity e = (LivingEntity) ent;
 					if (hitOnce != null && !(e instanceof Player) && !hitOnce.add(e.getUniqueId())) continue;   // 이미 이번 시전에 맞음
@@ -578,7 +579,18 @@ public class ColossusBoss extends DisplayBoss {
 	}
 
 
-	/** Continuous laser that follows the player at 4 m/s (0.2 block/tick) for {@code life} ticks. */
+	@Override
+	protected void onFootfall(int plant) {
+		Location l = mob.getLocation();
+		float p = plant % 2 == 0 ? 0.48F : 0.54F;
+		BU.sound(l, Sound.ENTITY_WARDEN_STEP, SoundCategory.HOSTILE, 1.55F, p);
+		BU.sound(l, Sound.BLOCK_DEEPSLATE_STEP, SoundCategory.HOSTILE, 1.65F, p);
+		BU.sound(l, Sound.BLOCK_BASALT_STEP, SoundCategory.HOSTILE, 1.4F, p);
+		BU.sound(l, Sound.ENTITY_IRON_GOLEM_STEP, SoundCategory.HOSTILE, 1.2F, p);
+		BU.sound(l, Sound.BLOCK_AMETHYST_BLOCK_STEP, SoundCategory.HOSTILE, 0.45F, 0.50F);
+	}
+
+	/** Continuous laser that follows the player at 3 m/s (0.15 block/tick) for {@code life} ticks. */
 	private void trackingBeam(World world, Vector start, Vector dir0, LivingEntity target, float len, int life) {
 		Vector dir = dir0.lengthSquared() > 1e-6 ? dir0.clone().normalize() : new Vector(0, 0, 1);
 		double d0 = target != null && target.getWorld() == world ? Math.max(1.0, target.getEyeLocation().toVector().distance(start)) : len;
@@ -688,8 +700,14 @@ public class ColossusBoss extends DisplayBoss {
 
 	@Override
 	protected void onDeathStart() {
-		Fx.burst(mob.getWorld(), eye(), kind, 22, 1.1);
-		BU.sound(mob.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.HOSTILE, 2F, 0.6F);
+		Location l = mob.getLocation();
+		Fx.burst(mob.getWorld(), eye(), kind, 34, 1.45);
+		mob.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, l.getX(), l.getY() + 2.2, l.getZ(), 1, 0, 0, 0, 0);
+		mob.getWorld().spawnParticle(Particle.BLOCK, l.getX(), l.getY() + 2.2, l.getZ(), 50, 1.4, 1.6, 1.4, 0.25, Material.DEEPSLATE.createBlockData());
+		mob.getWorld().spawnParticle(Particle.BLOCK, l.getX(), l.getY() + 2.2, l.getZ(), 40, 1.4, 1.6, 1.4, 0.25, Material.AMETHYST_BLOCK.createBlockData());
+		BU.sound(l, Sound.ENTITY_IRON_GOLEM_DEATH, SoundCategory.HOSTILE, 2.2F, 0.55F);
+		BU.sound(l, Sound.BLOCK_DEEPSLATE_BREAK, SoundCategory.HOSTILE, 2.2F, 0.50F);
+		BU.sound(l, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.HOSTILE, 1.4F, 0.50F);
 	}
 
 	@Override
@@ -748,15 +766,23 @@ public class ColossusBoss extends DisplayBoss {
 
 	private void tumble(Part p, Rigid bind, float u, float delay, int side, float up) {
 		if (p == null) return;
-		float local = u <= delay ? 0F : Math.min(1F, (u - delay) / 0.35F);
-		local = local * local * (3 - 2 * local);
-		float fade = u > 0.82F ? (u - 0.82F) / 0.18F : 0;
+		float fade = u > 0.80F ? (u - 0.80F) / 0.20F : 0;
 		float sc = Math.max(0.04F, 1F - fade);
+		float s = Math.min(1F, Math.max(0F, u - delay * 0.25F) / 0.60F);
+		double hash = (p.id != null ? p.id.hashCode() : System.identityHashCode(p)) * 0.6180339887;
+		float ang = (float) ((hash - Math.floor(hash)) * Math.PI * 2.0);
+		float dirX = (float) Math.cos(ang) * (2.6F + 1.8F * up) + side * 1.4F;
+		float dirZ = (float) Math.sin(ang) * (2.6F + 1.8F * up);
+		float vy0 = 2.4F + 3.2F * up;
+		float g = 14.0F;
+		float dy = vy0 * s - 0.5F * g * s * s;
+		float floorDy = -bind.pos().y + 0.35F;
+		if (dy < floorDy) dy = floorDy;
 		Rigid r = bind
-			.at(side * local * 1.6F, local * up * 0.4F - local * local * 2.8F, local * 0.8F)
-			.rotX(local * 90 * side)
-			.rotZ(local * 70 * side)
-			.rotY(local * 50);
+			.at(dirX * s, dy, dirZ * s)
+			.rotX(s * 240F * side)
+			.rotZ(s * 190F * side)
+			.rotY(s * 150F);
 		place(p, r, sc);
 	}
 
@@ -764,11 +790,12 @@ public class ColossusBoss extends DisplayBoss {
 	protected void deathFx(int tick, float u) {
 		org.bukkit.Location l = mob.getLocation();
 		if (tick % 4 == 0) {
-			l.getWorld().spawnParticle(org.bukkit.Particle.BLOCK, l.getX(), l.getY() + 1.4, l.getZ(), 10, 0.8, 0.9, 0.8, 0.08, org.bukkit.Material.AMETHYST_BLOCK.createBlockData());
-			l.getWorld().spawnParticle(org.bukkit.Particle.END_ROD, l.getX(), l.getY() + 1.2, l.getZ(), 3, 0.6, 0.6, 0.6, 0.02);
+			l.getWorld().spawnParticle(org.bukkit.Particle.BLOCK, l.getX(), l.getY() + 1.4, l.getZ(), 14, 1.2, 1.0, 1.2, 0.14, org.bukkit.Material.DEEPSLATE.createBlockData());
+			l.getWorld().spawnParticle(org.bukkit.Particle.BLOCK, l.getX(), l.getY() + 1.4, l.getZ(), 10, 1.2, 1.0, 1.2, 0.14, org.bukkit.Material.AMETHYST_BLOCK.createBlockData());
 		}
-		if (tick == 4 || tick == 16 || tick == 28 || tick == 40) {
-			BU.sound(l, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.HOSTILE, 1.4F, 0.7F + tick * 0.01F);
+		if (tick == 4 || tick == 14 || tick == 24 || tick == 36) {
+			BU.sound(l, Sound.BLOCK_DEEPSLATE_BREAK, SoundCategory.HOSTILE, 1.8F, 0.52F + tick * 0.005F);
+			BU.sound(l, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.HOSTILE, 1.0F, 0.55F + tick * 0.005F);
 		}
 	}
 

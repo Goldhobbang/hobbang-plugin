@@ -1,0 +1,7 @@
+{
+  "parent": "hobbang:item/boss/abyssal_smith/fore_l",
+  "textures": {
+    "t": "hobbang:item/boss/abyssal_smith/fore_l_purple",
+    "particle": "hobbang:item/boss/abyssal_smith/fore_l_purple"
+  }
+}

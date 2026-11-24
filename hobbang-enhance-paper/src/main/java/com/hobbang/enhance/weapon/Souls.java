@@ -22,8 +22,8 @@ import org.bukkit.persistence.PersistentDataType;
 public final class Souls implements Listener {
 	private static final NamespacedKey WEIGHT = Keys.k("soul_weight"), COUNT = Keys.k("soul_count");
 
-	/** 안전 상한 (무한정 커지는 것을 막음): 피해 최대 ×4, 범위 최대 +6칸 */
-	static final double DMG_PER_WEIGHT = 0.01, RADIUS_PER_WEIGHT = 0.03, DMG_CAP = 4.0, RADIUS_CAP = 6.0;
+	/** 안전 상한 (무한정 커지는 것을 막음): 피해 최대 ×4, 범위 최대 +3칸 */
+	static final double DMG_PER_WEIGHT = 0.01, RADIUS_PER_WEIGHT = 0.015, DMG_CAP = 4.0, RADIUS_CAP = 3.0;
 
 	/** 영혼 1개의 가중치 비율(%): 10강 5, 11강 6 … 15강 10 (10강 미만은 0 = 패시브 없음) */
 	public static double pct(int lv) {
@@ -39,12 +39,12 @@ public final class Souls implements Listener {
 	}
 
 	/** 지진 피해 배율 (10강 미만이면 ×1) */
-	static double dmgMult(ItemStack s, int lv) {
+	public static double dmgMult(ItemStack s, int lv) {
 		return lv < 10 ? 1 : Math.min(DMG_CAP, 1 + DMG_PER_WEIGHT * weight(s));
 	}
 
 	/** 지진 범위 추가(칸) */
-	static double radiusAdd(ItemStack s, int lv) {
+	public static double radiusAdd(ItemStack s, int lv) {
 		return lv < 10 ? 0 : Math.min(RADIUS_CAP, RADIUS_PER_WEIGHT * weight(s));
 	}
 

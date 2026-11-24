@@ -112,9 +112,11 @@ public final class Altar implements Listener {
 	@EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
 	public void onPlace(BlockPlaceEvent e) {
 		if (HItem.SUMMON_ALTAR.is(e.getItemInHand())) add(e.getBlockPlaced());
+		else if (isAltar(e.getBlockPlaced())) remove(e.getBlockPlaced());   // 옛 기록 위에 일반 스컬크 감지체 → 소환대가 되지 않게
 	}
 
-	@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
+	// MONITOR: 보호 플러그인 등이 HIGHEST 에서 파괴를 취소하면 블록은 남는데 아이템만 떨어지던 복제 방지 (취소된 파괴는 여기 오지 않음)
+	@EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
 	public void onBreak(BlockBreakEvent e) {
 		Block b = e.getBlock();
 		if (!isAltar(b)) return;
@@ -274,7 +276,33 @@ public final class Altar implements Listener {
 			else if (p.getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER && site.env == org.bukkit.World.Environment.NORMAL) f = 8;
 			from = new org.bukkit.Location(target, from.getX() * f, 64, from.getZ() * f);
 		}
-		org.bukkit.util.StructureSearchResult res = target.locateNearestStructure(from, st, 64, false);
+		if (!SEARCHING.add(p.getUniqueId())) return;   // 같은 플레이어의 탐색이 이미 진행 중
+		p.sendMessage(Component.text("[홉방] 소환대가 " + site.title + "의 기운을 더듬고 있습니다...", NamedTextColor.GRAY));
+		final org.bukkit.World tw = target;
+		final org.bukkit.Location src = from;
+		final java.util.UUID id = p.getUniqueId();
+		// 반경 64 청크 탐색을 한 틱에 몰아 하지 않고 반경을 넓혀 가며 틱마다 한 번씩 나눠 수행한다.
+		// 바닐라 StructureCheck 가 청크별 판정을 캐시하므로 앞 단계 재탐색은 싸고, 결과는 반경 64 한 번과 같다.
+		// locateNearestStructure 는 메인 스레드 전용이라 비동기 대신 틱 분산을 쓴다.
+		new org.bukkit.scheduler.BukkitRunnable() {
+			int i = 0;
+			@Override public void run() {
+				Player pl = Bukkit.getPlayer(id);
+				if (pl == null || !pl.isOnline()) { SEARCHING.remove(id); cancel(); return; }
+				org.bukkit.util.StructureSearchResult res = tw.locateNearestStructure(src, st, LOCATE_STEPS[i], false);
+				if (res != null || ++i >= LOCATE_STEPS.length) {
+					SEARCHING.remove(id);
+					cancel();
+					report(pl, site, tw, res);
+				}
+			}
+		}.runTaskTimer(HobbangPlugin.get(), 1L, 1L);
+	}
+
+	private static final java.util.Set<java.util.UUID> SEARCHING = new java.util.HashSet<>();
+	private static final int[] LOCATE_STEPS = {16, 22, 28, 32, 36, 39, 42, 45, 48, 51, 53, 55, 58, 60, 62, 64};
+
+	private static void report(Player p, Site site, org.bukkit.World target, org.bukkit.util.StructureSearchResult res) {
 		p.playSound(p.getLocation(), Sound.BLOCK_SCULK_SENSOR_CLICKING, 0.8F, 1.2F);
 		if (res == null) {
 			p.sendMessage(Component.text("[홉방] 근처(약 1,000칸)에서 " + site.title + "을(를) 찾지 못했습니다. 새 지역을 탐험해 보세요. (" + site.where + ")", NamedTextColor.YELLOW));

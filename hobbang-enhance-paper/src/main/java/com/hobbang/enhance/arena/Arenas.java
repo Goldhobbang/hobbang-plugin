@@ -6,6 +6,7 @@ import com.hobbang.enhance.boss.Boss;
 import com.hobbang.enhance.boss.BossKind;
 import com.hobbang.enhance.boss.BossManager;
 import com.hobbang.enhance.boss.Ritual;
+import com.hobbang.enhance.boss.SmithBoss;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -13,6 +14,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.TileState;
@@ -180,6 +182,68 @@ public final class Arenas implements Listener {
 		else p.sendMessage(Component.text(" 구조물 한가운데 제단(" + s.altarBlock.name().toLowerCase() + ")에 핵을 들고 우클릭. 소환대로 방향을 찾을 수 있습니다.", NamedTextColor.GRAY));
 	}
 
+	/** 제단 y좌표 기준으로 투기장 내부의 방해 블록을 위에서 아래로 수집 (제단·받침·바닥·구조물 외벽은 보존) */
+	/** t413: 프리즘 정동 템플릿의 자수정 장식 — 의식 정리에서 지우지 않는다 */
+	static boolean amethyst(org.bukkit.Material m) {
+		return switch (m) {
+			case AMETHYST_BLOCK, BUDDING_AMETHYST, AMETHYST_CLUSTER, LARGE_AMETHYST_BUD, MEDIUM_AMETHYST_BUD, SMALL_AMETHYST_BUD -> true;
+			default -> false;
+		};
+	}
+
+	public static List<Block> interiorClearTargets(Site site, Block altar) {
+		List<Block> out = new ArrayList<>();
+		if (site == null || site.structure == null || altar == null) return out;
+		World w = altar.getWorld();
+		int ax = altar.getX(), ay = altar.getY(), az = altar.getZ();
+		int rMax = switch (site) {
+			case FORGE -> 26;
+			case GROTTO -> 21;
+			case TEMPLE -> 14;
+			default -> 0;
+		};
+		if (rMax == 0) return out;
+		int dyMin = site == Site.TEMPLE ? -2 : -1;
+		int dyMax = switch (site) {
+			case FORGE -> 26;
+			case GROTTO -> 20;
+			case TEMPLE -> 18;
+			default -> 0;
+		};
+		for (int dy = dyMax; dy >= dyMin; dy--) {
+			int y = ay + dy;
+			if (y < w.getMinHeight() || y >= w.getMaxHeight()) continue;
+			for (int dx = -rMax; dx <= rMax; dx++) {
+				for (int dz = -rMax; dz <= rMax; dz++) {
+					int r2 = dx * dx + dz * dz;
+					if (r2 > rMax * rMax) continue;
+					if (site == Site.GROTTO) {
+						int domeMax = (int) Math.floor(20.0 * Math.sqrt(Math.max(0.0, 1.0 - r2 / 484.0)));
+						if (dy > domeMax) continue;
+					}
+					if (dy <= 0) {
+						boolean plinth = site == Site.TEMPLE ? r2 <= 20 : (Math.abs(dx) <= 1 && Math.abs(dz) <= 1);
+						if (plinth) continue;
+					}
+					Block b = w.getBlockAt(ax + dx, y, az + dz);
+					if (b.getType().isAir() || StormArena.keepBlock(b) || b.equals(altar)) continue;
+					if (site == Site.GROTTO && amethyst(b.getType())) continue;   // t413: 정동 자체의 자수정(블록·싹·군집)은 보존
+					out.add(b);
+				}
+			}
+		}
+		if (site == Site.FORGE) {
+			// 중앙에서 바깥으로 원형 파동처럼 주루루룩 비워지도록 반경 오름차순(동일 반경은 아래→위) 정렬
+			out.sort((a, b) -> {
+				int ra = (a.getX() - ax) * (a.getX() - ax) + (a.getZ() - az) * (a.getZ() - az);
+				int rb = (b.getX() - ax) * (b.getX() - ax) + (b.getZ() - az) * (b.getZ() - az);
+				if (ra != rb) return Integer.compare(ra, rb);
+				return Integer.compare(a.getY(), b.getY());
+			});
+		}
+		return out;
+	}
+
 	// ───────── 투기장 이탈 방지 ─────────
 	private static void leash() {
 		if (BossManager.all().isEmpty()) return;
@@ -192,7 +256,7 @@ public final class Arenas implements Listener {
 			boolean out = Math.abs(dx) > lim || Math.abs(dz) > lim || l.getY() < a.y() + a.site().yLo - 4 || l.getY() > a.y() + a.site().yHi + 20;
 			if (!out) continue;
 			Location to = a.spawn().add(0.5, b.kind.lift, 0.5);
-			to.setYaw(l.getYaw());
+			to.setYaw(b instanceof SmithBoss sb ? sb.facingYaw() : l.getYaw());
 			b.mob.getWorld().spawnParticle(Particle.REVERSE_PORTAL, l.getX(), l.getY() + 2, l.getZ(), 40, 1, 2, 1, 0.05);
 			b.mob.teleport(to, io.papermc.paper.entity.TeleportFlag.EntityState.RETAIN_PASSENGERS);
 		}
